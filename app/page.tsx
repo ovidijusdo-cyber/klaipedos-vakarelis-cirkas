@@ -581,6 +581,7 @@ function ClownJumpGame({
   const [shrinkMode, setShrinkMode] = useState(false);
   const [duelLevel, setDuelLevel] = useState<number | null>(null);
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+  const [hitFlash, setHitFlash] = useState(false);
   const [duelResult, setDuelResult] = useState<null | {
     player: "rock" | "paper" | "scissors";
     cpu: "rock" | "paper" | "scissors";
@@ -676,6 +677,7 @@ function ClownJumpGame({
     setShrinkMode(false);
     setDuelLevel(null);
     setResumeCountdown(null);
+    setHitFlash(false);
     setDuelResult(null);
     setDuelRevealed(false);
     setDoubleJumpFlash(false);
@@ -970,6 +972,8 @@ function ClownJumpGame({
         if (collision && lives > 0 && collidedObstacleId !== null) {
           collision = false;
           setLives((previousLives) => Math.max(0, previousLives - 1));
+          setHitFlash(true);
+          window.setTimeout(() => setHitFlash(false), 180);
           next = next.filter((obstacle) => obstacle.id !== collidedObstacleId);
         }
 
@@ -1143,7 +1147,7 @@ function ClownJumpGame({
             <div className="game-chip">Top: {bestScore}</div>
           </div>
 
-          <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
+          <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
             <div className="game-level-badge">Lygis {level}</div>
             <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className="game-coins-badge">Bonusai: {coins}</div>

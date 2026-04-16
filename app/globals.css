@@ -693,6 +693,16 @@ select:focus {
   min-height: 340px;
 }
 
+.game-stage.hit-flash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(239, 68, 68, 0.28);
+  animation: hit-flash 0.2s ease-out forwards;
+}
+
 .game-level-badge,
 .game-distance-badge {
   position: absolute;
@@ -2094,6 +2104,15 @@ th {
   }
   100% {
     transform: scale(1) translateY(-10px);
+    opacity: 0;
+  }
+}
+
+@keyframes hit-flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
     opacity: 0;
   }
 }
