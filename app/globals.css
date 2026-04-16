@@ -706,6 +706,23 @@ select:focus {
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
+.game-coins-badge {
+  position: absolute;
+  top: 56px;
+  left: 12px;
+  z-index: 2;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.82);
+  color: #92400e;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
 .game-level-badge {
   left: 12px;
 }
@@ -722,6 +739,30 @@ select:focus {
   bottom: 48px;
   height: 4px;
   background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 18px, transparent 18px 34px);
+}
+
+.stage-theme-1 {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.45), transparent 24%),
+    linear-gradient(180deg, #fef3c7 0%, #fed7aa 62%, #fdba74 62%, #fdba74 72%, #a3e635 72%, #84cc16 100%);
+}
+
+.stage-theme-2 {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.4), transparent 24%),
+    linear-gradient(180deg, #dbeafe 0%, #93c5fd 56%, #60a5fa 56%, #38bdf8 72%, #86efac 72%, #4ade80 100%);
+}
+
+.stage-theme-3 {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.36), transparent 24%),
+    linear-gradient(180deg, #ede9fe 0%, #c4b5fd 56%, #a78bfa 56%, #f472b6 72%, #fb7185 100%);
+}
+
+.stage-theme-4 {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.3), transparent 24%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 52%, #334155 52%, #475569 72%, #22c55e 72%, #84cc16 100%);
 }
 
 .clown-runner {
@@ -762,6 +803,64 @@ select:focus {
   text-align: center;
   padding: 6px;
   box-shadow: 0 10px 20px rgba(127, 29, 29, 0.22);
+}
+
+.game-bonus {
+  position: absolute;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.12));
+}
+
+.game-bonus.coin {
+  border-radius: 999px;
+  background: radial-gradient(circle, #fef08a 0%, #facc15 55%, #f59e0b 100%);
+  color: #78350f;
+  font-size: 0.95rem;
+  animation: float-bonus 1.8s ease-in-out infinite;
+}
+
+.game-bonus.balloon {
+  border-radius: 999px 999px 999px 999px / 999px 999px 820px 820px;
+  background: linear-gradient(180deg, #38bdf8, #2563eb);
+  color: white;
+  font-size: 0.9rem;
+  animation: float-bonus 2.1s ease-in-out infinite;
+}
+
+.game-over-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.game-over-card {
+  width: min(280px, calc(100% - 24px));
+  padding: 20px;
+  border-radius: 24px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 237, 213, 0.96));
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.16);
+}
+
+.game-over-card strong {
+  display: block;
+  font-size: 1.4rem;
+  color: #9a3412;
+  margin-bottom: 6px;
+}
+
+.game-over-card p {
+  margin: 0 0 14px;
+  color: #475569;
 }
 
 .game-obstacle.ground {
@@ -1651,6 +1750,16 @@ th {
   }
 }
 
+@keyframes float-bonus {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 @media (max-width: 1024px) {
   .hero,
   .content-grid,
@@ -1796,10 +1905,15 @@ th {
   }
 
   .game-level-badge,
-  .game-distance-badge {
+  .game-distance-badge,
+  .game-coins-badge {
     min-height: 30px;
     padding: 0 10px;
     font-size: 0.78rem;
+  }
+
+  .game-coins-badge {
+    top: 48px;
   }
 
   .clown-runner {
