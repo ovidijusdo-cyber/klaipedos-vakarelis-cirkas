@@ -572,6 +572,7 @@ function ClownJumpGame({
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [coins, setCoins] = useState(0);
+  const [lives, setLives] = useState(0);
   const [savedForScore, setSavedForScore] = useState<number | null>(null);
   const [distance, setDistance] = useState(0);
   const [playerY, setPlayerY] = useState(0);
@@ -667,6 +668,7 @@ function ClownJumpGame({
     setHasStarted(false);
     setScore(0);
     setCoins(0);
+    setLives(0);
     setDistance(0);
     setPlayerY(0);
     setSlowdownBuffer(0);
@@ -735,6 +737,7 @@ function ClownJumpGame({
 
     if (outcome === "win") {
       setScore((previousScore) => previousScore + 20);
+      setLives((previousLives) => Math.min(3, previousLives + 1));
     }
 
     setDuelResult({ player: choice, cpu, outcome });
@@ -938,6 +941,7 @@ function ClownJumpGame({
         }
 
         let collision = false;
+        let collidedObstacleId: number | null = null;
         let gained = 0;
         const player = playerBox();
 
@@ -953,6 +957,7 @@ function ClownJumpGame({
 
           if (!obstacle.passed && horizontalOverlap && verticalOverlap) {
             collision = true;
+            collidedObstacleId = obstacle.id;
           }
 
           return obstacle;
@@ -960,6 +965,12 @@ function ClownJumpGame({
 
         if (gained) {
           setScore((previousScore) => previousScore + gained);
+        }
+
+        if (collision && lives > 0 && collidedObstacleId !== null) {
+          collision = false;
+          setLives((previousLives) => Math.max(0, previousLives - 1));
+          next = next.filter((obstacle) => obstacle.id !== collidedObstacleId);
         }
 
         if (collision) {
@@ -1093,7 +1104,7 @@ function ClownJumpGame({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (duelLevel !== null) return;
+      if (duelLevel !== null || resumeCountdown !== null) return;
       if (event.code !== "Space") return;
       event.preventDefault();
 
@@ -1106,7 +1117,7 @@ function ClownJumpGame({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [duelLevel, isRunning]);
+  }, [duelLevel, isRunning, resumeCountdown]);
 
   useEffect(() => {
     return () => {
@@ -1136,6 +1147,7 @@ function ClownJumpGame({
             <div className="game-level-badge">Lygis {level}</div>
             <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className="game-coins-badge">Bonusai: {coins}</div>
+            <div className="game-lives-badge">Gyvybės: {"❤".repeat(lives) || "0"}</div>
             {slowdownActive ? <div className="game-power-badge slowdown">🎈 Lėčiau</div> : null}
             {giantMode ? <div className="game-power-badge giant">🍄 Mega</div> : null}
             {shrinkMode ? <div className="game-power-badge shadow">⬤ Mini</div> : null}

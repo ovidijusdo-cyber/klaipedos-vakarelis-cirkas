@@ -727,6 +727,23 @@ select:focus {
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
+.game-lives-badge {
+  position: absolute;
+  top: 96px;
+  left: 12px;
+  z-index: 2;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.82);
+  color: #dc2626;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
 .game-level-badge {
   left: 12px;
 }
@@ -2231,7 +2248,8 @@ th {
 
   .game-level-badge,
   .game-distance-badge,
-  .game-coins-badge {
+  .game-coins-badge,
+  .game-lives-badge {
     min-height: 30px;
     padding: 0 10px;
     font-size: 0.78rem;
@@ -2239,6 +2257,10 @@ th {
 
   .game-coins-badge {
     top: 48px;
+  }
+
+  .game-lives-badge {
+    top: 82px;
   }
 
   .game-power-badge {
