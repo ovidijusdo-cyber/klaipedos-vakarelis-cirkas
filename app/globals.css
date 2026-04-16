@@ -143,6 +143,7 @@ select:focus {
 }
 
 .panel-tab {
+  flex: 0 0 auto;
   min-height: 48px;
   padding: 0 18px;
   border-radius: 999px;
@@ -698,6 +699,10 @@ select:focus {
   gap: 16px;
   align-items: center;
   padding: 14px 16px;
+}
+
+.vote-target .secondary-button {
+  flex-shrink: 0;
 }
 
 .vote-target p {
@@ -1472,6 +1477,15 @@ th {
   .admin-payment-row {
     grid-template-columns: 1fr;
   }
+
+  .wheel-section.compact,
+  .wheel-section {
+    justify-items: center;
+  }
+
+  .wheel-side {
+    width: 100%;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1491,6 +1505,18 @@ th {
     font-size: 2.4rem;
   }
 
+  .panel-switcher {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-right: -2px;
+    scrollbar-width: thin;
+  }
+
+  .panel-tab {
+    white-space: nowrap;
+  }
+
   .guest-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1500,12 +1526,153 @@ th {
   .modal-header,
   .admin-reservation-head,
   .admin-payment-row,
-  .scanner-card-head {
+  .scanner-card-head,
+  .payment-card-head,
+  .vote-target {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .hero-actions,
+  .link-row,
+  .modal-actions,
+  .stack-inline,
+  .inline-header {
+    align-items: stretch;
+  }
+
+  .hero-actions > *,
+  .link-row > *,
+  .modal-actions > *,
+  .stack-inline > * {
+    width: 100%;
+  }
+
+  .telegram-button,
+  .map-link,
+  .primary-button,
+  .secondary-button,
+  .ghost-button,
+  .danger-button,
+  .ghost-inline,
+  .payment-button,
+  .payment-choice {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .timeline-item {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-time {
+    width: fit-content;
+  }
+
+  .responsible-grid,
+  .confirmation-grid,
+  .stats-grid.admin {
+    grid-template-columns: 1fr;
+  }
+
+  .wheel-section.compact,
+  .wheel-section {
+    gap: 18px;
+  }
+
+  .wheel-wrapper,
+  .wheel-wrapper.small {
+    width: min(100%, 260px);
+  }
+
+  .wheel-pointer {
+    top: -6px;
+    border-left-width: 13px;
+    border-right-width: 13px;
+    border-top-width: 24px;
+  }
+
+  .wheel-segment span {
+    display: none;
+  }
+
+  .wheel-result {
+    text-align: center;
+  }
+
+  .vote-result-head,
+  .vote-result-row {
+    align-items: flex-start;
+  }
+
+  .payment-note,
+  .privacy-section,
+  .highlight-box,
+  .summary-box,
+  .scanner-card,
+  .ticket-card {
+    padding: 16px;
+  }
+
+  .modal-backdrop {
+    padding: 10px;
+  }
+
+  .modal-card {
+    max-height: calc(100vh - 20px);
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .scanner-video {
+    max-height: 240px;
+  }
+
   .admin-reservation-meta {
     justify-items: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero-copy,
+  .spotlight-card,
+  .card,
+  .modal-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .chip-grid,
+  .stats-grid,
+  .guest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-cell,
+  .empty-state {
+    min-height: 54px;
+    padding: 12px;
+  }
+
+  .person-row {
+    grid-template-columns: 1fr;
+  }
+
+  .vote-step-indicator {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .step-pill {
+    text-align: center;
+  }
+
+  .wheel-wrapper,
+  .wheel-wrapper.small {
+    width: min(100%, 220px);
   }
 }
