@@ -89,6 +89,13 @@ type EventIdea = {
   text: string;
 };
 
+type GameScore = {
+  id: number;
+  name: string;
+  score: number;
+  createdAt: string;
+};
+
 type ResponsiblePerson = {
   id: number;
   role: string;
@@ -241,6 +248,12 @@ const initialResponsiblePeople: ResponsiblePerson[] = [
   { id: 7, role: "Šokių mokytojai", names: "" },
   { id: 8, role: "Žaidimų vedėjas", names: "" },
   { id: 9, role: "Savanoriai", names: "" },
+];
+
+const initialGameScores: GameScore[] = [
+  { id: 1, name: "Jonas", score: 18, createdAt: "2026-04-14 18:10" },
+  { id: 2, name: "AustÄ—ja", score: 14, createdAt: "2026-04-14 18:22" },
+  { id: 3, name: "Lukas", score: 9, createdAt: "2026-04-14 18:35" },
 ];
 
 const initialReservations: Reservation[] = [
@@ -527,6 +540,240 @@ function TelegramIcon() {
   );
 }
 
+function ClownJumpGame({
+  scores,
+  onSaveScore,
+}: {
+  scores: GameScore[];
+  onSaveScore: (name: string, score: number) => void;
+}) {
+  const animationFrameRef = useRef<number | null>(null);
+  const jumpTimeoutRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number | null>(null);
+  const spawnTimerRef = useRef(0);
+  const nextObstacleIdRef = useRef(1);
+  const [playerName, setPlayerName] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [isJumping, setIsJumping] = useState(false);
+  const [score, setScore] = useState(0);
+  const [savedForScore, setSavedForScore] = useState<number | null>(null);
+  const [obstacles, setObstacles] = useState<Array<{ id: number; x: number; label: string; passed: boolean }>>([]);
+
+  const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 10), [scores]);
+
+  function stopLoop() {
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }
+
+  function resetRound() {
+    stopLoop();
+    lastTimeRef.current = null;
+    spawnTimerRef.current = 0;
+    nextObstacleIdRef.current = 1;
+    setScore(0);
+    setObstacles([]);
+    setIsJumping(false);
+    setIsGameOver(false);
+    setSavedForScore(null);
+  }
+
+  function startGame() {
+    resetRound();
+    setIsRunning(true);
+  }
+
+  function jump() {
+    if (!isRunning || isJumping) return;
+    setIsJumping(true);
+    if (jumpTimeoutRef.current !== null) {
+      window.clearTimeout(jumpTimeoutRef.current);
+    }
+    jumpTimeoutRef.current = window.setTimeout(() => setIsJumping(false), 620);
+  }
+
+  function saveScore() {
+    const trimmed = playerName.trim();
+    if (!trimmed || score <= 0 || savedForScore === score) return;
+    onSaveScore(trimmed, score);
+    setSavedForScore(score);
+  }
+
+  useEffect(() => {
+    if (!isRunning) {
+      stopLoop();
+      return;
+    }
+
+    const obstacleLabels = ["KÅ«gis", "Kamuolys", "DÄ—Å¾Ä—", "Å½ievelÄ—"];
+
+    function tick(timestamp: number) {
+      if (lastTimeRef.current === null) {
+        lastTimeRef.current = timestamp;
+      }
+
+      const delta = Math.min(32, timestamp - lastTimeRef.current);
+      lastTimeRef.current = timestamp;
+      spawnTimerRef.current += delta;
+
+      setObstacles((previous) => {
+        let next = previous
+          .map((obstacle) => ({ ...obstacle, x: obstacle.x - delta * 0.17 }))
+          .filter((obstacle) => obstacle.x > -18);
+
+        if (spawnTimerRef.current >= 1200 + Math.random() * 700) {
+          next = [
+            ...next,
+            {
+              id: nextObstacleIdRef.current++,
+              x: 100,
+              label: obstacleLabels[Math.floor(Math.random() * obstacleLabels.length)],
+              passed: false,
+            },
+          ];
+          spawnTimerRef.current = 0;
+        }
+
+        let collision = false;
+        let gained = 0;
+
+        next = next.map((obstacle) => {
+          if (!obstacle.passed && obstacle.x <= 18) {
+            if (isJumping) {
+              gained += 1;
+              return { ...obstacle, passed: true };
+            }
+
+            if (obstacle.x <= 13) {
+              collision = true;
+            }
+          }
+
+          return obstacle;
+        });
+
+        if (gained) {
+          setScore((previousScore) => previousScore + gained);
+        }
+
+        if (collision) {
+          setIsRunning(false);
+          setIsGameOver(true);
+        }
+
+        return next;
+      });
+
+      animationFrameRef.current = window.requestAnimationFrame(tick);
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => stopLoop();
+  }, [isJumping, isRunning]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.code !== "Space") return;
+      event.preventDefault();
+
+      if (isRunning) {
+        jump();
+      } else {
+        startGame();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isRunning, isJumping]);
+
+  useEffect(() => {
+    return () => {
+      stopLoop();
+      if (jumpTimeoutRef.current !== null) {
+        window.clearTimeout(jumpTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <SectionCard title="Klouno Å¡uolis" description="Mini Å¾aidimukas apaÄ¨ioje: kompiuteryje Å¡ok su Space, telefone spausk mygtukÄ… ir rink taÅ¡kus.">
+      <div className="game-shell">
+        <div className="game-stage-card">
+          <div className="game-stage-head">
+            <div>
+              <strong>TaÅ¡kai: {score}</strong>
+              <p>{isGameOver ? "Atsitrenkei Ä¯ kliÅ«tÄ¯. Gali bandyti dar kartÄ…" : isRunning ? "Klounas bÄ—ga. Å ok per kliÅ«tis." : "Paspausk PradÄ—ti arba Space."}</p>
+            </div>
+            <div className="game-chip">Top: {topScores[0]?.score ?? 0}</div>
+          </div>
+
+          <div className="game-stage" role="img" aria-label="Klouno Å¡uolio mini Å¾aidimas">
+            <div className={isJumping ? "clown-runner jumping" : "clown-runner"}>
+              <span className="clown-face">🤡</span>
+            </div>
+            {obstacles.map((obstacle) => (
+              <div className="game-obstacle" key={obstacle.id} style={{ left: `${obstacle.x}%` }}>
+                <span>{obstacle.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="game-controls">
+            <button className="primary-button" type="button" onClick={isRunning ? jump : startGame}>
+              {isRunning ? "Å okti" : "PradÄ—ti Å¾aidimÄ…"}
+            </button>
+            <button className="ghost-button" type="button" onClick={startGame}>
+              Å½aisti iÅ¡ naujo
+            </button>
+          </div>
+        </div>
+
+        <div className="game-side">
+          <div className="payment-note">
+            <strong>Kaip Å¾aisti</strong>
+            <p>Kompiuteryje naudok `Space`, o telefone spausk mygtukÄ… „Å okti“. UÅ¾ kiekvienÄ… sÄ—kmingai perÅ¡oktÄ… kliÅ«tÄ¯ gausi po 1 taÅ¡kÄ….</p>
+          </div>
+
+          <div className="payment-note">
+            <strong>IÅ¡saugoti rezultatÄ…</strong>
+            <div className="stack">
+              <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="Tavo vardas rezultatui" />
+              <button className="secondary-button" disabled={!playerName.trim() || score <= 0 || savedForScore === score} type="button" onClick={saveScore}>
+                {savedForScore === score ? "Rezultatas iÅ¡saugotas" : "IÅ¡saugoti taÅ¡kus"}
+              </button>
+            </div>
+          </div>
+
+          <div className="leaderboard-card">
+            <div className="vote-result-head">
+              <strong>KlounÅ³ rekordai</strong>
+              <span>{topScores.length} Ä¯raÅ¡.</span>
+            </div>
+            <div className="stack">
+              {topScores.length === 0 ? (
+                <div className="empty-state">Kol kas dar nÄ—ra nei vieno rezultato.</div>
+              ) : (
+                topScores.map((entry, index) => (
+                  <div className="leaderboard-row" key={entry.id}>
+                    <span>#{index + 1}</span>
+                    <strong>{entry.name}</strong>
+                    <span>{entry.score} tÅ¡k.</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
 export default function Page() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerStreamRef = useRef<MediaStream | null>(null);
@@ -540,6 +787,7 @@ export default function Page() {
   const [songSuggestions, setSongSuggestions] = useState<SongSuggestion[]>(initialSongSuggestions);
   const [eventIdeas, setEventIdeas] = useState<EventIdea[]>(initialEventIdeas);
   const [responsiblePeople, setResponsiblePeople] = useState<ResponsiblePerson[]>(initialResponsiblePeople);
+  const [gameScores, setGameScores] = useState<GameScore[]>(initialGameScores);
 
   const [registerOpen, setRegisterOpen] = useState(false);
   const [myTicketOpen, setMyTicketOpen] = useState(false);
@@ -610,6 +858,7 @@ export default function Page() {
             songSuggestions?: SongSuggestion[];
             eventIdeas?: EventIdea[];
             responsiblePeople?: ResponsiblePerson[];
+            gameScores?: GameScore[];
           } | null;
         };
 
@@ -634,6 +883,7 @@ export default function Page() {
         if (parsed.songSuggestions?.length) setSongSuggestions(parsed.songSuggestions);
         if (parsed.eventIdeas?.length) setEventIdeas(parsed.eventIdeas);
         if (parsed.responsiblePeople?.length) setResponsiblePeople(parsed.responsiblePeople);
+        if (parsed.gameScores) setGameScores(parsed.gameScores);
       } catch (error) {
         console.error("Failed to load remote state", error);
       } finally {
@@ -667,6 +917,7 @@ export default function Page() {
           songSuggestions,
           eventIdeas,
           responsiblePeople,
+          gameScores,
         },
       }),
       signal: controller.signal,
@@ -677,7 +928,7 @@ export default function Page() {
     });
 
     return () => controller.abort();
-  }, [eventIdeas, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -1112,6 +1363,7 @@ export default function Page() {
     setSongSuggestions(initialSongSuggestions);
     setEventIdeas(initialEventIdeas);
     setResponsiblePeople(initialResponsiblePeople);
+    setGameScores(initialGameScores);
     setSubmitted(null);
     setLookup("");
     setMyLookup("");
@@ -1173,6 +1425,19 @@ export default function Page() {
     ]);
     setVoteTargetLookup("");
     setVoteStep(2);
+  }
+
+  function saveGameScore(name: string, score: number) {
+    const now = formatDateTime();
+    setGameScores((previous) =>
+      [...previous, { id: Date.now(), name, score, createdAt: now }]
+        .sort((a, b) => b.score - a.score || Date.parse(b.createdAt) - Date.parse(a.createdAt))
+        .slice(0, 30),
+    );
+    setNotifications((previous) => [
+      { id: Date.now(), message: `${name} iÅ¡saugojo Å¾aidimo rezultatÄ…: ${score} tÅ¡k.`, createdAt: now },
+      ...previous,
+    ]);
   }
 
   function stopScanner() {
@@ -1932,6 +2197,8 @@ export default function Page() {
           </div>
         </div>
       </SectionCard>
+
+      <ClownJumpGame scores={gameScores} onSaveScore={saveGameScore} />
 
       <Modal
         open={registerOpen}
