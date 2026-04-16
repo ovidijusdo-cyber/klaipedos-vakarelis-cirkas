@@ -712,7 +712,7 @@ function ClownJumpGame({
     const outcome = choice === cpu ? "draw" : winsAgainst[choice] === cpu ? "win" : "lose";
 
     if (outcome === "win") {
-      setScore((previousScore) => previousScore + 10);
+      setScore((previousScore) => previousScore + 20);
     }
 
     setDuelResult({ player: choice, cpu, outcome });
@@ -724,6 +724,11 @@ function ClownJumpGame({
 
   function continueAfterDuel() {
     if (duelLevel === null) return;
+    if (duelResult?.outcome === "draw") {
+      setDuelResult(null);
+      setDuelRevealed(false);
+      return;
+    }
     duelCompletedLevelsRef.current.add(duelLevel);
     setDuelLevel(null);
     setDuelResult(null);
@@ -1017,7 +1022,7 @@ function ClownJumpGame({
           <div className="game-stage-head">
             <div>
               <strong>Taškai: {score}</strong>
-              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį pele arba pirštu ir bandyk pasiimti +10 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Gali atlikti ir dvigubą šuolį, bet po jo reikės pilnai nusileisti." : "Paspausk Pradėti arba Space."}</p>
+              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį pele arba pirštu ir bandyk pasiimti +20 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Gali atlikti ir dvigubą šuolį, bet po jo reikės pilnai nusileisti." : "Paspausk Pradėti arba Space."}</p>
             </div>
             <div className="game-chip">Top: {bestScore}</div>
           </div>
@@ -1076,11 +1081,11 @@ function ClownJumpGame({
                         Kompiuteris: {duelRevealed ? `${duelChoices.find((choice) => choice.id === duelResult.cpu)?.emoji} ${duelChoices.find((choice) => choice.id === duelResult.cpu)?.label}` : "renkasi..." }
                       </div>
                       <strong>
-                        {duelResult.outcome === "win" ? "Laimėjai +10 tšk." : duelResult.outcome === "draw" ? "Lygiosios" : "Šį kartą laimėjo kompiuteris"}
+                        {duelResult.outcome === "win" ? "Laimėjai +20 tšk." : duelResult.outcome === "draw" ? "Lygiosios - žaidžiam dar kartą" : "Šį kartą laimėjo kompiuteris"}
                       </strong>
-                      <small>{duelResult.outcome === "win" ? "🎉 Bonusas pridėtas." : duelResult.outcome === "lose" ? "☹️ Bonuso šį kartą nėra." : "Be bonuso, bet bėgimas tęsiasi."}</small>
+                      <small>{duelResult.outcome === "win" ? "🎉 Bonusas pridėtas prie bendrų taškų." : duelResult.outcome === "lose" ? "☹️ Bonuso šį kartą nėra, bet tęsi toliau." : "Paspausk tęsti ir mesime dar kartą."}</small>
                       <button className="primary-button" type="button" onClick={continueAfterDuel}>
-                        Tęsti žaidimą
+                        {duelResult.outcome === "draw" ? "Mesti dar kartą" : "Tęsti žaidimą"}
                       </button>
                     </div>
                   )}
@@ -1101,10 +1106,10 @@ function ClownJumpGame({
           </div>
 
           <div className="game-controls">
-            <button className="primary-button" type="button" onClick={isRunning ? jump : startGame}>
-              {isRunning ? "Šokti" : "Pradėti žaidimą"}
+            <button className="primary-button" disabled={duelLevel !== null} type="button" onClick={isRunning ? jump : startGame}>
+              {duelLevel !== null ? "Dvikova vyksta" : isRunning ? "Šokti" : "Pradėti žaidimą"}
             </button>
-            <button className="ghost-button" type="button" onClick={startGame}>
+            <button className="ghost-button" disabled={duelLevel !== null} type="button" onClick={startGame}>
               Žaisti iš naujo
             </button>
           </div>
