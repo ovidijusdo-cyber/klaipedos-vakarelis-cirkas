@@ -934,18 +934,18 @@ select:focus {
 }
 
 .game-obstacle.small {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
 }
 
 .game-obstacle.medium {
-  width: 56px;
-  height: 56px;
+  width: 46px;
+  height: 46px;
 }
 
 .game-obstacle.large {
-  width: 72px;
-  height: 60px;
+  width: 58px;
+  height: 50px;
 }
 
 .game-obstacle.cone {
@@ -1063,11 +1063,17 @@ select:focus {
 }
 
 .duel-result {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 10px;
   padding: 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.duel-result.revealed {
+  animation: duel-reveal 0.35s ease;
 }
 
 .duel-result.win {
@@ -1080,6 +1086,30 @@ select:focus {
 
 .duel-result.draw {
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22);
+}
+
+.duel-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.duel-confetti span {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #facc15, #ef4444);
+  animation: duel-confetti-fall 0.9s ease-in forwards;
+}
+
+.duel-confetti span:nth-child(3n) {
+  background: linear-gradient(180deg, #38bdf8, #2563eb);
+}
+
+.duel-confetti span:nth-child(4n) {
+  background: linear-gradient(180deg, #4ade80, #16a34a);
 }
 
 .leaderboard-row {
@@ -1931,6 +1961,28 @@ th {
   }
 }
 
+@keyframes duel-reveal {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes duel-confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(95px) rotate(240deg);
+    opacity: 0;
+  }
+}
+
 @media (max-width: 1024px) {
   .hero,
   .content-grid,
@@ -2118,8 +2170,8 @@ th {
   }
 
   .game-obstacle {
-    width: 46px;
-    height: 46px;
+    width: 40px;
+    height: 40px;
     font-size: 0.58rem;
   }
 

@@ -575,6 +575,7 @@ function ClownJumpGame({
     cpu: "rock" | "paper" | "scissors";
     outcome: "win" | "lose" | "draw";
   }>(null);
+  const [duelRevealed, setDuelRevealed] = useState(false);
   const [bonuses, setBonuses] = useState<
     Array<{
       id: number;
@@ -649,6 +650,7 @@ function ClownJumpGame({
     setGiantMode(false);
     setDuelLevel(null);
     setDuelResult(null);
+    setDuelRevealed(false);
     setObstacles([]);
     setBonuses([]);
     setIsGameOver(false);
@@ -694,6 +696,10 @@ function ClownJumpGame({
     }
 
     setDuelResult({ player: choice, cpu, outcome });
+    setDuelRevealed(false);
+    window.setTimeout(() => {
+      setDuelRevealed(true);
+    }, 260);
     if (duelResumeTimeoutRef.current !== null) {
       window.clearTimeout(duelResumeTimeoutRef.current);
     }
@@ -708,6 +714,7 @@ function ClownJumpGame({
     duelCompletedLevelsRef.current.add(duelLevel);
     setDuelLevel(null);
     setDuelResult(null);
+    setDuelRevealed(false);
     resumeRound();
   }
 
@@ -733,7 +740,7 @@ function ClownJumpGame({
       const giant = giantUntilRef.current > 0;
       return {
         left: 13.6,
-        right: giant ? 22.2 : 19.8,
+        right: giant ? 21.2 : 19,
         bottom: 28 + playerYRef.current,
         top: 28 + playerYRef.current + (giant ? 72 : 52),
       };
@@ -745,16 +752,16 @@ function ClownJumpGame({
       size: "small" | "medium" | "large";
     }) => {
       const widths = {
-        small: 4.7,
-        medium: 6.2,
-        large: 8.1,
+        small: 3.9,
+        medium: 5.1,
+        large: 6.7,
       };
       const heights = {
-        small: 42,
-        medium: 56,
-        large: 60,
+        small: 34,
+        medium: 44,
+        large: 50,
       };
-      const bottom = obstacle.lane === "ground" ? 28 : 104;
+      const bottom = obstacle.lane === "ground" ? 28 : 98;
       return {
         left: obstacle.x,
         right: obstacle.x + widths[obstacle.size],
@@ -1009,12 +1016,19 @@ function ClownJumpGame({
                     ))}
                   </div>
                   {duelResult ? (
-                    <div className={`duel-result ${duelResult.outcome}`}>
+                    <div className={`duel-result ${duelResult.outcome}${duelRevealed ? " revealed" : ""}`}>
+                      {duelResult.outcome === "win" && duelRevealed ? (
+                        <div className="duel-confetti" aria-hidden="true">
+                          {Array.from({ length: 16 }).map((_, index) => (
+                            <span key={index} style={{ left: `${8 + index * 5.6}%`, animationDelay: `${(index % 5) * 0.06}s` }} />
+                          ))}
+                        </div>
+                      ) : null}
                       <div>
                         Tu: {duelChoices.find((choice) => choice.id === duelResult.player)?.emoji} {duelChoices.find((choice) => choice.id === duelResult.player)?.label}
                       </div>
                       <div>
-                        Kompiuteris: {duelChoices.find((choice) => choice.id === duelResult.cpu)?.emoji} {duelChoices.find((choice) => choice.id === duelResult.cpu)?.label}
+                        Kompiuteris: {duelRevealed ? `${duelChoices.find((choice) => choice.id === duelResult.cpu)?.emoji} ${duelChoices.find((choice) => choice.id === duelResult.cpu)?.label}` : "..." }
                       </div>
                       <strong>
                         {duelResult.outcome === "win" ? "Laimėjai +10 tšk." : duelResult.outcome === "draw" ? "Lygiosios" : "Šį kartą laimėjo kompiuteris"}
