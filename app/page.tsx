@@ -559,6 +559,8 @@ function ClownJumpGame({
   const slowdownUntilRef = useRef(0);
   const giantUntilRef = useRef(0);
   const shrinkUntilRef = useRef(0);
+  const specialBonusCooldownUntilRef = useRef(0);
+  const nextSpecialBonusIndexRef = useRef(0);
   const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
   const doubleJumpTimeoutRef = useRef<number | null>(null);
   const countdownTimeoutRef = useRef<number | null>(null);
@@ -657,6 +659,8 @@ function ClownJumpGame({
     slowdownUntilRef.current = 0;
     giantUntilRef.current = 0;
     shrinkUntilRef.current = 0;
+    specialBonusCooldownUntilRef.current = 0;
+    nextSpecialBonusIndexRef.current = 0;
     duelCompletedLevelsRef.current = new Set();
     airChallengeMomentsRef.current = {};
     airChallengeCountsRef.current = {};
@@ -971,9 +975,21 @@ function ClownJumpGame({
           .map((bonus) => ({ ...bonus, x: bonus.x - delta * (speed * 0.85) }))
           .filter((bonus) => bonus.x > -14);
 
-        if (Math.random() > 0.9955 - level * 0.003) {
-          const roll = Math.random();
-          const bonusType = roll > 0.7 ? "coin" : roll > 0.88 ? "balloon" : roll > 0.94 ? "mushroom" : "shadow";
+        const specialTypes: Array<"balloon" | "mushroom" | "shadow"> = ["balloon", "mushroom", "shadow"];
+        const canSpawnSpecial = timestamp >= specialBonusCooldownUntilRef.current;
+        const shouldSpawnSpecial = canSpawnSpecial && Math.random() > 0.9988 - level * 0.0007;
+        const shouldSpawnCoin = !shouldSpawnSpecial && Math.random() > 0.989 - level * 0.004;
+
+        if (shouldSpawnSpecial || shouldSpawnCoin) {
+          const bonusType = shouldSpawnSpecial
+            ? specialTypes[nextSpecialBonusIndexRef.current % specialTypes.length]
+            : "coin";
+
+          if (shouldSpawnSpecial) {
+            nextSpecialBonusIndexRef.current += 1;
+            specialBonusCooldownUntilRef.current = timestamp + 7000 + Math.random() * 3000;
+          }
+
           next = [
             ...next,
             {
