@@ -636,6 +636,73 @@ select:focus {
   align-items: start;
 }
 
+.game-shell.fullscreen {
+  min-height: 100vh;
+  padding: 24px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  align-items: stretch;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.24), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(250, 204, 21, 0.16), transparent 28%),
+    linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+}
+
+.game-shell.fullscreen .game-stage-card,
+.game-shell.fullscreen .leaderboard-card,
+.game-shell.fullscreen .payment-note {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 235, 0.96));
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.12);
+}
+
+.game-shell.fullscreen .game-stage-card {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 48px);
+}
+
+.game-shell.fullscreen .game-side {
+  align-self: stretch;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.game-shell.fullscreen .game-stage {
+  flex: 1;
+  min-height: min(74vh, 780px);
+}
+
+.game-shell.fullscreen .game-stage.duel-active {
+  min-height: min(78vh, 860px);
+}
+
+.game-shell.fullscreen .game-controls {
+  margin-top: auto;
+}
+
+.game-shell.fullscreen .clown-runner {
+  left: 54px;
+  bottom: 56px;
+  transform-origin: center bottom;
+}
+
+.game-shell.fullscreen .clown-face {
+  font-size: 2rem;
+}
+
+.game-shell.fullscreen .game-obstacle {
+  bottom: 48px;
+}
+
+.game-shell.fullscreen .game-obstacle.air {
+  bottom: 172px;
+}
+
+.game-shell.fullscreen .game-bonus {
+  width: 42px;
+  height: 42px;
+}
+
 .game-stage-card,
 .leaderboard-card {
   padding: 20px;
@@ -701,6 +768,39 @@ select:focus {
   pointer-events: none;
   background: rgba(239, 68, 68, 0.28);
   animation: hit-flash 0.2s ease-out forwards;
+}
+
+.game-fullscreen-toggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 7;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.game-fullscreen-toggle:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.18);
+}
+
+.game-fullscreen-toggle:active {
+  transform: translateY(0);
+}
+
+.game-fullscreen-toggle:focus-visible {
+  outline: 3px solid rgba(249, 115, 22, 0.35);
+  outline-offset: 2px;
 }
 
 .game-level-badge,
@@ -2298,6 +2398,33 @@ th {
 
   .game-stage.duel-active {
     min-height: 380px;
+  }
+
+  .game-shell.fullscreen {
+    padding: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .game-shell.fullscreen .game-stage-card,
+  .game-shell.fullscreen .game-side {
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .game-shell.fullscreen .game-stage {
+    min-height: 72vh;
+  }
+
+  .game-shell.fullscreen .game-stage.duel-active {
+    min-height: 80vh;
+  }
+
+  .game-shell.fullscreen .game-fullscreen-toggle {
+    right: 10px;
+    bottom: 10px;
+    padding: 9px 12px;
+    font-size: 0.8rem;
   }
 
   .game-level-badge,

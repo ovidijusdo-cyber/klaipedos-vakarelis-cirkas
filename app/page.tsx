@@ -547,6 +547,7 @@ function ClownJumpGame({
   scores: GameScore[];
   onSaveScore: (name: string, score: number) => void;
 }) {
+  const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const spawnTimerRef = useRef(0);
@@ -589,6 +590,7 @@ function ClownJumpGame({
   }>(null);
   const [duelRevealed, setDuelRevealed] = useState(false);
   const [doubleJumpFlash, setDoubleJumpFlash] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [bonuses, setBonuses] = useState<
     Array<{
       id: number;
@@ -639,6 +641,17 @@ function ClownJumpGame({
       window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+  }
+
+  async function toggleFullscreen() {
+    if (!fullscreenRef.current) return;
+
+    if (document.fullscreenElement === fullscreenRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await fullscreenRef.current.requestFullscreen();
   }
 
   function resetRound() {
@@ -1123,6 +1136,15 @@ function ClownJumpGame({
   }, [duelLevel, isGameOver, isRunning, resumeCountdown]);
 
   useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === fullscreenRef.current);
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
     return () => {
       stopLoop();
       if (doubleJumpTimeoutRef.current !== null) {
@@ -1136,7 +1158,7 @@ function ClownJumpGame({
 
   return (
     <SectionCard title="Klouno šuolis" description="Mini žaidimukas apačioje: kompiuteryje šok su Space, telefone spausk mygtuką ir rink taškus.">
-      <div className="game-shell">
+      <div className={`game-shell${isFullscreen ? " fullscreen" : ""}`} ref={fullscreenRef}>
         <div className="game-stage-card">
           <div className="game-stage-head">
             <div>
@@ -1147,6 +1169,9 @@ function ClownJumpGame({
           </div>
 
           <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
+            <button aria-label={isFullscreen ? "Išeiti iš pilno ekrano" : "Rodyti per visą ekraną"} className="game-fullscreen-toggle" type="button" onClick={toggleFullscreen}>
+              {isFullscreen ? "⤢ Uždaryti" : "⛶ Pilnas ekranas"}
+            </button>
             <div className="game-level-badge">
               <span>Lygis {level}</span>
               <span className="game-heart-row" aria-label={`Gyvybės ${lives} iš 3`}>
