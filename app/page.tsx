@@ -749,6 +749,7 @@ function ClownJumpGame({
       { label: "Paukštis", lane: "air" as const, size: "small" as const, variant: "bird" as const, points: 3, clearY: 14 },
     ];
     const airTemplates = obstacleTemplates.filter((template) => template.lane === "air");
+    const groundTemplates = obstacleTemplates.filter((template) => template.lane === "ground");
 
     const playerBox = () => {
       const giant = giantUntilRef.current > 0;
@@ -820,10 +821,10 @@ function ClownJumpGame({
           .map((obstacle) => ({ ...obstacle, x: obstacle.x - delta * speed }))
           .filter((obstacle) => obstacle.x > -18);
 
-        const spawnDelay = Math.max(620, 1460 - level * 72 + Math.random() * 260);
+        const spawnDelay = Math.max(700, 1540 - level * 68 + Math.random() * 280);
         if (spawnTimerRef.current >= spawnDelay) {
           const canSpawnAirChallenge = !next.some((obstacle) => obstacle.lane === "ground" && obstacle.x > 18 && obstacle.x < 112);
-          const shouldSpawnAirChallenge = level >= 2 && canSpawnAirChallenge && Math.random() > 0.76;
+          const shouldSpawnAirChallenge = level >= 2 && canSpawnAirChallenge && Math.random() > 0.86;
 
           if (shouldSpawnAirChallenge) {
             const template = airTemplates[Math.floor(Math.random() * airTemplates.length)];
@@ -843,39 +844,39 @@ function ClownJumpGame({
             ];
             spawnTimerRef.current = 0;
           } else {
-          const available = obstacleTemplates.slice(0, Math.min(obstacleTemplates.length, 3 + level));
-          const template = available[Math.floor(Math.random() * available.length)];
-          const additions = [
-            {
-              id: nextObstacleIdRef.current++,
-              x: 100,
-              label: template.label,
-              passed: false,
-              lane: template.lane,
-              size: template.size,
-              variant: template.variant,
-              points: template.points,
-              clearY: template.clearY,
-            },
-          ];
+            const available = groundTemplates.slice(0, Math.min(groundTemplates.length, 2 + Math.min(level, 4)));
+            const template = available[Math.floor(Math.random() * available.length)];
+            const additions = [
+              {
+                id: nextObstacleIdRef.current++,
+                x: 100,
+                label: template.label,
+                passed: false,
+                lane: template.lane,
+                size: template.size,
+                variant: template.variant,
+                points: template.points,
+                clearY: template.clearY,
+              },
+            ];
 
-          if (level >= 3 && Math.random() > 0.68) {
-            const comboTemplate = available[Math.floor(Math.random() * available.length)];
-            additions.push({
-              id: nextObstacleIdRef.current++,
-              x: 112 + Math.random() * 12,
-              label: comboTemplate.label,
-              passed: false,
-              lane: comboTemplate.lane,
-              size: comboTemplate.size,
-              variant: comboTemplate.variant,
-              points: comboTemplate.points,
-              clearY: comboTemplate.clearY,
-            });
-          }
+            if (level >= 4 && Math.random() > 0.74) {
+              const comboTemplate = available[Math.floor(Math.random() * available.length)];
+              additions.push({
+                id: nextObstacleIdRef.current++,
+                x: 112 + Math.random() * 10,
+                label: comboTemplate.label,
+                passed: false,
+                lane: comboTemplate.lane,
+                size: comboTemplate.size,
+                variant: comboTemplate.variant,
+                points: comboTemplate.points,
+                clearY: comboTemplate.clearY,
+              });
+            }
 
-          next = [...next, ...additions];
-          spawnTimerRef.current = 0;
+            next = [...next, ...additions];
+            spawnTimerRef.current = 0;
           }
         }
 
@@ -1049,16 +1050,17 @@ function ClownJumpGame({
               <div className="duel-overlay">
                 <div className="duel-card">
                   <strong>Lygio dvikova</strong>
-                  <p>{duelResult ? "Kompiuteris jau pasirinko. Jei laimėjai, gauni +10 taškų." : `Pasiekei ${duelLevel} lygį. Rinkis akmenį, popierių arba žirkles.`}</p>
-                  <div className="duel-choices">
-                    {duelChoices.map((choice) => (
-                      <button className="duel-choice" disabled={duelResult !== null} key={choice.id} type="button" onClick={() => playDuel(choice.id)}>
-                        <span>{choice.emoji}</span>
-                        <small>{choice.label}</small>
-                      </button>
-                    ))}
-                  </div>
-                  {duelResult ? (
+                  <p>{duelResult ? duelRevealed ? "Rezultatas jau aiškus." : "Kompiuteris renkasi..." : `Pasiekei ${duelLevel} lygį. Rinkis akmenį, popierių arba žirkles.`}</p>
+                  {!duelResult ? (
+                    <div className="duel-choices">
+                      {duelChoices.map((choice) => (
+                        <button className="duel-choice" key={choice.id} type="button" onClick={() => playDuel(choice.id)}>
+                          <span>{choice.emoji}</span>
+                          <small>{choice.label}</small>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
                     <div className={`duel-result ${duelResult.outcome}${duelRevealed ? " revealed" : ""}`}>
                       {duelResult.outcome === "win" && duelRevealed ? (
                         <div className="duel-confetti" aria-hidden="true">
@@ -1071,7 +1073,7 @@ function ClownJumpGame({
                         Tu: {duelChoices.find((choice) => choice.id === duelResult.player)?.emoji} {duelChoices.find((choice) => choice.id === duelResult.player)?.label}
                       </div>
                       <div>
-                        Kompiuteris: {duelRevealed ? `${duelChoices.find((choice) => choice.id === duelResult.cpu)?.emoji} ${duelChoices.find((choice) => choice.id === duelResult.cpu)?.label}` : "..." }
+                        Kompiuteris: {duelRevealed ? `${duelChoices.find((choice) => choice.id === duelResult.cpu)?.emoji} ${duelChoices.find((choice) => choice.id === duelResult.cpu)?.label}` : "renkasi..." }
                       </div>
                       <strong>
                         {duelResult.outcome === "win" ? "Laimėjai +10 tšk." : duelResult.outcome === "draw" ? "Lygiosios" : "Šį kartą laimėjo kompiuteris"}
@@ -1081,7 +1083,7 @@ function ClownJumpGame({
                         Tęsti žaidimą
                       </button>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             ) : null}
