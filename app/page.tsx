@@ -558,9 +558,13 @@ function ClownJumpGame({
   const [isJumping, setIsJumping] = useState(false);
   const [score, setScore] = useState(0);
   const [savedForScore, setSavedForScore] = useState<number | null>(null);
-  const [obstacles, setObstacles] = useState<Array<{ id: number; x: number; label: string; passed: boolean }>>([]);
+  const [distance, setDistance] = useState(0);
+  const [obstacles, setObstacles] = useState<Array<{ id: number; x: number; label: string; passed: boolean; lane: "low" | "high"; size: "small" | "medium" | "large"; variant: "cone" | "box" | "ball" | "banner" | "barrels"; points: number }>>([]);
 
   const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 10), [scores]);
+  const level = useMemo(() => Math.min(5, 1 + Math.floor(score / 8)), [score]);
+  const speed = 0.15 + (level - 1) * 0.025;
+  const bestScore = topScores[0]?.score ?? 0;
 
   function stopLoop() {
     if (animationFrameRef.current !== null) {
@@ -575,6 +579,7 @@ function ClownJumpGame({
     spawnTimerRef.current = 0;
     nextObstacleIdRef.current = 1;
     setScore(0);
+    setDistance(0);
     setObstacles([]);
     setIsJumping(false);
     setIsGameOver(false);
@@ -608,7 +613,13 @@ function ClownJumpGame({
       return;
     }
 
-    const obstacleLabels = ["KÅ«gis", "Kamuolys", "DÄ—Å¾Ä—", "Å½ievelÄ—"];
+    const obstacleTemplates = [
+      { label: "Kūgis", lane: "low" as const, size: "small" as const, variant: "cone" as const, points: 1 },
+      { label: "Kamuolys", lane: "low" as const, size: "medium" as const, variant: "ball" as const, points: 1 },
+      { label: "Dėžė", lane: "low" as const, size: "large" as const, variant: "box" as const, points: 2 },
+      { label: "Juosta", lane: "high" as const, size: "medium" as const, variant: "banner" as const, points: 2 },
+      { label: "Statinės", lane: "low" as const, size: "large" as const, variant: "barrels" as const, points: 3 },
+    ];
 
     function tick(timestamp: number) {
       if (lastTimeRef.current === null) {
@@ -618,22 +629,44 @@ function ClownJumpGame({
       const delta = Math.min(32, timestamp - lastTimeRef.current);
       lastTimeRef.current = timestamp;
       spawnTimerRef.current += delta;
+      setDistance((previous) => previous + delta * speed * 0.12);
 
       setObstacles((previous) => {
         let next = previous
-          .map((obstacle) => ({ ...obstacle, x: obstacle.x - delta * 0.17 }))
+          .map((obstacle) => ({ ...obstacle, x: obstacle.x - delta * speed }))
           .filter((obstacle) => obstacle.x > -18);
 
-        if (spawnTimerRef.current >= 1200 + Math.random() * 700) {
-          next = [
-            ...next,
+        const spawnDelay = Math.max(580, 1320 - level * 130 + Math.random() * 220);
+        if (spawnTimerRef.current >= spawnDelay) {
+          const available = obstacleTemplates.slice(0, Math.min(obstacleTemplates.length, level + 1));
+          const template = available[Math.floor(Math.random() * available.length)];
+          const additions = [
             {
               id: nextObstacleIdRef.current++,
               x: 100,
-              label: obstacleLabels[Math.floor(Math.random() * obstacleLabels.length)],
+              label: template.label,
               passed: false,
+              lane: template.lane,
+              size: template.size,
+              variant: template.variant,
+              points: template.points,
             },
           ];
+
+          if (level >= 3 && Math.random() > 0.72) {
+            additions.push({
+              id: nextObstacleIdRef.current++,
+              x: 116,
+              label: "Kliūtis+",
+              passed: false,
+              lane: Math.random() > 0.5 ? "high" : "low",
+              size: Math.random() > 0.5 ? "small" : "medium",
+              variant: Math.random() > 0.5 ? "cone" : "ball",
+              points: 2,
+            });
+          }
+
+          next = [...next, ...additions];
           spawnTimerRef.current = 0;
         }
 
@@ -641,13 +674,17 @@ function ClownJumpGame({
         let gained = 0;
 
         next = next.map((obstacle) => {
-          if (!obstacle.passed && obstacle.x <= 18) {
-            if (isJumping) {
-              gained += 1;
+          if (!obstacle.passed && obstacle.x <= 20) {
+            const needsJump = obstacle.lane === "low";
+            const needsStay = obstacle.lane === "high";
+            const survived = (needsJump && isJumping) || (needsStay && !isJumping);
+
+            if (survived) {
+              gained += obstacle.points;
               return { ...obstacle, passed: true };
             }
 
-            if (obstacle.x <= 13) {
+            if (obstacle.x <= 12) {
               collision = true;
             }
           }
@@ -707,17 +744,23 @@ function ClownJumpGame({
           <div className="game-stage-head">
             <div>
               <strong>TaÅ¡kai: {score}</strong>
-              <p>{isGameOver ? "Atsitrenkei Ä¯ kliÅ«tÄ¯. Gali bandyti dar kartÄ…" : isRunning ? "Klounas bÄ—ga. Å ok per kliÅ«tis." : "Paspausk PradÄ—ti arba Space."}</p>
+              <p>{isGameOver ? "Atsitrenkei Ä¯ kliÅ«tÄ¯. Gali bandyti dar kartÄ…" : isRunning ? "Klounas bÄ—ga. Venk Å¾emÅ³ kliÅ«ÄiÅ³ Å¡okdamas, o pro aukÅ¡tas pralÄ—k apaÄioje." : "Paspausk PradÄ—ti arba Space."}</p>
             </div>
-            <div className="game-chip">Top: {topScores[0]?.score ?? 0}</div>
+            <div className="game-chip">Top: {bestScore}</div>
           </div>
 
           <div className="game-stage" role="img" aria-label="Klouno Å¡uolio mini Å¾aidimas">
+            <div className="game-level-badge">Lygis {level}</div>
+            <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className={isJumping ? "clown-runner jumping" : "clown-runner"}>
               <span className="clown-face">🤡</span>
             </div>
             {obstacles.map((obstacle) => (
-              <div className="game-obstacle" key={obstacle.id} style={{ left: `${obstacle.x}%` }}>
+              <div
+                className={`game-obstacle ${obstacle.lane} ${obstacle.size} ${obstacle.variant}`}
+                key={obstacle.id}
+                style={{ left: `${obstacle.x}%` }}
+              >
                 <span>{obstacle.label}</span>
               </div>
             ))}
@@ -736,7 +779,12 @@ function ClownJumpGame({
         <div className="game-side">
           <div className="payment-note">
             <strong>Kaip Å¾aisti</strong>
-            <p>Kompiuteryje naudok `Space`, o telefone spausk mygtukÄ… „Å okti“. UÅ¾ kiekvienÄ… sÄ—kmingai perÅ¡oktÄ… kliÅ«tÄ¯ gausi po 1 taÅ¡kÄ….</p>
+            <p>Kompiuteryje naudok `Space`, o telefone spausk mygtukÄ… „Å okti“. Å½emos kliÅ«tys reikalauja Å¡uolio, o aukÅ¡tos juostos reikalauja likti apaÄioje. Kuo toliau, tuo greiÄiau ir chaotiÅ¡kiau.</p>
+          </div>
+
+          <div className="payment-note">
+            <strong>Sunkumo progresas</strong>
+            <p>Didesniame lygyje daugÄ—ja kliÅ«ÄiÅ³ tipÅ³, jos artÄ—ja greiÄiau, o kartais pasirodo net dvi iÅ¡ karto. UÅ¾ sunkesnes kliÅ«tis gauni daugiau taÅ¡kÅ³.</p>
           </div>
 
           <div className="payment-note">

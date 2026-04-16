@@ -689,6 +689,31 @@ select:focus {
     linear-gradient(180deg, #fef3c7 0%, #fed7aa 62%, #fdba74 62%, #fdba74 72%, #a3e635 72%, #84cc16 100%);
 }
 
+.game-level-badge,
+.game-distance-badge {
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.88);
+  color: #7c2d12;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.game-level-badge {
+  left: 12px;
+}
+
+.game-distance-badge {
+  right: 12px;
+}
+
 .game-stage::after {
   content: "";
   position: absolute;
@@ -738,6 +763,51 @@ select:focus {
   text-align: center;
   padding: 6px;
   box-shadow: 0 10px 20px rgba(127, 29, 29, 0.22);
+}
+
+.game-obstacle.low {
+  bottom: 28px;
+}
+
+.game-obstacle.high {
+  bottom: 104px;
+}
+
+.game-obstacle.small {
+  width: 42px;
+  height: 42px;
+}
+
+.game-obstacle.medium {
+  width: 56px;
+  height: 56px;
+}
+
+.game-obstacle.large {
+  width: 72px;
+  height: 60px;
+}
+
+.game-obstacle.cone {
+  background: linear-gradient(180deg, #ef4444, #f97316);
+}
+
+.game-obstacle.ball {
+  background: linear-gradient(180deg, #0ea5e9, #2563eb);
+  border-radius: 999px;
+}
+
+.game-obstacle.box {
+  background: linear-gradient(180deg, #7c3aed, #ec4899);
+}
+
+.game-obstacle.banner {
+  background: linear-gradient(180deg, #111827, #334155);
+  border-radius: 12px;
+}
+
+.game-obstacle.barrels {
+  background: linear-gradient(180deg, #15803d, #65a30d);
 }
 
 .leaderboard-row {
@@ -1714,6 +1784,13 @@ th {
     min-height: 190px;
   }
 
+  .game-level-badge,
+  .game-distance-badge {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+  }
+
   .clown-runner {
     width: 54px;
     height: 54px;
@@ -1727,6 +1804,10 @@ th {
     width: 46px;
     height: 46px;
     font-size: 0.58rem;
+  }
+
+  .game-obstacle.high {
+    bottom: 92px;
   }
 
   .wheel-pointer {
