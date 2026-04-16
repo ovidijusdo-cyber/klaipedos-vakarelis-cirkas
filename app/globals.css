@@ -1518,10 +1518,6 @@ th {
     white-space: nowrap;
   }
 
-  .guest-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .list-item,
   .reservation-panel,
   .modal-header,
@@ -1648,15 +1644,28 @@ th {
   }
 
   .chip-grid,
-  .stats-grid,
-  .guest-grid {
+  .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .guest-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .guest-cell,
   .empty-state {
-    min-height: 54px;
-    padding: 12px;
+    min-height: 48px;
+    padding: 8px 4px;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    line-height: 1.15;
+    word-break: break-word;
+  }
+
+  .guest-city {
+    font-size: 0.58rem;
+    letter-spacing: 0.04em;
   }
 
   .person-row {
