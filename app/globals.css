@@ -680,27 +680,14 @@ select:focus {
   margin-top: auto;
 }
 
-.game-shell.fullscreen .clown-runner {
-  left: 54px;
-  bottom: 56px;
+.game-shell.fullscreen .clown-runner,
+.game-shell.fullscreen .game-obstacle,
+.game-shell.fullscreen .game-bonus {
   transform-origin: center bottom;
 }
 
 .game-shell.fullscreen .clown-face {
-  font-size: 2rem;
-}
-
-.game-shell.fullscreen .game-obstacle {
-  bottom: 48px;
-}
-
-.game-shell.fullscreen .game-obstacle.air {
-  bottom: 172px;
-}
-
-.game-shell.fullscreen .game-bonus {
-  width: 42px;
-  height: 42px;
+  font-size: 1.9rem;
 }
 
 .game-stage-card,
