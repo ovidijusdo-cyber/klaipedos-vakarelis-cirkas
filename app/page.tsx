@@ -558,6 +558,7 @@ function ClownJumpGame({
   const slowdownBufferRef = useRef(0);
   const slowdownUntilRef = useRef(0);
   const giantUntilRef = useRef(0);
+  const shrinkUntilRef = useRef(0);
   const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
   const doubleJumpTimeoutRef = useRef<number | null>(null);
   const countdownTimeoutRef = useRef<number | null>(null);
@@ -574,6 +575,7 @@ function ClownJumpGame({
   const [playerY, setPlayerY] = useState(0);
   const [slowdownBuffer, setSlowdownBuffer] = useState(0);
   const [giantMode, setGiantMode] = useState(false);
+  const [shrinkMode, setShrinkMode] = useState(false);
   const [duelLevel, setDuelLevel] = useState<number | null>(null);
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
   const [duelResult, setDuelResult] = useState<null | {
@@ -588,7 +590,7 @@ function ClownJumpGame({
       id: number;
       x: number;
       label: string;
-      type: "coin" | "balloon" | "mushroom";
+      type: "coin" | "balloon" | "mushroom" | "shadow";
       y: number;
       points: number;
     }>
@@ -654,6 +656,7 @@ function ClownJumpGame({
     slowdownBufferRef.current = 0;
     slowdownUntilRef.current = 0;
     giantUntilRef.current = 0;
+    shrinkUntilRef.current = 0;
     duelCompletedLevelsRef.current = new Set();
     airChallengeMomentsRef.current = {};
     airChallengeCountsRef.current = {};
@@ -664,6 +667,7 @@ function ClownJumpGame({
     setPlayerY(0);
     setSlowdownBuffer(0);
     setGiantMode(false);
+    setShrinkMode(false);
     setDuelLevel(null);
     setResumeCountdown(null);
     setDuelResult(null);
@@ -783,11 +787,12 @@ function ClownJumpGame({
 
     const playerBox = () => {
       const giant = giantUntilRef.current > 0;
+      const shrink = shrinkUntilRef.current > 0;
       return {
         left: 13.6,
-        right: giant ? 21.2 : 19,
+        right: giant ? 21.2 : shrink ? 17.2 : 19,
         bottom: 28 + playerYRef.current,
-        top: 28 + playerYRef.current + (giant ? 72 : 52),
+        top: 28 + playerYRef.current + (giant ? 72 : shrink ? 24 : 52),
       };
     };
 
@@ -836,6 +841,11 @@ function ClownJumpGame({
       if (giantUntilRef.current && timestamp >= giantUntilRef.current) {
         giantUntilRef.current = 0;
         setGiantMode(false);
+      }
+
+      if (shrinkUntilRef.current && timestamp >= shrinkUntilRef.current) {
+        shrinkUntilRef.current = 0;
+        setShrinkMode(false);
       }
 
       setDistance((previous) => previous + delta * speed * 0.12);
@@ -961,18 +971,25 @@ function ClownJumpGame({
           .map((bonus) => ({ ...bonus, x: bonus.x - delta * (speed * 0.85) }))
           .filter((bonus) => bonus.x > -14);
 
-        if (Math.random() > 0.988 - level * 0.008) {
+        if (Math.random() > 0.9955 - level * 0.003) {
           const roll = Math.random();
-          const bonusType = roll > 0.62 ? "coin" : roll > 0.24 ? "balloon" : "mushroom";
+          const bonusType = roll > 0.7 ? "coin" : roll > 0.88 ? "balloon" : roll > 0.94 ? "mushroom" : "shadow";
           next = [
             ...next,
             {
               id: nextBonusIdRef.current++,
               x: 100,
-              label: bonusType === "coin" ? "★" : bonusType === "balloon" ? "🎈" : "🍄",
+              label: bonusType === "coin" ? "★" : bonusType === "balloon" ? "🎈" : bonusType === "mushroom" ? "🍄" : "⬤",
               type: bonusType,
-              y: bonusType === "coin" ? 52 + Math.random() * 44 : bonusType === "balloon" ? 86 + Math.random() * 34 : 34 + Math.random() * 10,
-              points: bonusType === "coin" ? 2 : bonusType === "balloon" ? 4 : 5,
+              y:
+                bonusType === "coin"
+                  ? 52 + Math.random() * 44
+                  : bonusType === "balloon"
+                    ? 86 + Math.random() * 34
+                    : bonusType === "mushroom"
+                      ? 34 + Math.random() * 10
+                      : 42 + Math.random() * 14,
+              points: bonusType === "coin" ? 2 : bonusType === "balloon" ? 4 : bonusType === "mushroom" ? 5 : 5,
             },
           ];
         }
@@ -995,7 +1012,15 @@ function ClownJumpGame({
             }
             if (bonus.type === "mushroom") {
               giantUntilRef.current = timestamp + 10000;
+              shrinkUntilRef.current = 0;
               setGiantMode(true);
+              setShrinkMode(false);
+            }
+            if (bonus.type === "shadow") {
+              shrinkUntilRef.current = timestamp + 5000;
+              giantUntilRef.current = 0;
+              setShrinkMode(true);
+              setGiantMode(false);
             }
             return false;
           }
@@ -1097,7 +1122,8 @@ function ClownJumpGame({
             <div className="game-coins-badge">Bonusai: {coins}</div>
             {slowdownActive ? <div className="game-power-badge slowdown">🎈 Lėčiau</div> : null}
             {giantMode ? <div className="game-power-badge giant">🍄 Mega</div> : null}
-            <div className={`${playerY > 4 ? "clown-runner jumping" : "clown-runner"}${giantMode ? " giant" : ""}${doubleJumpFlash ? " double-jump" : ""}`} style={{ transform: `translateY(${-playerY}px)` }}>
+            {shrinkMode ? <div className="game-power-badge shadow">⬤ Mini</div> : null}
+            <div className={`${playerY > 4 ? "clown-runner jumping" : "clown-runner"}${giantMode ? " giant" : ""}${shrinkMode ? " tiny" : ""}${doubleJumpFlash ? " double-jump" : ""}`} style={{ transform: `translateY(${-playerY}px)` }}>
               <span className="clown-face">🤡</span>
               <span aria-hidden="true" className="clown-legs">
                 <span className="left-leg" />
@@ -1195,7 +1221,7 @@ function ClownJumpGame({
 
           <div className="payment-note">
             <strong>Bonusai ir tempas</strong>
-            <p>Lygiai dabar ilgesni: pirmas lėčiausias, antras kiek greitesnis, trečias dar greitesnis ir taip toliau. Balionas trumpam grąžina lėtesnį ritmą, o grybukas apie 10 sekundžių padidina klouną.</p>
+            <p>Lygiai dabar ilgesni: pirmas lėčiausias, antras kiek greitesnis, trečias dar greitesnis ir taip toliau. Specialūs bonusai pasirodo retai: balionas sulėtina, grybukas padidina, o juodas bonusas kelioms sekundėms labai sumažina klouną.</p>
           </div>
 
           <div className="payment-note">
