@@ -556,7 +556,9 @@ function ClownJumpGame({
   const playerVelocityRef = useRef(0);
   const slowdownBufferRef = useRef(0);
   const giantUntilRef = useRef(0);
+  const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
   const [playerName, setPlayerName] = useState("");
+  const [hasStarted, setHasStarted] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
@@ -566,6 +568,12 @@ function ClownJumpGame({
   const [playerY, setPlayerY] = useState(0);
   const [slowdownBuffer, setSlowdownBuffer] = useState(0);
   const [giantMode, setGiantMode] = useState(false);
+  const [duelLevel, setDuelLevel] = useState<number | null>(null);
+  const [duelResult, setDuelResult] = useState<null | {
+    player: "rock" | "paper" | "scissors";
+    cpu: "rock" | "paper" | "scissors";
+    outcome: "win" | "lose" | "draw";
+  }>(null);
   const [bonuses, setBonuses] = useState<
     Array<{
       id: number;
@@ -592,11 +600,22 @@ function ClownJumpGame({
 
   const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 10), [scores]);
   const bestScore = topScores[0]?.score ?? 0;
+  const levelLength = 230;
+  const levelSpeeds = [0.058, 0.072, 0.085, 0.097, 0.109, 0.119, 0.128, 0.136];
   const effectiveDistance = useMemo(() => Math.max(0, distance - slowdownBuffer), [distance, slowdownBuffer]);
-  const level = useMemo(() => Math.min(8, 1 + Math.floor(effectiveDistance / 150)), [effectiveDistance]);
-  const speed = useMemo(() => Math.min(0.18, 0.075 + effectiveDistance * 0.000022), [effectiveDistance]);
+  const level = useMemo(() => Math.min(8, 1 + Math.floor(effectiveDistance / levelLength)), [effectiveDistance]);
+  const levelProgress = useMemo(() => (effectiveDistance % levelLength) / levelLength, [effectiveDistance]);
+  const speed = useMemo(() => {
+    const baseSpeed = levelSpeeds[Math.max(0, level - 1)] ?? levelSpeeds[levelSpeeds.length - 1];
+    return Math.min(0.145, baseSpeed + levelProgress * 0.01);
+  }, [level, levelProgress]);
   const themeLevel = useMemo(() => Math.min(4, 1 + Math.floor((level - 1) / 2)), [level]);
   const slowdownActive = slowdownBuffer > 1;
+  const duelChoices = [
+    { id: "rock" as const, label: "Akmuo", emoji: "🪨" },
+    { id: "paper" as const, label: "Popierius", emoji: "📄" },
+    { id: "scissors" as const, label: "Žirklės", emoji: "✂️" },
+  ];
 
   function stopLoop() {
     if (animationFrameRef.current !== null) {
@@ -615,12 +634,16 @@ function ClownJumpGame({
     playerVelocityRef.current = 0;
     slowdownBufferRef.current = 0;
     giantUntilRef.current = 0;
+    duelCompletedLevelsRef.current = new Set();
+    setHasStarted(false);
     setScore(0);
     setCoins(0);
     setDistance(0);
     setPlayerY(0);
     setSlowdownBuffer(0);
     setGiantMode(false);
+    setDuelLevel(null);
+    setDuelResult(null);
     setObstacles([]);
     setBonuses([]);
     setIsGameOver(false);
@@ -629,6 +652,12 @@ function ClownJumpGame({
 
   function startGame() {
     resetRound();
+    setHasStarted(true);
+    setIsRunning(true);
+  }
+
+  function resumeRound() {
+    lastTimeRef.current = null;
     setIsRunning(true);
   }
 
@@ -643,6 +672,31 @@ function ClownJumpGame({
     if (!trimmed || score <= 0 || savedForScore === score) return;
     onSaveScore(trimmed, score);
     setSavedForScore(score);
+  }
+
+  function playDuel(choice: "rock" | "paper" | "scissors") {
+    if (duelLevel === null || duelResult) return;
+    const cpu = duelChoices[Math.floor(Math.random() * duelChoices.length)].id;
+    const winsAgainst = {
+      rock: "scissors",
+      paper: "rock",
+      scissors: "paper",
+    } as const;
+    const outcome = choice === cpu ? "draw" : winsAgainst[choice] === cpu ? "win" : "lose";
+
+    if (outcome === "win") {
+      setScore((previousScore) => previousScore + 10);
+    }
+
+    setDuelResult({ player: choice, cpu, outcome });
+  }
+
+  function continueAfterDuel() {
+    if (duelLevel === null) return;
+    duelCompletedLevelsRef.current.add(duelLevel);
+    setDuelLevel(null);
+    setDuelResult(null);
+    resumeRound();
   }
 
   useEffect(() => {
@@ -825,6 +879,16 @@ function ClownJumpGame({
   }, [isRunning, level, speed]);
 
   useEffect(() => {
+    if (!hasStarted || !isRunning || isGameOver || duelLevel !== null || level < 2) return;
+    if (duelCompletedLevelsRef.current.has(level)) return;
+
+    stopLoop();
+    setIsRunning(false);
+    setDuelLevel(level);
+    setDuelResult(null);
+  }, [duelLevel, hasStarted, isGameOver, isRunning, level]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.code !== "Space") return;
       event.preventDefault();
@@ -851,7 +915,7 @@ function ClownJumpGame({
           <div className="game-stage-head">
             <div>
               <strong>Taškai: {score}</strong>
-              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Balionas sulėtina tempą, o grybukas laikinai paverčia klouną didesniu." : "Paspausk Pradėti arba Space."}</p>
+              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį ir bandyk pasiimti +10 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Balionas sulėtina tempą, o grybukas laikinai paverčia klouną didesniu." : "Paspausk Pradėti arba Space."}</p>
             </div>
             <div className="game-chip">Top: {bestScore}</div>
           </div>
@@ -864,6 +928,10 @@ function ClownJumpGame({
             {giantMode ? <div className="game-power-badge giant">🍄 Mega</div> : null}
             <div className={`${playerY > 4 ? "clown-runner jumping" : "clown-runner"}${giantMode ? " giant" : ""}`} style={{ transform: `translateY(${-playerY}px)` }}>
               <span className="clown-face">🤡</span>
+              <span aria-hidden="true" className="clown-legs">
+                <span className="left-leg" />
+                <span className="right-leg" />
+              </span>
             </div>
             {bonuses.map((bonus) => (
               <div className={`game-bonus ${bonus.type}`} key={bonus.id} style={{ left: `${bonus.x}%`, bottom: `${bonus.y + 28}px` }}>
@@ -875,6 +943,38 @@ function ClownJumpGame({
                 <span>{obstacle.label}</span>
               </div>
             ))}
+            {duelLevel !== null ? (
+              <div className="duel-overlay">
+                <div className="duel-card">
+                  <strong>Lygio dvikova</strong>
+                  <p>{duelResult ? "Kompiuteris jau pasirinko. Jei laimėjai, gauni +10 taškų." : `Pasiekei ${duelLevel} lygį. Rinkis akmenį, popierių arba žirkles.`}</p>
+                  <div className="duel-choices">
+                    {duelChoices.map((choice) => (
+                      <button className="duel-choice" disabled={duelResult !== null} key={choice.id} type="button" onClick={() => playDuel(choice.id)}>
+                        <span>{choice.emoji}</span>
+                        <small>{choice.label}</small>
+                      </button>
+                    ))}
+                  </div>
+                  {duelResult ? (
+                    <div className={`duel-result ${duelResult.outcome}`}>
+                      <div>
+                        Tu: {duelChoices.find((choice) => choice.id === duelResult.player)?.emoji} {duelChoices.find((choice) => choice.id === duelResult.player)?.label}
+                      </div>
+                      <div>
+                        Kompiuteris: {duelChoices.find((choice) => choice.id === duelResult.cpu)?.emoji} {duelChoices.find((choice) => choice.id === duelResult.cpu)?.label}
+                      </div>
+                      <strong>
+                        {duelResult.outcome === "win" ? "Laimėjai +10 tšk." : duelResult.outcome === "draw" ? "Lygiosios" : "Šį kartą laimėjo kompiuteris"}
+                      </strong>
+                      <button className="primary-button" type="button" onClick={continueAfterDuel}>
+                        Tęsti bėgimą
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
             {isGameOver ? (
               <div className="game-over-overlay">
                 <div className="game-over-card">
@@ -906,7 +1006,7 @@ function ClownJumpGame({
 
           <div className="payment-note">
             <strong>Bonusai ir tempas</strong>
-            <p>Pradžioje tempas lėtas ir dabar greitėja daug švelniau. Balionas trumpam grąžina lėtesnį ritmą, o po to greitis vėl po truputį kyla. Grybukas laikinai padidina klouną maždaug 10 sekundžių.</p>
+            <p>Lygiai dabar ilgesni: pirmas lėčiausias, antras kiek greitesnis, trečias dar greitesnis ir taip toliau. Balionas trumpam grąžina lėtesnį ritmą, o grybukas apie 10 sekundžių padidina klouną.</p>
           </div>
 
           <div className="payment-note">

@@ -799,8 +799,11 @@ select:focus {
   width: 52px;
   height: 52px;
   border-radius: 18px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   background: linear-gradient(180deg, #ffffff, #fee2e2);
   border: 1px solid rgba(239, 68, 68, 0.22);
   box-shadow: 0 12px 22px rgba(15, 23, 42, 0.1);
@@ -821,6 +824,30 @@ select:focus {
 .clown-face {
   font-size: 1.7rem;
   line-height: 1;
+}
+
+.clown-legs {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  height: 12px;
+}
+
+.clown-legs span {
+  width: 4px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #dc2626, #7f1d1d);
+  transform-origin: top center;
+  animation: clown-run 0.34s ease-in-out infinite alternate;
+}
+
+.clown-legs .right-leg {
+  animation-delay: 0.17s;
+}
+
+.clown-runner.jumping .clown-legs span {
+  animation-play-state: paused;
 }
 
 .game-obstacle {
@@ -922,49 +949,49 @@ select:focus {
 }
 
 .game-obstacle.cone {
-  background: linear-gradient(180deg, #ef4444, #f97316);
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
 }
 
 .game-obstacle.ball {
-  background: linear-gradient(180deg, #0ea5e9, #2563eb);
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
   border-radius: 999px;
 }
 
 .game-obstacle.box {
-  background: linear-gradient(180deg, #7c3aed, #ec4899);
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
 }
 
 .game-obstacle.triangle {
-  background: linear-gradient(180deg, #f97316, #ef4444);
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
   clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
   border-radius: 0;
 }
 
 .game-obstacle.banner {
-  background: linear-gradient(180deg, #111827, #334155);
+  background: linear-gradient(180deg, #ef4444, #991b1b);
   border-radius: 12px;
 }
 
 .game-obstacle.ring {
-  background: radial-gradient(circle, transparent 32%, #f59e0b 34%, #fde68a 58%, #f97316 100%);
+  background: radial-gradient(circle, transparent 32%, #ef4444 34%, #fecaca 58%, #991b1b 100%);
   border-radius: 999px;
-  color: #7c2d12;
+  color: transparent;
 }
 
 .game-obstacle.kite {
-  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  background: linear-gradient(135deg, #ef4444, #991b1b);
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   color: transparent;
 }
 
 .game-obstacle.bird {
-  background: linear-gradient(180deg, #fb7185, #db2777);
+  background: linear-gradient(180deg, #ef4444, #991b1b);
   border-radius: 999px 999px 999px 999px / 68% 68% 36% 36%;
   color: transparent;
 }
 
 .game-obstacle.barrels {
-  background: linear-gradient(180deg, #15803d, #65a30d);
+  background: linear-gradient(180deg, #ef4444, #991b1b);
 }
 
 .game-bonus.mushroom {
@@ -973,6 +1000,86 @@ select:focus {
   color: #7f1d1d;
   font-size: 0.9rem;
   animation: float-bonus 1.9s ease-in-out infinite;
+}
+
+.duel-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(6px);
+}
+
+.duel-card {
+  width: min(360px, calc(100% - 24px));
+  padding: 20px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(254, 215, 170, 0.96));
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.18);
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.duel-card strong {
+  font-size: 1.3rem;
+  color: #9a3412;
+}
+
+.duel-card p {
+  margin: 0;
+  color: #475569;
+}
+
+.duel-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.duel-choice {
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff7ed, #ffedd5);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.18);
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 800;
+  color: #9a3412;
+}
+
+.duel-choice span {
+  font-size: 1.6rem;
+}
+
+.duel-choice:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.duel-result {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.duel-result.win {
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.25);
+}
+
+.duel-result.lose {
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.24);
+}
+
+.duel-result.draw {
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22);
 }
 
 .leaderboard-row {
@@ -1815,6 +1922,15 @@ th {
   }
 }
 
+@keyframes clown-run {
+  0% {
+    transform: rotate(14deg);
+  }
+  100% {
+    transform: rotate(-18deg);
+  }
+}
+
 @media (max-width: 1024px) {
   .hero,
   .content-grid,
@@ -1992,6 +2108,15 @@ th {
     height: 58px;
   }
 
+  .clown-legs {
+    gap: 6px;
+    height: 10px;
+  }
+
+  .clown-legs span {
+    height: 10px;
+  }
+
   .game-obstacle {
     width: 46px;
     height: 46px;
@@ -2000,6 +2125,10 @@ th {
 
   .game-obstacle.air {
     bottom: 92px;
+  }
+
+  .duel-choices {
+    grid-template-columns: 1fr;
   }
 
   .wheel-pointer {
