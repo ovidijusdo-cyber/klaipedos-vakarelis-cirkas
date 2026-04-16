@@ -1462,7 +1462,8 @@ th {
   .chip-grid,
   .form-grid.three,
   .payment-hero,
-  .wheel-section {
+  .wheel-section,
+  .wheel-section.compact {
     grid-template-columns: 1fr;
   }
 
