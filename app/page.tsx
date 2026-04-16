@@ -1109,20 +1109,18 @@ function ClownJumpGame({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (duelLevel !== null || resumeCountdown !== null) return;
+      if (duelLevel !== null || resumeCountdown !== null || isGameOver) return;
       if (event.code !== "Space") return;
       event.preventDefault();
 
       if (isRunning) {
         jump();
-      } else {
-        startGame();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [duelLevel, isRunning, resumeCountdown]);
+  }, [duelLevel, isGameOver, isRunning, resumeCountdown]);
 
   useEffect(() => {
     return () => {
