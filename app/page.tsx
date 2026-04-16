@@ -1027,7 +1027,7 @@ function ClownJumpGame({
             <div className="game-chip">Top: {bestScore}</div>
           </div>
 
-          <div className={`game-stage stage-theme-${themeLevel}`} role="img" aria-label="Klouno šuolio mini žaidimas">
+          <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
             <div className="game-level-badge">Lygis {level}</div>
             <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className="game-coins-badge">Bonusai: {coins}</div>
