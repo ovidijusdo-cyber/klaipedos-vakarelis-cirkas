@@ -554,6 +554,7 @@ function ClownJumpGame({
   const nextBonusIdRef = useRef(1);
   const playerYRef = useRef(0);
   const playerVelocityRef = useRef(0);
+  const jumpCountRef = useRef(0);
   const slowdownBufferRef = useRef(0);
   const giantUntilRef = useRef(0);
   const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
@@ -638,6 +639,7 @@ function ClownJumpGame({
     nextBonusIdRef.current = 1;
     playerYRef.current = 0;
     playerVelocityRef.current = 0;
+    jumpCountRef.current = 0;
     slowdownBufferRef.current = 0;
     giantUntilRef.current = 0;
     duelCompletedLevelsRef.current = new Set();
@@ -670,8 +672,16 @@ function ClownJumpGame({
 
   function jump() {
     if (!isRunning) return;
-    if (playerYRef.current > 4) return;
-    playerVelocityRef.current = 1.16;
+    if (playerYRef.current <= 4) {
+      jumpCountRef.current = 1;
+      playerVelocityRef.current = 1.16;
+      return;
+    }
+
+    if (jumpCountRef.current < 2) {
+      jumpCountRef.current = 2;
+      playerVelocityRef.current = 1.08;
+    }
   }
 
   function saveScore() {
@@ -792,7 +802,12 @@ function ClownJumpGame({
       const gravity = 0.0052;
       const nextVelocity = playerVelocityRef.current - gravity * delta;
       const nextY = Math.max(0, playerYRef.current + nextVelocity * delta);
-      playerVelocityRef.current = nextY === 0 ? 0 : nextVelocity;
+      if (nextY === 0) {
+        playerVelocityRef.current = 0;
+        jumpCountRef.current = 0;
+      } else {
+        playerVelocityRef.current = nextVelocity;
+      }
       playerYRef.current = nextY;
       setPlayerY(nextY);
 
@@ -974,7 +989,7 @@ function ClownJumpGame({
           <div className="game-stage-head">
             <div>
               <strong>Taškai: {score}</strong>
-              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį ir bandyk pasiimti +10 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Balionas sulėtina tempą, o grybukas laikinai paverčia klouną didesniu." : "Paspausk Pradėti arba Space."}</p>
+              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį ir bandyk pasiimti +10 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Gali atlikti ir dvigubą šuolį, bet po jo reikės pilnai nusileisti." : "Paspausk Pradėti arba Space."}</p>
             </div>
             <div className="game-chip">Top: {bestScore}</div>
           </div>
@@ -1065,7 +1080,7 @@ function ClownJumpGame({
         <div className="game-side">
           <div className="payment-note">
             <strong>Kaip žaisti</strong>
-            <p>Kompiuteryje naudok `Space`, o telefone spausk mygtuką „Šokti“. Žemėje esančias figūras reikia peršokti, o ore kabančių kliūčių kaip tik neliesti šuoliu.</p>
+            <p>Kompiuteryje naudok `Space`, o telefone spausk mygtuką „Šokti“. Žemėje esančias figūras reikia peršokti, o ore kabančių kliūčių kaip tik neliesti šuoliu. Ore gali atlikti dar vieną papildomą šuolį.</p>
           </div>
 
           <div className="payment-note">
