@@ -557,6 +557,7 @@ function ClownJumpGame({
   const slowdownBufferRef = useRef(0);
   const giantUntilRef = useRef(0);
   const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
+  const duelResumeTimeoutRef = useRef<number | null>(null);
   const [playerName, setPlayerName] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -626,6 +627,10 @@ function ClownJumpGame({
 
   function resetRound() {
     stopLoop();
+    if (duelResumeTimeoutRef.current !== null) {
+      window.clearTimeout(duelResumeTimeoutRef.current);
+      duelResumeTimeoutRef.current = null;
+    }
     lastTimeRef.current = null;
     spawnTimerRef.current = 0;
     nextObstacleIdRef.current = 1;
@@ -689,6 +694,13 @@ function ClownJumpGame({
     }
 
     setDuelResult({ player: choice, cpu, outcome });
+    if (duelResumeTimeoutRef.current !== null) {
+      window.clearTimeout(duelResumeTimeoutRef.current);
+    }
+    duelResumeTimeoutRef.current = window.setTimeout(() => {
+      continueAfterDuel();
+      duelResumeTimeoutRef.current = null;
+    }, 1800);
   }
 
   function continueAfterDuel() {
@@ -716,6 +728,40 @@ function ClownJumpGame({
       { label: "Aitvaras", lane: "air" as const, size: "large" as const, variant: "kite" as const, points: 4, clearY: 22 },
       { label: "Paukštis", lane: "air" as const, size: "small" as const, variant: "bird" as const, points: 3, clearY: 14 },
     ];
+
+    const playerBox = () => {
+      const giant = giantUntilRef.current > 0;
+      return {
+        left: 13.6,
+        right: giant ? 22.2 : 19.8,
+        bottom: 28 + playerYRef.current,
+        top: 28 + playerYRef.current + (giant ? 72 : 52),
+      };
+    };
+
+    const obstacleBox = (obstacle: {
+      x: number;
+      lane: "ground" | "air";
+      size: "small" | "medium" | "large";
+    }) => {
+      const widths = {
+        small: 4.7,
+        medium: 6.2,
+        large: 8.1,
+      };
+      const heights = {
+        small: 42,
+        medium: 56,
+        large: 60,
+      };
+      const bottom = obstacle.lane === "ground" ? 28 : 104;
+      return {
+        left: obstacle.x,
+        right: obstacle.x + widths[obstacle.size],
+        bottom,
+        top: bottom + heights[obstacle.size],
+      };
+    };
 
     function tick(timestamp: number) {
       if (lastTimeRef.current === null) {
@@ -787,19 +833,20 @@ function ClownJumpGame({
 
         let collision = false;
         let gained = 0;
+        const player = playerBox();
 
         next = next.map((obstacle) => {
-          if (!obstacle.passed && obstacle.x <= 20) {
-            const survived = obstacle.lane === "ground" ? playerYRef.current >= obstacle.clearY : playerYRef.current <= obstacle.clearY;
+          const box = obstacleBox(obstacle);
+          const horizontalOverlap = player.left < box.right && player.right > box.left;
+          const verticalOverlap = player.bottom < box.top && player.top > box.bottom;
 
-            if (survived) {
-              gained += obstacle.points;
-              return { ...obstacle, passed: true };
-            }
+          if (!obstacle.passed && box.right < player.left) {
+            gained += obstacle.points;
+            return { ...obstacle, passed: true };
+          }
 
-            if (obstacle.x <= 12) {
-              collision = true;
-            }
+          if (!obstacle.passed && horizontalOverlap && verticalOverlap) {
+            collision = true;
           }
 
           return obstacle;
@@ -905,7 +952,12 @@ function ClownJumpGame({
   }, [isRunning]);
 
   useEffect(() => {
-    return () => stopLoop();
+    return () => {
+      stopLoop();
+      if (duelResumeTimeoutRef.current !== null) {
+        window.clearTimeout(duelResumeTimeoutRef.current);
+      }
+    };
   }, []);
 
   return (
@@ -967,9 +1019,7 @@ function ClownJumpGame({
                       <strong>
                         {duelResult.outcome === "win" ? "Laimėjai +10 tšk." : duelResult.outcome === "draw" ? "Lygiosios" : "Šį kartą laimėjo kompiuteris"}
                       </strong>
-                      <button className="primary-button" type="button" onClick={continueAfterDuel}>
-                        Tęsti bėgimą
-                      </button>
+                      <small>Žaidimas tuoj tęsis automatiškai...</small>
                     </div>
                   ) : null}
                 </div>
