@@ -980,7 +980,7 @@ select:focus {
 }
 
 .game-obstacle.air {
-  bottom: 104px;
+  bottom: 148px;
 }
 
 .game-obstacle.small {
@@ -2257,7 +2257,7 @@ th {
   }
 
   .game-obstacle.air {
-    bottom: 92px;
+    bottom: 128px;
   }
 
   .duel-choices {

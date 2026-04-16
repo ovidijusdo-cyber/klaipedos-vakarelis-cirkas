@@ -556,10 +556,13 @@ function ClownJumpGame({
   const playerVelocityRef = useRef(0);
   const jumpCountRef = useRef(0);
   const slowdownBufferRef = useRef(0);
+  const slowdownUntilRef = useRef(0);
   const giantUntilRef = useRef(0);
   const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
   const doubleJumpTimeoutRef = useRef<number | null>(null);
   const countdownTimeoutRef = useRef<number | null>(null);
+  const airChallengeMomentsRef = useRef<Record<number, number[]>>({});
+  const airChallengeCountsRef = useRef<Record<number, number>>({});
   const [playerName, setPlayerName] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -611,12 +614,13 @@ function ClownJumpGame({
   const effectiveDistance = useMemo(() => Math.max(0, distance - slowdownBuffer), [distance, slowdownBuffer]);
   const level = useMemo(() => Math.min(8, 1 + Math.floor(effectiveDistance / levelLength)), [effectiveDistance]);
   const levelProgress = useMemo(() => (effectiveDistance % levelLength) / levelLength, [effectiveDistance]);
+  const slowdownActive = slowdownBuffer > 1;
   const speed = useMemo(() => {
     const baseSpeed = levelSpeeds[Math.max(0, level - 1)] ?? levelSpeeds[levelSpeeds.length - 1];
-    return Math.min(0.145, baseSpeed + levelProgress * 0.01);
-  }, [level, levelProgress]);
+    const adjusted = Math.min(0.145, baseSpeed + levelProgress * 0.01);
+    return slowdownActive ? adjusted * 0.5 : adjusted;
+  }, [level, levelProgress, slowdownActive]);
   const themeLevel = useMemo(() => Math.min(4, 1 + Math.floor((level - 1) / 2)), [level]);
-  const slowdownActive = slowdownBuffer > 1;
   const duelChoices = [
     { id: "rock" as const, label: "Akmuo", emoji: "🪨" },
     { id: "paper" as const, label: "Popierius", emoji: "📄" },
@@ -648,8 +652,11 @@ function ClownJumpGame({
     playerVelocityRef.current = 0;
     jumpCountRef.current = 0;
     slowdownBufferRef.current = 0;
+    slowdownUntilRef.current = 0;
     giantUntilRef.current = 0;
     duelCompletedLevelsRef.current = new Set();
+    airChallengeMomentsRef.current = {};
+    airChallengeCountsRef.current = {};
     setHasStarted(false);
     setScore(0);
     setCoins(0);
@@ -744,6 +751,17 @@ function ClownJumpGame({
   }
 
   useEffect(() => {
+    if (!airChallengeMomentsRef.current[level]) {
+      const count = level < 2 ? 0 : 1 + Math.floor(Math.random() * 3);
+      airChallengeMomentsRef.current[level] = Array.from({ length: count }, (_, index) => {
+        const segment = 0.22 + index * (0.48 / Math.max(count, 1));
+        return Math.min(0.88, segment + Math.random() * 0.18);
+      }).sort((a, b) => a - b);
+      airChallengeCountsRef.current[level] = 0;
+    }
+  }, [level]);
+
+  useEffect(() => {
     if (!isRunning) {
       stopLoop();
       return;
@@ -788,7 +806,7 @@ function ClownJumpGame({
         medium: 44,
         large: 50,
       };
-      const bottom = obstacle.lane === "ground" ? 28 : 98;
+      const bottom = obstacle.lane === "ground" ? 28 : 144;
       return {
         left: obstacle.x,
         right: obstacle.x + widths[obstacle.size],
@@ -808,6 +826,12 @@ function ClownJumpGame({
       const nextSlowdownBuffer = Math.max(0, slowdownBufferRef.current - delta * 0.01);
       slowdownBufferRef.current = nextSlowdownBuffer;
       setSlowdownBuffer(nextSlowdownBuffer);
+
+      if (slowdownUntilRef.current && timestamp >= slowdownUntilRef.current) {
+        slowdownUntilRef.current = 0;
+        slowdownBufferRef.current = 0;
+        setSlowdownBuffer(0);
+      }
 
       if (giantUntilRef.current && timestamp >= giantUntilRef.current) {
         giantUntilRef.current = 0;
@@ -836,7 +860,13 @@ function ClownJumpGame({
         const spawnDelay = Math.max(700, 1540 - level * 68 + Math.random() * 280);
         if (spawnTimerRef.current >= spawnDelay) {
           const canSpawnAirChallenge = !next.some((obstacle) => obstacle.lane === "ground" && obstacle.x > 18 && obstacle.x < 112);
-          const shouldSpawnAirChallenge = level >= 2 && canSpawnAirChallenge && Math.random() > 0.86;
+          const airMoments = airChallengeMomentsRef.current[level] ?? [];
+          const airCount = airChallengeCountsRef.current[level] ?? 0;
+          const shouldSpawnAirChallenge =
+            level >= 2 &&
+            canSpawnAirChallenge &&
+            airCount < airMoments.length &&
+            levelProgress >= airMoments[airCount];
 
           if (shouldSpawnAirChallenge) {
             const template = airTemplates[Math.floor(Math.random() * airTemplates.length)];
@@ -854,6 +884,7 @@ function ClownJumpGame({
                 clearY: template.clearY,
               },
             ];
+            airChallengeCountsRef.current[level] = airCount + 1;
             spawnTimerRef.current = 0;
           } else {
             const available = groundTemplates.slice(0, Math.min(groundTemplates.length, 2 + Math.min(level, 4)));
@@ -957,7 +988,8 @@ function ClownJumpGame({
             gained += bonus.points;
             gainedCoins += 1;
             if (bonus.type === "balloon") {
-              const addedSlowdown = Math.min(90, slowdownBufferRef.current + 60);
+              slowdownUntilRef.current = timestamp + 4500;
+              const addedSlowdown = 120;
               slowdownBufferRef.current = addedSlowdown;
               setSlowdownBuffer(addedSlowdown);
             }
