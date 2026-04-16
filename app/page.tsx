@@ -615,6 +615,7 @@ function ClownJumpGame({
 
   const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 10), [scores]);
   const bestScore = topScores[0]?.score ?? 0;
+  const totalScore = score + coins;
   const levelLength = 230;
   const levelSpeeds = [0.058, 0.072, 0.085, 0.097, 0.109, 0.119, 0.128, 0.136];
   const effectiveDistance = useMemo(() => Math.max(0, distance - slowdownBuffer), [distance, slowdownBuffer]);
@@ -722,9 +723,9 @@ function ClownJumpGame({
 
   function saveScore() {
     const trimmed = playerName.trim();
-    if (!trimmed || score <= 0 || savedForScore === score) return;
-    onSaveScore(trimmed, score);
-    setSavedForScore(score);
+    if (!trimmed || totalScore <= 0 || savedForScore === totalScore) return;
+    onSaveScore(trimmed, totalScore);
+    setSavedForScore(totalScore);
   }
 
   function playDuel(choice: "rock" | "paper" | "scissors") {
@@ -1141,7 +1142,7 @@ function ClownJumpGame({
         <div className="game-stage-card">
           <div className="game-stage-head">
             <div>
-              <strong>Taškai: {score}</strong>
+              <strong>Taškai: {totalScore}</strong>
               <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį pele arba pirštu ir bandyk pasiimti +20 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Gali atlikti ir dvigubą šuolį, bet po jo reikės pilnai nusileisti." : "Paspausk Pradėti arba Space."}</p>
             </div>
             <div className="game-chip">Top: {bestScore}</div>
@@ -1213,7 +1214,7 @@ function ClownJumpGame({
                       <strong>
                         {duelResult.outcome === "win" ? "Laimėjai +20 tšk." : duelResult.outcome === "draw" ? "Lygiosios - žaidžiam dar kartą" : "Šį kartą laimėjo kompiuteris"}
                       </strong>
-                      <small>{duelResult.outcome === "win" ? "🎉 Bonusas pridėtas prie bendrų taškų." : duelResult.outcome === "lose" ? "☹️ Bonuso šį kartą nėra, bet tęsi toliau." : "Paspausk tęsti ir mesime dar kartą."}</small>
+                      <small>{duelResult.outcome === "win" ? "🎉 Gavai +20 taškų ir 1 papildomą gyvybę." : duelResult.outcome === "lose" ? "☹️ Bonuso šį kartą nėra, bet tęsi toliau." : "Paspausk tęsti ir mesime dar kartą."}</small>
                       <button className="primary-button" type="button" onClick={continueAfterDuel}>
                         {duelResult.outcome === "draw" ? "Mesti dar kartą" : "Tęsti žaidimą"}
                       </button>
@@ -1234,7 +1235,7 @@ function ClownJumpGame({
               <div className="game-over-overlay">
                 <div className="game-over-card">
                   <strong>Game Over</strong>
-                  <p>Rezultatas: {score} tšk. ir {coins} bonus.</p>
+                  <p>Rezultatas: {totalScore} tšk. ({score} bazė + {coins} bonusų)</p>
                   <button className="primary-button" type="button" onClick={startGame}>
                     Bandyti dar kartą
                   </button>
@@ -1268,8 +1269,8 @@ function ClownJumpGame({
             <strong>Išsaugoti rezultatą</strong>
             <div className="stack">
               <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="Tavo vardas rezultatui" />
-              <button className="secondary-button" disabled={!playerName.trim() || score <= 0 || savedForScore === score} type="button" onClick={saveScore}>
-                {savedForScore === score ? "Rezultatas išsaugotas" : "Išsaugoti taškus"}
+              <button className="secondary-button" disabled={!playerName.trim() || totalScore <= 0 || savedForScore === totalScore} type="button" onClick={saveScore}>
+                {savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti taškus"}
               </button>
             </div>
           </div>
