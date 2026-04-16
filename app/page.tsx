@@ -554,6 +554,8 @@ function ClownJumpGame({
   const nextBonusIdRef = useRef(1);
   const playerYRef = useRef(0);
   const playerVelocityRef = useRef(0);
+  const slowdownBufferRef = useRef(0);
+  const giantUntilRef = useRef(0);
   const [playerName, setPlayerName] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
@@ -562,12 +564,14 @@ function ClownJumpGame({
   const [savedForScore, setSavedForScore] = useState<number | null>(null);
   const [distance, setDistance] = useState(0);
   const [playerY, setPlayerY] = useState(0);
+  const [slowdownBuffer, setSlowdownBuffer] = useState(0);
+  const [giantMode, setGiantMode] = useState(false);
   const [bonuses, setBonuses] = useState<
     Array<{
       id: number;
       x: number;
       label: string;
-      type: "coin" | "balloon";
+      type: "coin" | "balloon" | "mushroom";
       y: number;
       points: number;
     }>
@@ -580,7 +584,7 @@ function ClownJumpGame({
       passed: boolean;
       lane: "ground" | "air";
       size: "small" | "medium" | "large";
-      variant: "cone" | "box" | "ball" | "banner" | "barrels" | "triangle" | "ring";
+      variant: "cone" | "box" | "ball" | "banner" | "barrels" | "triangle" | "ring" | "kite" | "bird";
       points: number;
       clearY: number;
     }>
@@ -588,9 +592,11 @@ function ClownJumpGame({
 
   const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 10), [scores]);
   const bestScore = topScores[0]?.score ?? 0;
-  const level = useMemo(() => Math.min(8, 1 + Math.floor(distance / 120)), [distance]);
-  const speed = useMemo(() => Math.min(0.23, 0.108 + distance * 0.00007), [distance]);
+  const effectiveDistance = useMemo(() => Math.max(0, distance - slowdownBuffer), [distance, slowdownBuffer]);
+  const level = useMemo(() => Math.min(8, 1 + Math.floor(effectiveDistance / 150)), [effectiveDistance]);
+  const speed = useMemo(() => Math.min(0.18, 0.075 + effectiveDistance * 0.000022), [effectiveDistance]);
   const themeLevel = useMemo(() => Math.min(4, 1 + Math.floor((level - 1) / 2)), [level]);
+  const slowdownActive = slowdownBuffer > 1;
 
   function stopLoop() {
     if (animationFrameRef.current !== null) {
@@ -607,10 +613,14 @@ function ClownJumpGame({
     nextBonusIdRef.current = 1;
     playerYRef.current = 0;
     playerVelocityRef.current = 0;
+    slowdownBufferRef.current = 0;
+    giantUntilRef.current = 0;
     setScore(0);
     setCoins(0);
     setDistance(0);
     setPlayerY(0);
+    setSlowdownBuffer(0);
+    setGiantMode(false);
     setObstacles([]);
     setBonuses([]);
     setIsGameOver(false);
@@ -649,6 +659,8 @@ function ClownJumpGame({
       { label: "Statinės", lane: "ground" as const, size: "large" as const, variant: "barrels" as const, points: 4, clearY: 52 },
       { label: "Juosta", lane: "air" as const, size: "medium" as const, variant: "banner" as const, points: 3, clearY: 18 },
       { label: "Žiedas", lane: "air" as const, size: "medium" as const, variant: "ring" as const, points: 4, clearY: 24 },
+      { label: "Aitvaras", lane: "air" as const, size: "large" as const, variant: "kite" as const, points: 4, clearY: 22 },
+      { label: "Paukštis", lane: "air" as const, size: "small" as const, variant: "bird" as const, points: 3, clearY: 14 },
     ];
 
     function tick(timestamp: number) {
@@ -659,6 +671,15 @@ function ClownJumpGame({
       const delta = Math.min(32, timestamp - lastTimeRef.current);
       lastTimeRef.current = timestamp;
       spawnTimerRef.current += delta;
+      const nextSlowdownBuffer = Math.max(0, slowdownBufferRef.current - delta * 0.01);
+      slowdownBufferRef.current = nextSlowdownBuffer;
+      setSlowdownBuffer(nextSlowdownBuffer);
+
+      if (giantUntilRef.current && timestamp >= giantUntilRef.current) {
+        giantUntilRef.current = 0;
+        setGiantMode(false);
+      }
+
       setDistance((previous) => previous + delta * speed * 0.12);
 
       const gravity = 0.0052;
@@ -747,17 +768,18 @@ function ClownJumpGame({
           .map((bonus) => ({ ...bonus, x: bonus.x - delta * (speed * 0.85) }))
           .filter((bonus) => bonus.x > -14);
 
-        if (Math.random() > 0.985 - level * 0.01) {
-          const bonusType = Math.random() > 0.35 ? "coin" : "balloon";
+        if (Math.random() > 0.988 - level * 0.008) {
+          const roll = Math.random();
+          const bonusType = roll > 0.62 ? "coin" : roll > 0.24 ? "balloon" : "mushroom";
           next = [
             ...next,
             {
               id: nextBonusIdRef.current++,
               x: 100,
-              label: bonusType === "coin" ? "★" : "🎈",
+              label: bonusType === "coin" ? "★" : bonusType === "balloon" ? "🎈" : "🍄",
               type: bonusType,
-              y: bonusType === "coin" ? 52 + Math.random() * 42 : 76 + Math.random() * 36,
-              points: bonusType === "coin" ? 2 : 4,
+              y: bonusType === "coin" ? 52 + Math.random() * 44 : bonusType === "balloon" ? 86 + Math.random() * 34 : 34 + Math.random() * 10,
+              points: bonusType === "coin" ? 2 : bonusType === "balloon" ? 4 : 5,
             },
           ];
         }
@@ -772,6 +794,15 @@ function ClownJumpGame({
           if (caught) {
             gained += bonus.points;
             gainedCoins += 1;
+            if (bonus.type === "balloon") {
+              const addedSlowdown = Math.min(90, slowdownBufferRef.current + 60);
+              slowdownBufferRef.current = addedSlowdown;
+              setSlowdownBuffer(addedSlowdown);
+            }
+            if (bonus.type === "mushroom") {
+              giantUntilRef.current = timestamp + 10000;
+              setGiantMode(true);
+            }
             return false;
           }
 
@@ -820,7 +851,7 @@ function ClownJumpGame({
           <div className="game-stage-head">
             <div>
               <strong>Taškai: {score}</strong>
-              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės." : "Paspausk Pradėti arba Space."}</p>
+              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Balionas sulėtina tempą, o grybukas laikinai paverčia klouną didesniu." : "Paspausk Pradėti arba Space."}</p>
             </div>
             <div className="game-chip">Top: {bestScore}</div>
           </div>
@@ -829,7 +860,9 @@ function ClownJumpGame({
             <div className="game-level-badge">Lygis {level}</div>
             <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className="game-coins-badge">Bonusai: {coins}</div>
-            <div className={playerY > 4 ? "clown-runner jumping" : "clown-runner"} style={{ transform: `translateY(${-playerY}px)` }}>
+            {slowdownActive ? <div className="game-power-badge slowdown">🎈 Lėčiau</div> : null}
+            {giantMode ? <div className="game-power-badge giant">🍄 Mega</div> : null}
+            <div className={`${playerY > 4 ? "clown-runner jumping" : "clown-runner"}${giantMode ? " giant" : ""}`} style={{ transform: `translateY(${-playerY}px)` }}>
               <span className="clown-face">🤡</span>
             </div>
             {bonuses.map((bonus) => (
@@ -872,8 +905,8 @@ function ClownJumpGame({
           </div>
 
           <div className="payment-note">
-            <strong>Sunkumo progresas</strong>
-            <p>Pradžioje tempas lėtas, bet bėgant distancijai jis nuosekliai ir švelniai greitėja. Vėliau atsiranda daugiau formų, skirtingi aukščiai, skraidantys bonusai ir net dvigubos kliūtys iš karto.</p>
+            <strong>Bonusai ir tempas</strong>
+            <p>Pradžioje tempas lėtas ir dabar greitėja daug švelniau. Balionas trumpam grąžina lėtesnį ritmą, o po to greitis vėl po truputį kyla. Grybukas laikinai padidina klouną maždaug 10 sekundžių.</p>
           </div>
 
           <div className="payment-note">

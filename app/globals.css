@@ -731,6 +731,33 @@ select:focus {
   right: 12px;
 }
 
+.game-power-badge {
+  position: absolute;
+  z-index: 3;
+  top: 56px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.game-power-badge.slowdown {
+  right: 12px;
+  background: linear-gradient(180deg, #dbeafe, #93c5fd);
+  color: #1d4ed8;
+}
+
+.game-power-badge.giant {
+  right: 108px;
+  background: linear-gradient(180deg, #fef3c7, #f59e0b);
+  color: #7c2d12;
+}
+
 .game-stage::after {
   content: "";
   position: absolute;
@@ -769,22 +796,30 @@ select:focus {
   position: absolute;
   left: 14%;
   bottom: 28px;
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #ffffff, #fee2e2);
   border: 1px solid rgba(239, 68, 68, 0.22);
   box-shadow: 0 12px 22px rgba(15, 23, 42, 0.1);
+  transition: width 160ms ease, height 160ms ease, border-radius 160ms ease, box-shadow 160ms ease;
 }
 
 .clown-runner.jumping {
   box-shadow: 0 18px 28px rgba(15, 23, 42, 0.16);
 }
 
+.clown-runner.giant {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  box-shadow: 0 18px 32px rgba(245, 158, 11, 0.3);
+}
+
 .clown-face {
-  font-size: 2rem;
+  font-size: 1.7rem;
   line-height: 1;
 }
 
@@ -916,8 +951,28 @@ select:focus {
   color: #7c2d12;
 }
 
+.game-obstacle.kite {
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  color: transparent;
+}
+
+.game-obstacle.bird {
+  background: linear-gradient(180deg, #fb7185, #db2777);
+  border-radius: 999px 999px 999px 999px / 68% 68% 36% 36%;
+  color: transparent;
+}
+
 .game-obstacle.barrels {
   background: linear-gradient(180deg, #15803d, #65a30d);
+}
+
+.game-bonus.mushroom {
+  border-radius: 14px 14px 12px 12px;
+  background: linear-gradient(180deg, #fca5a5, #ef4444 58%, #fef2f2 58%, #ffffff 100%);
+  color: #7f1d1d;
+  font-size: 0.9rem;
+  animation: float-bonus 1.9s ease-in-out infinite;
 }
 
 .leaderboard-row {
@@ -1916,13 +1971,25 @@ th {
     top: 48px;
   }
 
-  .clown-runner {
-    width: 54px;
-    height: 54px;
+  .game-power-badge {
+    top: 82px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 0.72rem;
   }
 
-  .clown-runner.jumping {
-    transform: translateY(-70px);
+  .game-power-badge.giant {
+    right: 98px;
+  }
+
+  .clown-runner {
+    width: 44px;
+    height: 44px;
+  }
+
+  .clown-runner.giant {
+    width: 58px;
+    height: 58px;
   }
 
   .game-obstacle {
