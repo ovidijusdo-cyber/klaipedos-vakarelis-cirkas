@@ -1148,10 +1148,18 @@ function ClownJumpGame({
           </div>
 
           <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
-            <div className="game-level-badge">Lygis {level}</div>
+            <div className="game-level-badge">
+              <span>Lygis {level}</span>
+              <span className="game-heart-row" aria-label={`Gyvybės ${lives} iš 3`}>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <span className={index < lives ? "game-heart active" : "game-heart"} key={index}>
+                    ❤
+                  </span>
+                ))}
+              </span>
+            </div>
             <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className="game-coins-badge">Bonusai: {coins}</div>
-            <div className="game-lives-badge">Gyvybės: {"❤".repeat(lives) || "0"}</div>
             {slowdownActive ? <div className="game-power-badge slowdown">🎈 Lėčiau</div> : null}
             {giantMode ? <div className="game-power-badge giant">🍄 Mega</div> : null}
             {shrinkMode ? <div className="game-power-badge shadow">⬤ Mini</div> : null}

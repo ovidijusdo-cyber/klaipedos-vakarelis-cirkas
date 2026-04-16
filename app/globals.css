@@ -720,6 +720,28 @@ select:focus {
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
+.game-level-badge {
+  gap: 10px;
+}
+
+.game-heart-row {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.game-heart {
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #cbd5e1;
+  text-shadow: none;
+}
+
+.game-heart.active {
+  color: #ef4444;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.18);
+}
+
 .game-coins-badge {
   position: absolute;
   top: 56px;
@@ -733,23 +755,6 @@ select:focus {
   justify-content: center;
   background: rgba(255, 255, 255, 0.82);
   color: #92400e;
-  font-weight: 800;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
-}
-
-.game-lives-badge {
-  position: absolute;
-  top: 96px;
-  left: 12px;
-  z-index: 2;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.82);
-  color: #dc2626;
   font-weight: 800;
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
@@ -2267,8 +2272,7 @@ th {
 
   .game-level-badge,
   .game-distance-badge,
-  .game-coins-badge,
-  .game-lives-badge {
+  .game-coins-badge {
     min-height: 30px;
     padding: 0 10px;
     font-size: 0.78rem;
@@ -2276,10 +2280,6 @@ th {
 
   .game-coins-badge {
     top: 48px;
-  }
-
-  .game-lives-badge {
-    top: 82px;
   }
 
   .game-power-badge {
