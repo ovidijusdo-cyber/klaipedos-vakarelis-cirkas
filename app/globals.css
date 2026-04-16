@@ -1233,6 +1233,36 @@ select:focus {
   background: #f8fafc;
 }
 
+.leaderboard-place {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  font-weight: 800;
+}
+
+.leaderboard-place.place-1 {
+  color: #b45309;
+}
+
+.leaderboard-place.place-2 {
+  color: #475569;
+}
+
+.leaderboard-place.place-3 {
+  color: #92400e;
+}
+
+.leaderboard-prize-note {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff7ed, #ffedd5);
+  color: #9a3412;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 .vote-box {
   display: grid;
   gap: 18px;

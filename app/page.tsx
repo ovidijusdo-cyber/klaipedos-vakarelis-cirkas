@@ -613,7 +613,7 @@ function ClownJumpGame({
     }>
   >([]);
 
-  const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 10), [scores]);
+  const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 5), [scores]);
   const bestScore = topScores[0]?.score ?? 0;
   const totalScore = score + coins;
   const levelLength = 230;
@@ -1286,12 +1286,17 @@ function ClownJumpGame({
               ) : (
                 topScores.map((entry, index) => (
                   <div className="leaderboard-row" key={entry.id}>
-                    <span>#{index + 1}</span>
+                    <span className={`leaderboard-place place-${index + 1}`}>
+                      {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
+                    </span>
                     <strong>{entry.name}</strong>
                     <span>{entry.score} tšk.</span>
                   </div>
                 ))
               )}
+            </div>
+            <div className="leaderboard-prize-note">
+              Per vakarėlį bus teikiami prizai žaidimo `1`, `2` ir `3` vietų laimėtojams.
             </div>
           </div>
         </div>
