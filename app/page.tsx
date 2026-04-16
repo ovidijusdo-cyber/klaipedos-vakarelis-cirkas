@@ -559,6 +559,7 @@ function ClownJumpGame({
   const giantUntilRef = useRef(0);
   const duelCompletedLevelsRef = useRef<Set<number>>(new Set());
   const doubleJumpTimeoutRef = useRef<number | null>(null);
+  const countdownTimeoutRef = useRef<number | null>(null);
   const [playerName, setPlayerName] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -571,6 +572,7 @@ function ClownJumpGame({
   const [slowdownBuffer, setSlowdownBuffer] = useState(0);
   const [giantMode, setGiantMode] = useState(false);
   const [duelLevel, setDuelLevel] = useState<number | null>(null);
+  const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
   const [duelResult, setDuelResult] = useState<null | {
     player: "rock" | "paper" | "scissors";
     cpu: "rock" | "paper" | "scissors";
@@ -634,6 +636,10 @@ function ClownJumpGame({
       window.clearTimeout(doubleJumpTimeoutRef.current);
       doubleJumpTimeoutRef.current = null;
     }
+    if (countdownTimeoutRef.current !== null) {
+      window.clearTimeout(countdownTimeoutRef.current);
+      countdownTimeoutRef.current = null;
+    }
     lastTimeRef.current = null;
     spawnTimerRef.current = 0;
     nextObstacleIdRef.current = 1;
@@ -652,6 +658,7 @@ function ClownJumpGame({
     setSlowdownBuffer(0);
     setGiantMode(false);
     setDuelLevel(null);
+    setResumeCountdown(null);
     setDuelResult(null);
     setDuelRevealed(false);
     setDoubleJumpFlash(false);
@@ -733,7 +740,7 @@ function ClownJumpGame({
     setDuelLevel(null);
     setDuelResult(null);
     setDuelRevealed(false);
-    resumeRound();
+    setResumeCountdown(3);
   }
 
   useEffect(() => {
@@ -990,6 +997,28 @@ function ClownJumpGame({
   }, [duelLevel, hasStarted, isGameOver, isRunning, level]);
 
   useEffect(() => {
+    if (resumeCountdown === null) return;
+
+    if (resumeCountdown <= 0) {
+      setResumeCountdown(null);
+      resumeRound();
+      return;
+    }
+
+    countdownTimeoutRef.current = window.setTimeout(() => {
+      setResumeCountdown((previous) => (previous === null ? null : previous - 1));
+      countdownTimeoutRef.current = null;
+    }, 1000);
+
+    return () => {
+      if (countdownTimeoutRef.current !== null) {
+        window.clearTimeout(countdownTimeoutRef.current);
+        countdownTimeoutRef.current = null;
+      }
+    };
+  }, [resumeCountdown]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (duelLevel !== null) return;
       if (event.code !== "Space") return;
@@ -1011,6 +1040,9 @@ function ClownJumpGame({
       stopLoop();
       if (doubleJumpTimeoutRef.current !== null) {
         window.clearTimeout(doubleJumpTimeoutRef.current);
+      }
+      if (countdownTimeoutRef.current !== null) {
+        window.clearTimeout(countdownTimeoutRef.current);
       }
     };
   }, []);
@@ -1092,6 +1124,14 @@ function ClownJumpGame({
                 </div>
               </div>
             ) : null}
+            {resumeCountdown !== null ? (
+              <div className="resume-countdown-overlay">
+                <div className="resume-countdown-card">
+                  <strong>Pasiruošk</strong>
+                  <span>{resumeCountdown}</span>
+                </div>
+              </div>
+            ) : null}
             {isGameOver ? (
               <div className="game-over-overlay">
                 <div className="game-over-card">
@@ -1106,10 +1146,10 @@ function ClownJumpGame({
           </div>
 
           <div className="game-controls">
-            <button className="primary-button" disabled={duelLevel !== null} type="button" onClick={isRunning ? jump : startGame}>
-              {duelLevel !== null ? "Dvikova vyksta" : isRunning ? "Šokti" : "Pradėti žaidimą"}
+            <button className="primary-button" disabled={duelLevel !== null || resumeCountdown !== null} type="button" onClick={isRunning ? jump : startGame}>
+              {resumeCountdown !== null ? "Skaičiuojam..." : duelLevel !== null ? "Dvikova vyksta" : isRunning ? "Šokti" : "Pradėti žaidimą"}
             </button>
-            <button className="ghost-button" disabled={duelLevel !== null} type="button" onClick={startGame}>
+            <button className="ghost-button" disabled={duelLevel !== null || resumeCountdown !== null} type="button" onClick={startGame}>
               Žaisti iš naujo
             </button>
           </div>
