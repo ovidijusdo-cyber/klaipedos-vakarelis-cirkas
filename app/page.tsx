@@ -1168,10 +1168,10 @@ function ClownJumpGame({
             <div className="game-chip">Top: {bestScore}</div>
           </div>
 
-          <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
-            <button aria-label={isFullscreen ? "Išeiti iš pilno ekrano" : "Rodyti per visą ekraną"} className="game-fullscreen-toggle" type="button" onClick={toggleFullscreen}>
-              {isFullscreen ? "⤢ Uždaryti" : "⛶ Pilnas ekranas"}
-            </button>
+            <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
+              <button aria-label={isFullscreen ? "Išeiti iš pilno ekrano" : "Rodyti per visą ekraną"} className="game-fullscreen-toggle" type="button" onClick={toggleFullscreen}>
+                {isFullscreen ? "⤢" : "⛶"}
+              </button>
             <div className="game-level-badge">
               <span>Lygis {level}</span>
               <span className="game-heart-row" aria-label={`Gyvybės ${lives} iš 3`}>

@@ -764,15 +764,21 @@ select:focus {
   z-index: 7;
   border: 0;
   border-radius: 999px;
-  padding: 10px 14px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 1.2rem;
+  line-height: 1;
   color: #0f172a;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
   backdrop-filter: blur(10px);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .game-fullscreen-toggle:hover {
@@ -2399,19 +2405,37 @@ th {
     overflow: visible;
   }
 
+  .game-shell.fullscreen .game-stage-card {
+    min-height: calc(100dvh - 24px);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
   .game-shell.fullscreen .game-stage {
-    min-height: 72vh;
+    min-height: 0;
+    height: min(68dvh, 640px);
   }
 
   .game-shell.fullscreen .game-stage.duel-active {
-    min-height: 80vh;
+    height: min(74dvh, 700px);
+    min-height: 0;
   }
 
   .game-shell.fullscreen .game-fullscreen-toggle {
     right: 10px;
     bottom: 10px;
-    padding: 9px 12px;
-    font-size: 0.8rem;
+    width: 42px;
+    height: 42px;
+    font-size: 1.08rem;
+  }
+
+  .game-shell.fullscreen .game-controls {
+    position: sticky;
+    bottom: 0;
+    z-index: 8;
+    margin-top: 0;
+    padding-top: 12px;
+    background: linear-gradient(180deg, rgba(255, 247, 237, 0), rgba(255, 247, 237, 0.98) 22%);
   }
 
   .game-level-badge,
