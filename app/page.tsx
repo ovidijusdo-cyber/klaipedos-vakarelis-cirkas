@@ -1133,6 +1133,16 @@ function ClownJumpGame({
 
     useEffect(() => {
       function handleKeyDown(event: KeyboardEvent) {
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable)
+        ) {
+          return;
+        }
+
         if (event.code !== "Space") return;
 
         if (duelLevel !== null || resumeCountdown !== null || isGameOver) {
@@ -2425,14 +2435,14 @@ export default function Page() {
               ))}
             </div>
 
-            <div className="highlight-box">
-              <Field label="Idėja renginiui">
-                <input
-                  value={ideaForm}
-                  onChange={(event) => setIdeaForm(event.target.value)}
-                  placeholder="Pvz. konkursas, žaidimas, staigmena ar kita veikla"
-                />
-              </Field>
+              <div className="highlight-box">
+                <Field label="Idėja renginiui">
+                  <textarea
+                    value={ideaForm}
+                    onChange={(event) => setIdeaForm(event.target.value)}
+                    placeholder="Pvz. konkursas, žaidimas, staigmena ar kita veikla"
+                  />
+                </Field>
               <button className="secondary-button" type="button" onClick={addEventIdea}>
                 Pasiūlyti idėją
               </button>
