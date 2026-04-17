@@ -1305,7 +1305,7 @@ function ClownJumpGame({
 
           <div className="leaderboard-card">
             <div className="vote-result-head">
-              <strong>Klounų rekordai</strong>
+              <strong>Dalyvių rekordai</strong>
               <span>{topScores.length} įraš.</span>
             </div>
             <div className="stack">
@@ -2144,6 +2144,15 @@ export default function Page() {
               <span>Kaina</span>
               <strong>13+ m. – 10 €, vaikai – nemokamai</strong>
             </div>
+          </div>
+
+          <div className="hero-gallery" aria-label="Renginio vietos nuotraukos">
+            <figure className="hero-gallery-card hero-gallery-card-large">
+              <img alt="Priekulės kultūros centro apšvietimas renginio metu" src="/event-gallery/priekules-apsvietimas.jpg" />
+            </figure>
+            <figure className="hero-gallery-card">
+              <img alt="Priekulės kultūros centro salės vaizdas" src="/event-gallery/priekules-sale.jpg" />
+            </figure>
           </div>
 
           <div className="countdown-card">
