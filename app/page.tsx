@@ -596,6 +596,7 @@ function ClownJumpGame({
   const [duelRevealed, setDuelRevealed] = useState(false);
   const [doubleJumpFlash, setDoubleJumpFlash] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [scoreSaveOpen, setScoreSaveOpen] = useState(false);
   const [bonuses, setBonuses] = useState<
     Array<{
       id: number;
@@ -706,11 +707,12 @@ function ClownJumpGame({
     setDuelResult(null);
     setDuelRevealed(false);
     setDoubleJumpFlash(false);
-    setObstacles([]);
-    setBonuses([]);
-    setIsGameOver(false);
-    setSavedForScore(null);
-  }
+      setObstacles([]);
+      setBonuses([]);
+      setIsGameOver(false);
+      setSavedForScore(null);
+      setScoreSaveOpen(false);
+    }
 
   function startGame() {
     resetRound();
@@ -750,6 +752,7 @@ function ClownJumpGame({
     if (!trimmed || totalScore <= 0 || savedForScore === totalScore || !qualifiesForTopFive) return;
     onSaveScore(trimmed, totalScore);
     setSavedForScore(totalScore);
+    setScoreSaveOpen(false);
   }
 
   function playDuel(choice: "rock" | "paper" | "scissors") {
@@ -1190,8 +1193,9 @@ function ClownJumpGame({
   }, []);
 
   return (
+    <>
     <SectionCard title="Klouno šuolis" description="Mini žaidimukas apačioje: kompiuteryje šok su Space, telefone spausk mygtuką ir rink taškus.">
-      <div className={`game-shell${isFullscreen ? " fullscreen" : ""}`} ref={fullscreenRef}>
+        <div className={`game-shell${isFullscreen ? " fullscreen" : ""}`} ref={fullscreenRef}>
         <div className="game-stage-card">
           <div className="game-stage-head">
             <div>
@@ -1295,28 +1299,18 @@ function ClownJumpGame({
                   <button className="primary-button" type="button" onClick={startGame}>
                     Bandyti dar kartą
                   </button>
-                  <div className="game-over-save">
-                    <input
-                      value={playerName}
-                      onChange={(event) => setPlayerName(event.target.value)}
-                      placeholder="Įrašyk vardą rekordui"
-                    />
-                    <button
-                      className="secondary-button"
-                      disabled={!playerName.trim() || savedForScore === totalScore || !qualifiesForTopFive}
-                      type="button"
-                      onClick={saveScore}
-                    >
-                      {savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti savo taškus"}
-                    </button>
-                    {savedForScore === totalScore ? (
-                      <small className="game-over-note success">Rezultatas įrašytas į rekordų lentą.</small>
-                    ) : qualifiesForTopFive ? (
+                  {savedForScore === totalScore ? (
+                    <small className="game-over-note success">Rezultatas įrašytas į rekordų lentą.</small>
+                  ) : qualifiesForTopFive ? (
+                    <>
+                      <button className="secondary-button" type="button" onClick={() => setScoreSaveOpen(true)}>
+                        Įrašyti vardą rekordui
+                      </button>
                       <small className="game-over-note">Šis rezultatas patenka į Top 5, gali jį išsaugoti.</small>
-                    ) : (
-                      <small className="game-over-note muted">Rezultatas šiuo metu nepatenka į Top 5.</small>
-                    )}
-                  </div>
+                    </>
+                  ) : (
+                    <small className="game-over-note muted">Rezultatas šiuo metu nepatenka į Top 5.</small>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -1390,9 +1384,38 @@ function ClownJumpGame({
               Per vakarėlį bus teikiami prizai žaidimo `1`, `2` ir `3` vietų laimėtojams.
             </div>
           </div>
+          </div>
         </div>
-      </div>
-    </SectionCard>
+      </SectionCard>
+      <Modal
+        open={scoreSaveOpen}
+        title="Įrašyti vardą rekordui"
+        description="Jei tavo rezultatas patenka į Top 5, gali jį išsaugoti rekordų lentai."
+        onClose={() => setScoreSaveOpen(false)}
+      >
+        <div className="stack">
+          <input
+            value={playerName}
+            onChange={(event) => setPlayerName(event.target.value)}
+            placeholder="Įrašyk vardą rekordui"
+          />
+          <div className="modal-actions">
+            <button className="ghost-button" type="button" onClick={() => setScoreSaveOpen(false)}>
+              Uždaryti
+            </button>
+            <button
+              className="secondary-button"
+              disabled={!playerName.trim() || savedForScore === totalScore || !qualifiesForTopFive}
+              type="button"
+              onClick={saveScore}
+            >
+              {savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti savo taškus"}
+            </button>
+          </div>
+          {!qualifiesForTopFive ? <small className="game-over-note muted">Rezultatas šiuo metu nepatenka į Top 5.</small> : null}
+        </div>
+      </Modal>
+    </>
   );
 }
 
