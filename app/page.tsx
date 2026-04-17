@@ -1125,36 +1125,48 @@ function ClownJumpGame({
     };
   }, [resumeCountdown]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (duelLevel !== null || resumeCountdown !== null || isGameOver) return;
-      if (event.code !== "Space") return;
-      event.preventDefault();
+    useEffect(() => {
+      function handleKeyDown(event: KeyboardEvent) {
+        if (event.code !== "Space") return;
 
-      if (isRunning) {
-        jump();
-      }
+        if (duelLevel !== null || resumeCountdown !== null || isGameOver) {
+          event.preventDefault();
+          return;
+        }
+
+        event.preventDefault();
+
+        if (isRunning) {
+          jump();
+        }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [duelLevel, isGameOver, isRunning, resumeCountdown]);
 
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(document.fullscreenElement === fullscreenRef.current);
-    }
+    useEffect(() => {
+      function handleFullscreenChange() {
+        setIsFullscreen(document.fullscreenElement === fullscreenRef.current);
+      }
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      stopLoop();
-      if (doubleJumpTimeoutRef.current !== null) {
-        window.clearTimeout(doubleJumpTimeoutRef.current);
+    useEffect(() => {
+      if (!isGameOver) return;
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
       }
+    }, [isGameOver]);
+
+    useEffect(() => {
+      return () => {
+        stopLoop();
+        if (doubleJumpTimeoutRef.current !== null) {
+          window.clearTimeout(doubleJumpTimeoutRef.current);
+        }
       if (countdownTimeoutRef.current !== null) {
         window.clearTimeout(countdownTimeoutRef.current);
       }
@@ -1168,7 +1180,7 @@ function ClownJumpGame({
           <div className="game-stage-head">
             <div>
               <strong>Taškai: {totalScore}</strong>
-              <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį pele arba pirštu ir bandyk pasiimti +20 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Gali atlikti ir dvigubą šuolį, bet po jo reikės pilnai nusileisti." : "Paspausk Pradėti arba Space."}</p>
+                <p>{isGameOver ? "Atsitrenkei į kliūtį. Gali bandyti dar kartą." : duelLevel !== null ? `Pasiekei ${duelLevel} lygį. Sužaisk prieš kompiuterį pele arba pirštu ir bandyk pasiimti +20 taškų.` : isRunning ? "Šuolis trumpas ir tikras: žemas kliūtis peršok, o pro ore esančias figūras pralįsk likdamas ant žemės. Gali atlikti ir dvigubą šuolį, bet po jo reikės pilnai nusileisti." : "Paspausk Pradėti žaidimą."}</p>
             </div>
             <div className="game-chip">Top: {bestScore}</div>
           </div>
@@ -1285,8 +1297,8 @@ function ClownJumpGame({
         <div className="game-side">
           <div className="payment-note">
             <strong>Kaip žaisti</strong>
-            <p>Kompiuteryje naudok `Space`, o telefone spausk mygtuką „Šokti“. Žemėje esančias figūras reikia peršokti, o ore kabančių kliūčių kaip tik neliesti šuoliu. Ore gali atlikti dar vieną papildomą šuolį.</p>
-          </div>
+              <p>Kompiuteryje naudok `Space`, kai žaidimas jau vyksta, o telefone spausk mygtuką „Šokti“. Žemėje esančias figūras reikia peršokti, o ore kabančių kliūčių kaip tik neliesti šuoliu. Ore gali atlikti dar vieną papildomą šuolį.</p>
+            </div>
 
           <div className="payment-note">
             <strong>Bonusai ir tempas</strong>
