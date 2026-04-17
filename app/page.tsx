@@ -122,6 +122,11 @@ type PendingCancel = {
   name: string;
 } | null;
 
+type PendingDelete = {
+  reservationId: number;
+  label: string;
+} | null;
+
 type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
 };
@@ -1363,6 +1368,7 @@ export default function Page() {
   const [ideaForm, setIdeaForm] = useState("");
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [privacyTouched, setPrivacyTouched] = useState(false);
   const [registerPaymentChoice, setRegisterPaymentChoice] = useState<PaymentMethod>(null);
@@ -1766,6 +1772,26 @@ export default function Page() {
     if (!pendingCancel) return;
     cancelPerson(pendingCancel.reservationId, pendingCancel.personId);
     setPendingCancel(null);
+  }
+
+  function requestDeleteReservation(reservationId: number, label: string) {
+    setPendingDelete({ reservationId, label });
+  }
+
+  function confirmDeleteReservation() {
+    if (!pendingDelete) return;
+
+    setReservations((previous) => previous.filter((item) => item.id !== pendingDelete.reservationId));
+    setNotifications((previous) => [
+      {
+        id: Date.now(),
+        message: `Ištrinta rezervacija: ${pendingDelete.label}.`,
+        createdAt: formatDateTime(),
+      },
+      ...previous,
+    ]);
+    setPendingDelete(null);
+    setDoorNotice({ type: "success", text: "Rezervacija ištrinta." });
   }
 
   function submitTransfer() {
@@ -2527,20 +2553,30 @@ export default function Page() {
                     </div>
                     {pendingReservations.length === 0 ? <div className="empty-state">Šiuo metu nėra laukiančių patvirtinimo rezervacijų.</div> : null}
                     {pendingReservations.map((reservation) => (
-                      <div className="admin-reservation-card pending" key={reservation.id}>
-                        <div className="admin-reservation-head">
-                          <div>
-                            <strong>{reservation.qrCode}</strong>
-                            <p>{reservation.contactEmail}</p>
-                            <p>{reservation.contactPhone}</p>
-                            <p className="admin-created-at">Registruota: {reservation.createdAt}</p>
+                        <div className="admin-reservation-card pending" key={reservation.id}>
+                          <div className="admin-reservation-head">
+                            <div>
+                              <strong>{reservation.qrCode}</strong>
+                              <p>{reservation.contactEmail}</p>
+                              <p>{reservation.contactPhone}</p>
+                              <p className="admin-created-at">Registruota: {reservation.createdAt}</p>
+                            </div>
+                            <div className="admin-reservation-side">
+                              <button
+                                aria-label={`Ištrinti rezervaciją ${reservation.qrCode}`}
+                                className="admin-delete-button"
+                                type="button"
+                                onClick={() => requestDeleteReservation(reservation.id, reservation.qrCode)}
+                              >
+                                ×
+                              </button>
+                              <div className="admin-reservation-meta">
+                                <span>{counts(reservation).total} asm.</span>
+                                <span>Banku: {amount(reservation)} €</span>
+                                <span>Grynais: {cashAmount(reservation)} €</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="admin-reservation-meta">
-                            <span>{counts(reservation).total} asm.</span>
-                            <span>Banku: {amount(reservation)} €</span>
-                            <span>Grynais: {cashAmount(reservation)} €</span>
-                          </div>
-                        </div>
 
                         <div className="admin-person-list">
                           {activePeople(reservation).map((person) => (
@@ -2587,20 +2623,30 @@ export default function Page() {
                     </div>
                     {approvedReservations.length === 0 ? <div className="empty-state">Kol kas dar nėra pažymėtų rezervacijų.</div> : null}
                     {approvedReservations.map((reservation) => (
-                      <div className="admin-reservation-card approved" key={reservation.id}>
-                        <div className="admin-reservation-head">
-                          <div>
-                            <strong>{reservation.qrCode}</strong>
-                            <p>{reservation.contactEmail}</p>
-                            <p>{reservation.contactPhone}</p>
-                            <p className="admin-created-at">Registruota: {reservation.createdAt}</p>
+                        <div className="admin-reservation-card approved" key={reservation.id}>
+                          <div className="admin-reservation-head">
+                            <div>
+                              <strong>{reservation.qrCode}</strong>
+                              <p>{reservation.contactEmail}</p>
+                              <p>{reservation.contactPhone}</p>
+                              <p className="admin-created-at">Registruota: {reservation.createdAt}</p>
+                            </div>
+                            <div className="admin-reservation-side">
+                              <button
+                                aria-label={`Ištrinti rezervaciją ${reservation.qrCode}`}
+                                className="admin-delete-button"
+                                type="button"
+                                onClick={() => requestDeleteReservation(reservation.id, reservation.qrCode)}
+                              >
+                                ×
+                              </button>
+                              <div className="admin-reservation-meta">
+                                <span>{counts(reservation).total} asm.</span>
+                                <span>Banku: {amount(reservation)} €</span>
+                                <span>Grynais: {cashAmount(reservation)} €</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="admin-reservation-meta">
-                            <span>{counts(reservation).total} asm.</span>
-                            <span>Banku: {amount(reservation)} €</span>
-                            <span>Grynais: {cashAmount(reservation)} €</span>
-                          </div>
-                        </div>
 
                         <div className="admin-person-list">
                           {activePeople(reservation).map((person) => (
@@ -3335,6 +3381,28 @@ export default function Page() {
             </button>
             <button className="danger-button" type="button" onClick={confirmCancel}>
               Taip, atšaukti
+            </button>
+          </div>
+          </div>
+        </Modal>
+
+      <Modal
+        open={Boolean(pendingDelete)}
+        title="Ar tikrai ištrinti rezervaciją?"
+        description={pendingDelete ? `Rezervacija ${pendingDelete.label} bus pašalinta visam laikui.` : undefined}
+        onClose={() => setPendingDelete(null)}
+      >
+        <div className="stack">
+          <div className="highlight-box cancel-note">
+            <p>Šis veiksmas pašalins visą rezervaciją iš admin zonos, svečių lentos ir paieškų.</p>
+            <p>Jei nori palikti istoriją, geriau naudok atšaukimą ar apmokėjimo žymėjimą, o ne ištrynimą.</p>
+          </div>
+          <div className="modal-actions">
+            <button className="ghost-button" type="button" onClick={() => setPendingDelete(null)}>
+              Grįžti
+            </button>
+            <button className="danger-button" type="button" onClick={confirmDeleteReservation}>
+              Taip, ištrinti
             </button>
           </div>
         </div>
