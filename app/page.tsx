@@ -1300,10 +1300,23 @@ function ClownJumpGame({
               <p>Kompiuteryje naudok `Space`, kai žaidimas jau vyksta, o telefone spausk mygtuką „Šokti“. Žemėje esančias figūras reikia peršokti, o ore kabančių kliūčių kaip tik neliesti šuoliu. Ore gali atlikti dar vieną papildomą šuolį.</p>
             </div>
 
-          <div className="payment-note">
-            <strong>Bonusai ir tempas</strong>
-            <p>Lygiai dabar ilgesni: pirmas lėčiausias, antras kiek greitesnis, trečias dar greitesnis ir taip toliau. Specialūs bonusai pasirodo retai: balionas sulėtina, grybukas padidina, o juodas bonusas kelioms sekundėms labai sumažina klouną.</p>
-          </div>
+            <div className="payment-note">
+              <strong>Bonusai ir tempas</strong>
+              <p>
+                Lygiai dabar ilgesni: pirmas lėčiausias, antras kiek greitesnis, trečias dar
+                greitesnis ir taip toliau. Tarp lygių vyksta dvikova „akmuo, popierius, žirklės“ su
+                kompiuteriu.
+              </p>
+              <p>
+                Laimėjęs dvikovą gauni papildomų taškų ir vieną gyvybę. Gyvybės rodomos prie lygio,
+                o maksimaliai jų gali sukaupti tris.
+              </p>
+              <p>
+                Bonusai taip pat prisideda prie bendro rezultato: geltoni bonusai kelia taškus,
+                balionas kuriam laikui sulėtina tempą, grybukas padidina klouną, o juodas bonusas
+                kelioms sekundėms labai sumažina klouną.
+              </p>
+            </div>
 
           <div className="payment-note">
             <strong>Išsaugoti rezultatą</strong>
