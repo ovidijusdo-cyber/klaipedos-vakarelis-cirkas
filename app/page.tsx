@@ -126,7 +126,7 @@ type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
 };
 
-const ADMIN_PIN = "2026";
+const ADMIN_PIN = "programuotojas307";
 const REVOLUT_PAYMENT_URL = "https://revolut.me/ovidij1c5";
 const REVOLUT_APP_URL = "https://app.revolut.com/";
 const BANK_ACCOUNT = {
@@ -2099,11 +2099,11 @@ export default function Page() {
         <div className="hero-copy">
           <CircusLights />
           <div className="eyebrow">Klaipėdos vakarėlio registracija</div>
-          <h1>{EVENT_NAME}</h1>
-          <p>
-            Pilnas vieno puslapio sprendimas su registracija, vietų kontrole, QR bilietais, atvykimo
-            žymėjimu, atšaukimais, laukiančiųjų eile ir admin valdymu.
-          </p>
+            <h1>{EVENT_NAME}</h1>
+            <p>
+              Kviečiame į spalvingą vakarėlį, kuriame lauks žaidimai, šokiai, gera muzika, smagi
+              kompanija ir daug gražių nuotraukų bei prisiminimų.
+            </p>
 
           <div className="chip-grid">
             <div className="chip">
@@ -2386,14 +2386,13 @@ export default function Page() {
               <Field label="Durininko / admin PIN">
                 <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
               </Field>
-              <div className="stack-inline">
-                <button className="primary-button" type="button" onClick={unlockAdmin}>
-                  Atrakinti QR tikrinimą
-                </button>
-                <span className="tiny-note">Demonstracinis PIN: 2026.</span>
+                <div className="stack-inline">
+                  <button className="primary-button" type="button" onClick={unlockAdmin}>
+                    Atrakinti QR tikrinimą
+                  </button>
+                </div>
+                {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
               </div>
-              {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
-            </div>
           ) : (
             <div className="stack">
               {doorNotice ? <div className={`notice qr-feedback ${doorNotice.type}`}>{doorNotice.text}</div> : null}
@@ -2497,11 +2496,10 @@ export default function Page() {
               <Field label="Admin PIN">
                 <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
               </Field>
-              <button className="primary-button" type="button" onClick={unlockAdmin}>
-                Atrakinti
-              </button>
-              <p className="tiny-note">Demonstracinis PIN šiame projekte: 2026.</p>
-            </div>
+                <button className="primary-button" type="button" onClick={unlockAdmin}>
+                  Atrakinti
+                </button>
+              </div>
           ) : (
             <div className="stack">
               {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
