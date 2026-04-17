@@ -623,6 +623,12 @@ function ClownJumpGame({
   const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 5), [scores]);
   const bestScore = topScores[0]?.score ?? 0;
   const totalScore = score + coins;
+  const qualifiesForTopFive = useMemo(() => {
+    if (totalScore <= 0) return false;
+    if (topScores.length < 5) return true;
+    const threshold = topScores[topScores.length - 1]?.score ?? 0;
+    return totalScore > threshold;
+  }, [topScores, totalScore]);
   const levelLength = 230;
   const levelSpeeds = [0.058, 0.072, 0.085, 0.097, 0.109, 0.119, 0.128, 0.136];
   const effectiveDistance = useMemo(() => Math.max(0, distance - slowdownBuffer), [distance, slowdownBuffer]);
@@ -741,7 +747,7 @@ function ClownJumpGame({
 
   function saveScore() {
     const trimmed = playerName.trim();
-    if (!trimmed || totalScore <= 0 || savedForScore === totalScore) return;
+    if (!trimmed || totalScore <= 0 || savedForScore === totalScore || !qualifiesForTopFive) return;
     onSaveScore(trimmed, totalScore);
     setSavedForScore(totalScore);
   }
@@ -1279,6 +1285,28 @@ function ClownJumpGame({
                   <button className="primary-button" type="button" onClick={startGame}>
                     Bandyti dar kartą
                   </button>
+                  <div className="game-over-save">
+                    <input
+                      value={playerName}
+                      onChange={(event) => setPlayerName(event.target.value)}
+                      placeholder="Įrašyk vardą rekordui"
+                    />
+                    <button
+                      className="secondary-button"
+                      disabled={!playerName.trim() || savedForScore === totalScore || !qualifiesForTopFive}
+                      type="button"
+                      onClick={saveScore}
+                    >
+                      {savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti savo taškus"}
+                    </button>
+                    {savedForScore === totalScore ? (
+                      <small className="game-over-note success">Rezultatas įrašytas į rekordų lentą.</small>
+                    ) : qualifiesForTopFive ? (
+                      <small className="game-over-note">Šis rezultatas patenka į Top 5, gali jį išsaugoti.</small>
+                    ) : (
+                      <small className="game-over-note muted">Rezultatas šiuo metu nepatenka į Top 5.</small>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : null}
