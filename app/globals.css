@@ -2413,11 +2413,11 @@ th {
 
   .game-shell.fullscreen .game-stage {
     min-height: 0;
-    height: min(68dvh, 640px);
+    height: min(56dvh, 520px);
   }
 
   .game-shell.fullscreen .game-stage.duel-active {
-    height: min(74dvh, 700px);
+    height: min(64dvh, 620px);
     min-height: 0;
   }
 
@@ -2434,7 +2434,7 @@ th {
     bottom: 0;
     z-index: 8;
     margin-top: 0;
-    padding-top: 12px;
+    padding-top: 10px;
     background: linear-gradient(180deg, rgba(255, 247, 237, 0), rgba(255, 247, 237, 0.98) 22%);
   }
 
