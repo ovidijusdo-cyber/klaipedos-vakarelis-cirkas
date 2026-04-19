@@ -3036,7 +3036,7 @@ export default function Page() {
                     <div className="payment-card-head">
                       <div>
                         <span className="muted-label dark">Bankiniai duomenys</span>
-                        <h4>Bankinio pavedimo duomenys</h4>
+                        <h4>Bankinio pavedimo duomenys iš kito banko</h4>
                       </div>
                       <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
                     </div>
@@ -3068,11 +3068,11 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="payment-note">
-                    <strong>Mokėjimo paskirtis</strong>
-                    <p>
-                      Mokėjimo paskirtyje įrašyk savo vardą, pavardę ir telefono numerį, kad organizatorius galėtų lengvai sutikrinti pavedimą.
-                    </p>
+                    <div className="payment-note">
+                      <strong>Mokėjimo paskirtis</strong>
+                      <p>
+                        Mokėjimo paskirtyje įrašyk vardus asmenų, už kuriuos daromas pavedimas į vakarėlį, kad organizatorius galėtų lengvai sutikrinti apmokėjimą.
+                      </p>
                     <p>
                       Kai organizatorius admin zonoje pažymės mokėjimą kaip gautą, tik tada
                       dalyvis atsiras svečių lentoje.
