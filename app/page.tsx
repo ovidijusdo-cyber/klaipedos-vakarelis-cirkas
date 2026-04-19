@@ -1134,58 +1134,58 @@ function ClownJumpGame({
     };
   }, [resumeCountdown]);
 
-    useEffect(() => {
-      function handleKeyDown(event: KeyboardEvent) {
-        const target = event.target;
-        if (
-          target instanceof HTMLInputElement ||
-          target instanceof HTMLTextAreaElement ||
-          target instanceof HTMLSelectElement ||
-          (target instanceof HTMLElement && target.isContentEditable)
-        ) {
-          return;
-        }
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
 
-        if (event.code !== "Space") return;
+      if (event.code !== "Space") return;
 
-        if (duelLevel !== null || resumeCountdown !== null || isGameOver) {
-          event.preventDefault();
-          return;
-        }
-
+      if (duelLevel !== null || resumeCountdown !== null || isGameOver) {
         event.preventDefault();
+        return;
+      }
 
-        if (isRunning) {
-          jump();
-        }
+      event.preventDefault();
+
+      if (isRunning) {
+        jump();
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [duelLevel, isGameOver, isRunning, resumeCountdown]);
 
-    useEffect(() => {
-      function handleFullscreenChange() {
-        setIsFullscreen(document.fullscreenElement === fullscreenRef.current);
-      }
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === fullscreenRef.current);
+    }
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-    useEffect(() => {
-      if (!isGameOver) return;
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    }, [isGameOver]);
+  useEffect(() => {
+    if (!isGameOver) return;
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }, [isGameOver]);
 
-    useEffect(() => {
-      return () => {
-        stopLoop();
-        if (doubleJumpTimeoutRef.current !== null) {
-          window.clearTimeout(doubleJumpTimeoutRef.current);
-        }
+  useEffect(() => {
+    return () => {
+      stopLoop();
+      if (doubleJumpTimeoutRef.current !== null) {
+        window.clearTimeout(doubleJumpTimeoutRef.current);
+      }
       if (countdownTimeoutRef.current !== null) {
         window.clearTimeout(countdownTimeoutRef.current);
       }
@@ -1457,7 +1457,6 @@ export default function Page() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [privacyTouched, setPrivacyTouched] = useState(false);
-  const [registerPaymentChoice, setRegisterPaymentChoice] = useState<PaymentMethod>(null);
   const [selectedTransferPersonId, setSelectedTransferPersonId] = useState("");
   const [transferForm, setTransferForm] = useState({ replacementName: "", replacementPhone: "" });
   const [countdown, setCountdown] = useState(() => getCountdownParts(EVENT_START_ISO));
@@ -1629,11 +1628,11 @@ export default function Page() {
   const totalAdults = useMemo(() => activeReservations.reduce((sum, reservation) => sum + counts(reservation).adults, 0), [activeReservations]);
   const totalChildren = useMemo(() => activeReservations.reduce((sum, reservation) => sum + counts(reservation).children, 0), [activeReservations]);
   const totalBankChosen = useMemo(
-    () => activeReservations.reduce((sum, reservation) => sum + (reservation.preferredPaymentMethod === "bank" ? counts(reservation).total : 0), 0),
+    () => activeReservations.reduce((sum, reservation) => sum + ((reservation.paymentMethod ?? reservation.preferredPaymentMethod) === "bank" ? counts(reservation).total : 0), 0),
     [activeReservations],
   );
   const totalCashChosen = useMemo(
-    () => activeReservations.reduce((sum, reservation) => sum + (reservation.preferredPaymentMethod === "cash" ? counts(reservation).total : 0), 0),
+    () => activeReservations.reduce((sum, reservation) => sum + ((reservation.paymentMethod ?? reservation.preferredPaymentMethod) === "cash" ? counts(reservation).total : 0), 0),
     [activeReservations],
   );
   const formDiscountActive = useMemo(() => form.discountCode.trim().toLowerCase() === VOLUNTEER_DISCOUNT_CODE, [form.discountCode]);
@@ -1642,7 +1641,6 @@ export default function Page() {
     () => (formDiscountActive ? Math.max(0, formBaseTotal - (formBaseTotal * VOLUNTEER_DISCOUNT_PERCENT) / 100) : formBaseTotal),
     [formBaseTotal, formDiscountActive],
   );
-  const formCashTotal = useMemo(() => formTotal + form.people.length, [form.people.length, formTotal]);
   const myReservation = useMemo(() => lookupReservation(activeReservations, myLookup), [activeReservations, myLookup]);
   const cancelReservation = useMemo(() => lookupReservation(activeReservations, cancelLookup), [activeReservations, cancelLookup]);
   const transferReservation = useMemo(() => lookupReservation(activeReservations, transferLookup), [activeReservations, transferLookup]);
@@ -1795,7 +1793,6 @@ export default function Page() {
       setRegisterOpen(false);
       setRegisterStep("details");
       setPrivacyTouched(false);
-      setRegisterPaymentChoice(null);
       setForm({ city: "", contactPhone: "", contactEmail: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
       setSubmitted(null);
       return;
@@ -1809,7 +1806,7 @@ export default function Page() {
       qrCode: qrFromId(stamp),
       paid: false,
       paymentMethod: null,
-      preferredPaymentMethod: registerPaymentChoice,
+        preferredPaymentMethod: "bank",
       createdAt: formatDateTime(),
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
       people,
@@ -1827,7 +1824,6 @@ export default function Page() {
     setRegisterOpen(false);
     setRegisterStep("details");
     setPrivacyTouched(false);
-    setRegisterPaymentChoice(null);
   }
 
   function cancelPerson(reservationId: number, personId: string) {
@@ -2306,8 +2302,7 @@ export default function Page() {
             <ul className="plain-list">
               <li>Užpildyk registraciją ir pridėk visus žmones, kuriuos registruoji.</li>
               <li>Patvirtink privatumo politiką ir pereik į apmokėjimo žingsnį.</li>
-              <li>Pasirink, ar mokėsi bankiniu pavedimu per Revolut, ar grynaisiais.</li>
-              <li>Atlik apmokėjimą ir palauk, kol organizatorius pažymės, kad mokėjimas gautas.</li>
+                <li>Atlik bankinį apmokėjimą per Revolut ir palauk, kol organizatorius pažymės, kad mokėjimas gautas.</li>
               <li>Kai apmokėjimas bus patvirtintas, tavo vardas atsiras svečių lentoje.</li>
               <li>Per „Mano bilietas“ galėsi rasti savo QR kodą įėjimui.</li>
               <li>Jei pasikeistų planai, galėsi atšaukti dalyvavimą arba perduoti vietą kitam žmogui.</li>
@@ -2635,8 +2630,8 @@ export default function Page() {
               <div className="stats-grid admin">
                 <StatCard label="Suaugusių" value={String(totalAdults)} />
                 <StatCard label="Vaikų" value={String(totalChildren)} />
-                <StatCard label="Rinkosi banką" value={String(totalBankChosen)} tone="accent" />
-                <StatCard label="Rinkosi grynuosius" value={String(totalCashChosen)} tone="success" />
+                <StatCard label="Pažymėta banku" value={String(totalBankChosen)} tone="accent" />
+                <StatCard label="Pažymėta grynais" value={String(totalCashChosen)} tone="success" />
               </div>
 
               <SectionCard title="Rezervacijos" description="Čia gali pažymėti, kaip buvo atsiskaityta už rezervaciją.">
@@ -2692,10 +2687,8 @@ export default function Page() {
                             <strong>Laukia patikrinimo</strong>
                             <p>
                               {reservation.preferredPaymentMethod === "bank"
-                                ? "Registruojantis pasirinktas bankinis pavedimas."
-                                : reservation.preferredPaymentMethod === "cash"
-                                  ? "Registruojantis pasirinkti grynieji."
-                                  : "Patikrink, ar gavai bankinį pavedimą arba grynuosius, ir pažymėk būdą."}
+                                ? "Registruojantis pasirinktas bankinis pavedimas. Jei žmogus sumokėjo grynais, gali pažymėti tai ranka."
+                                : "Patikrink, ar gavai bankinį pavedimą arba grynuosius, ir pažymėk būdą."}
                             </p>
                           </div>
                           <div className="stack-inline">
@@ -2897,12 +2890,11 @@ export default function Page() {
         open={registerOpen}
         title="Registracijos forma"
         description="Įvesk bendrus kontaktus ir visus registruojamus asmenis."
-        onClose={() => {
-          setRegisterOpen(false);
-          setRegisterStep("details");
-          setPrivacyTouched(false);
-          setRegisterPaymentChoice(null);
-        }}
+          onClose={() => {
+            setRegisterOpen(false);
+            setRegisterStep("details");
+            setPrivacyTouched(false);
+          }}
       >
         <form className="stack" onSubmit={submitReservation}>
           {registerStep === "details" ? (
@@ -2998,143 +2990,106 @@ export default function Page() {
                   </button>
                 </div>
             </>
-          ) : (
-            <>
-              <div className="payment-step">
-                <div className="payment-hero">
-                  <div className="summary-box">
-                    <span>Mokėtina suma</span>
-                    <strong>{formTotal} €</strong>
-                    <p>Apmokėjimas vykdomas į asmeninę Ovidijaus D. Revolut sąskaitą.</p>
+            ) : (
+              <>
+                <div className="payment-step">
+                  <div className="payment-hero">
+                    <div className="summary-box">
+                      <span>Mokėtina suma</span>
+                      <strong>{formTotal} €</strong>
+                      <p>Apmokėjimas vykdomas į asmeninę Ovidijaus D. Revolut sąskaitą.</p>
+                    </div>
+
+                    <div className="payment-note">
+                      <strong>Svarbu prieš apmokant</strong>
+                      <p>
+                        Po apmokėjimo organizatorius admin zonoje rankiniu būdu pažymės rezervaciją kaip apmokėtą.
+                      </p>
+                      <p>
+                        Kol apmokėjimas nebus pažymėtas kaip gautas, žmogus neatsiras svečių lentoje.
+                      </p>
+                    </div>
                   </div>
+
+                  <div className="payment-card">
+                    <div className="payment-card-head">
+                      <div>
+                        <span className="muted-label dark">Greitas apmokėjimas</span>
+                        <h4>Bankinis apmokėjimas per Revolut</h4>
+                      </div>
+                      <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
+                    </div>
+                    <p>
+                      Atidaryk mokėjimo nuorodą ir atlik pavedimą į asmeninę Revolut sąskaitą. Grynieji svečiams čia neberodomi, tačiau organizatorius prireikus vis tiek galės juos pažymėti admin zonoje.
+                    </p>
+                    <div className="stack-inline">
+                      <a className="payment-button" href={REVOLUT_PAYMENT_URL} target="_blank" rel="noreferrer">
+                        Atidaryti Revolut.me
+                      </a>
+                      <a className="map-link" href={REVOLUT_APP_URL} target="_blank" rel="noreferrer">
+                        Atidaryti Revolut programėlę
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="payment-card">
+                    <div className="payment-card-head">
+                      <div>
+                        <span className="muted-label dark">Bankiniai duomenys</span>
+                        <h4>Bankinio pavedimo duomenys</h4>
+                      </div>
+                      <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
+                    </div>
+                    <div className="bank-grid">
+                      <div className="bank-row">
+                        <span>Gavėjas</span>
+                        <strong>{BANK_ACCOUNT.recipient}</strong>
+                      </div>
+                      <div className="bank-row">
+                        <span>IBAN</span>
+                        <strong>{BANK_ACCOUNT.iban}</strong>
+                      </div>
+                      <div className="bank-row">
+                        <span>BIC / SWIFT</span>
+                        <strong>{BANK_ACCOUNT.bic}</strong>
+                      </div>
+                      <div className="bank-row">
+                        <span>Bankas</span>
+                        <strong>{BANK_ACCOUNT.bankName}</strong>
+                      </div>
+                      <div className="bank-row">
+                        <span>Adresas</span>
+                        <strong>{BANK_ACCOUNT.bankAddress}</strong>
+                      </div>
+                      <div className="bank-row">
+                        <span>Korespondentinis BIC</span>
+                        <strong>{BANK_ACCOUNT.correspondentBic}</strong>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="payment-note">
-                    <strong>Svarbu prieš apmokant</strong>
+                    <strong>Mokėjimo paskirtis</strong>
                     <p>
-                      Po apmokėjimo organizatorius admin zonoje rankiniu būdu pažymės rezervaciją kaip apmokėtą.
+                      Mokėjimo paskirtyje įrašyk savo vardą, pavardę ir telefono numerį, kad organizatorius galėtų lengvai sutikrinti pavedimą.
                     </p>
                     <p>
-                      Kol apmokėjimas nebus pažymėtas kaip gautas, žmogus neatsiras svečių lentoje.
+                      Kai organizatorius admin zonoje pažymės mokėjimą kaip gautą, tik tada
+                      dalyvis atsiras svečių lentoje.
                     </p>
                   </div>
                 </div>
 
-                <div className="payment-card">
-                  <div className="payment-card-head">
-                    <div>
-                      <span className="muted-label dark">Greitas apmokėjimas</span>
-                      <h4>Apmokėti per Revolut</h4>
-                    </div>
-                    <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
-                  </div>
-                  <p>
-                    Patogiausias būdas: atsidaryk mokėjimo nuorodą ir atlik pavedimą į asmeninę Revolut sąskaitą.
-                  </p>
-                  <div className="stack-inline">
-                    <button
-                      className={registerPaymentChoice === "bank" ? "payment-choice bank active" : "payment-choice bank"}
-                      type="button"
-                      onClick={() => setRegisterPaymentChoice("bank")}
-                    >
-                      Pasirenku bankinį pavedimą
-                    </button>
-                  </div>
-                  <div className="stack-inline">
-                    <a className="payment-button" href={REVOLUT_PAYMENT_URL} target="_blank" rel="noreferrer">
-                      Atidaryti Revolut.me
-                    </a>
-                    <a className="map-link" href={REVOLUT_APP_URL} target="_blank" rel="noreferrer">
-                      Atidaryti Revolut programėlę
-                    </a>
-                  </div>
+                <div className="modal-actions">
+                  <button className="ghost-button" type="button" onClick={() => setRegisterStep("details")}>
+                    Grįžti
+                  </button>
+                  <button className="primary-button" type="button" onClick={finalizeReservation}>
+                    Tęsti po apmokėjimo
+                  </button>
                 </div>
-
-                <div className="payment-card">
-                  <div className="payment-card-head">
-                    <div>
-                      <span className="muted-label dark">Alternatyva</span>
-                      <h4>Atsiskaitymas grynais</h4>
-                    </div>
-                    <span className="payment-badge">+1 €/asm.</span>
-                  </div>
-                  <p>
-                    Jei patogiau, gali atsiskaityti grynais. Tokiu atveju prisideda papildomas
-                    1 € mokestis už kiekvieną registruojamą žmogų.
-                  </p>
-                  <div className="stack-inline">
-                    <button
-                      className={registerPaymentChoice === "cash" ? "payment-choice cash active" : "payment-choice cash"}
-                      type="button"
-                      onClick={() => setRegisterPaymentChoice("cash")}
-                    >
-                      Pasirenku mokėti grynais
-                    </button>
-                  </div>
-                  <div className="summary-box compact">
-                    <span>Grynųjų suma</span>
-                    <strong>{formCashTotal} €</strong>
-                    <p>Ši suma bus pažymėta admin zonoje pasirinkus apmokėjimą grynais.</p>
-                  </div>
-                </div>
-
-                <div className="payment-card">
-                  <div className="payment-card-head">
-                    <div>
-                      <span className="muted-label dark">Bankiniai duomenys</span>
-                      <h4>Bankinio pavedimo duomenys</h4>
-                    </div>
-                    <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
-                  </div>
-                  <div className="bank-grid">
-                    <div className="bank-row">
-                      <span>Gavėjas</span>
-                      <strong>{BANK_ACCOUNT.recipient}</strong>
-                    </div>
-                    <div className="bank-row">
-                      <span>IBAN</span>
-                      <strong>{BANK_ACCOUNT.iban}</strong>
-                    </div>
-                    <div className="bank-row">
-                      <span>BIC / SWIFT</span>
-                      <strong>{BANK_ACCOUNT.bic}</strong>
-                    </div>
-                    <div className="bank-row">
-                      <span>Bankas</span>
-                      <strong>{BANK_ACCOUNT.bankName}</strong>
-                    </div>
-                    <div className="bank-row">
-                      <span>Adresas</span>
-                      <strong>{BANK_ACCOUNT.bankAddress}</strong>
-                    </div>
-                    <div className="bank-row">
-                      <span>Korespondentinis BIC</span>
-                      <strong>{BANK_ACCOUNT.correspondentBic}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="payment-note">
-                  <strong>Mokėjimo paskirtis</strong>
-                  <p>
-                    Mokėjimo paskirtyje įrašyk savo vardą, pavardę ir telefono numerį, kad organizatorius galėtų lengvai sutikrinti pavedimą.
-                  </p>
-                  <p>
-                    Kai organizatorius admin zonoje pažymės „Bankiniu pavedimu“ arba „Grynais“, tik tada
-                    dalyvis atsiras svečių lentoje.
-                  </p>
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button className="ghost-button" type="button" onClick={() => setRegisterStep("details")}>
-                  Grįžti
-                </button>
-                <button className="primary-button" type="button" disabled={!registerPaymentChoice} onClick={finalizeReservation}>
-                  Tęsti su pasirinktu apmokėjimu
-                </button>
-              </div>
-              {!registerPaymentChoice ? <div className="validation-error">Pasirinkite, ar mokėsite bankiniu pavedimu, ar grynais.</div> : null}
-            </>
-          )}
+              </>
+            )}
         </form>
       </Modal>
 
@@ -3461,15 +3416,15 @@ export default function Page() {
         onClose={() => setPendingCancel(null)}
       >
         <div className="stack">
-          <div className="highlight-box cancel-note">
-            <p>
-              Pinigai grąžinami esant sveikatos sutrikimams ar kitoms rimtoms nenumatytoms aplinkybėms.
-            </p>
-            <p>
-              Kitu atveju pirmiausia prašome patiems surasti, ką pakviestumėte vietoj savęs į vakarėlį.
-              Tuomet tas žmogus įėjimo mokestį sumokės jums tiesiogiai.
-            </p>
-          </div>
+            <div className="highlight-box cancel-note">
+              <p>
+                Pinigai nėra grąžinami.
+              </p>
+              <p>
+                Norint atgauti sumokėtus pinigus, reikia susikeisti su kitu žmogumi, kuris ateitų vietoj jūsų.
+                Tuomet tas žmogus įėjimo mokestį sumoka jums tiesiogiai.
+              </p>
+            </div>
           <div className="modal-actions">
             <button className="ghost-button" type="button" onClick={() => setPendingCancel(null)}>
               Grįžti
