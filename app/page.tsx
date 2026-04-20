@@ -2030,23 +2030,6 @@ export default function Page() {
     downloadFile("cirkas-rezervacijos.csv", rows.join("\n"), "text/csv;charset=utf-8");
   }
 
-  function resetDemoData() {
-    setReservations(initialReservations);
-    setWaitingList([]);
-    setNotifications([]);
-    setTransfers([]);
-    setVotes([]);
-    setSongSuggestions(initialSongSuggestions);
-    setEventIdeas(initialEventIdeas);
-    setResponsiblePeople(initialResponsiblePeople);
-    setSubmitted(null);
-    setLookup("");
-    setMyLookup("");
-    setCancelLookup("");
-    setTransferLookup("");
-    setScannerValue("");
-  }
-
   function unlockAdmin() {
     if (adminPin === ADMIN_PIN) {
       setAdminUnlocked(true);
@@ -2858,9 +2841,6 @@ export default function Page() {
               <div className="stack-inline">
                 <button className="secondary-button" type="button" onClick={exportReservations}>
                   Eksportuoti CSV
-                </button>
-                <button className="danger-button" type="button" onClick={resetDemoData}>
-                  Atstatyti demo duomenis
                 </button>
               </div>
             </div>
