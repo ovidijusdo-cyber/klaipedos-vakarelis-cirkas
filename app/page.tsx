@@ -166,12 +166,19 @@ const PROGRAM_ITEMS = [
 ];
 
 const IMPORTANT_REMINDERS = [
-  "Galima saikingai vartoti alkoholį.",
-  "Renginio laikas dar gali būti papildytas tikslesnėmis detalėmis.",
-  "Po renginio kviesime prisidėti prie bendro sutvarkymo.",
+  "Galima saikingai vartoti savo atsineštą alkoholį. Renginyje bus paskirti atsakingi broliai, kurie stebės situaciją. Prašome būti atsargiems bei įvertinti savo galimybes. Viskas privalo būti padoriai.",
+  "Renginio laikas prasidės 18:00. Prašome Jūsų nevėluoti, kadangi norėsime pradėti laiku.",
+  "Po renginio galintys prisidėti prie salės sutvarkymo, mielai esate kviečiami.",
   "Vienkartiniai indai bus paruošti vietoje.",
-  "Prašome atsinešti gaiviųjų gėrimų ir savo pagamintų patiekalų.",
-  "Bus bendras švediškas stalas.",
+  "Prašome atsinešti gaiviųjų gėrimų ir savo pagamintų patiekalų, bus bendras švediškas stalas. Kviečiame kiekvieną svečią šiek tiek pasiruošti ir atsinešti savo gamybos patiekalą ar užkandį, kad stalas būtų kūrybingas ir įvairus, venkime vien tik traškučių, guminukų ar kitų saldumynų. Laukiami vaisiai, naminiai pyragai, tortai, įdomūs užkandžiai ar kažkas, kuo nustebintumėt kitus. Norime turėti gerą energiją šokiams, o tai bus tik su geru maistu.",
+  "Vakarėlio metu vyks konkursai, žaidimai, tad raginame būti aktyviems.",
+  "Vakarėlio metu organizatoriai bei paskirti budėtojai padės užtikrinti, kad nuotaika išliktų gera, o aplinka saugi ir jauki visiems.",
+  "Apranga cirko tema. Tai gan laisva tema, nes viskas tinka. Kviečiame rinktis klounų, gyvūnų, akrobatų ar cirko vedėjų įvaizdžius arba bent vieną ryškų cirko akcentą. Viskas paliekama Jūsų fantazijai.",
+  "Prašome susipažinti su viskuo, kas yra šiame internetiniame puslapyje.",
+  "Paruošime žaidimų ir veiklų, kviečiame aktyviai dalyvauti.",
+  "Kiekvienas svečias atsakingas už savo tvarką.",
+  "Prašome patiems pasirūpinti atvykimu iki vakarėlio vietos. Jeigu bandėte susieškoti ir nepavyko surasti vietos pas ką nors atvykti į vakarėlį, parašykite broliui Ovidijui: +370 6635 2281.",
+  "Ateikite su gera nuotaika ir pasiruošę linksmybėms.",
 ];
 
 const WHEEL_PRIZES = [
