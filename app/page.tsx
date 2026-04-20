@@ -37,6 +37,7 @@ type Reservation = {
   preferredPaymentMethod: PaymentMethod;
   createdAt: string;
   discountPercent: number;
+  rideOfferSeats: number | null;
   people: Person[];
 };
 
@@ -45,6 +46,7 @@ type WaitingItem = {
   city: string;
   contactPhone: string;
   contactEmail: string;
+  rideOfferSeats: number | null;
   people: Person[];
   createdAt: string;
 };
@@ -284,6 +286,7 @@ const initialReservations: Reservation[] = [
     preferredPaymentMethod: "bank",
     createdAt: "2026-04-14 10:20",
     discountPercent: 0,
+    rideOfferSeats: null,
     people: [
       { id: "1-1", firstName: "Jonas", lastName: "Petraitis", type: "adult", active: true, arrived: false, arrivedAt: null },
       { id: "1-2", firstName: "Austėja", lastName: "Petraitė", type: "adult", active: true, arrived: false, arrivedAt: null },
@@ -1472,6 +1475,7 @@ export default function Page() {
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [privacyTouched, setPrivacyTouched] = useState(false);
   const [invitationCodeTouched, setInvitationCodeTouched] = useState(false);
+  const [rideSeatsTouched, setRideSeatsTouched] = useState(false);
   const [selectedTransferPersonId, setSelectedTransferPersonId] = useState("");
   const [transferForm, setTransferForm] = useState({ replacementName: "", replacementPhone: "" });
   const [countdown, setCountdown] = useState(() => getCountdownParts(EVENT_START_ISO));
@@ -1495,6 +1499,8 @@ export default function Page() {
     contactEmail: "",
     invitationCode: "",
     discountCode: "",
+    canOfferRide: false,
+    rideSeats: "",
     consentAccepted: false,
     people: [createEmptyPerson()],
   });
@@ -1534,10 +1540,18 @@ export default function Page() {
             parsed.reservations.map((reservation) => ({
               ...reservation,
               preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
+              rideOfferSeats: reservation.rideOfferSeats ?? null,
             })),
           );
         }
-        if (parsed.waitingList) setWaitingList(parsed.waitingList);
+        if (parsed.waitingList) {
+          setWaitingList(
+            parsed.waitingList.map((item) => ({
+              ...item,
+              rideOfferSeats: item.rideOfferSeats ?? null,
+            })),
+          );
+        }
         if (parsed.notifications) setNotifications(parsed.notifications);
         if (parsed.transfers) setTransfers(parsed.transfers);
         if (parsed.votes) setVotes(parsed.votes);
@@ -1675,6 +1689,29 @@ export default function Page() {
         .sort((a, b) => reservationTimestamp(b) - reservationTimestamp(a)),
     [activeReservations],
   );
+  const rideOffers = useMemo(
+    () =>
+      activeReservations
+        .filter((reservation) => (reservation.rideOfferSeats ?? 0) > 0)
+        .map((reservation) => {
+          const active = activePeople(reservation);
+          const firstPerson = active[0];
+          const label = firstPerson
+            ? `${firstPerson.firstName} ${firstPerson.lastName}`.trim()
+            : reservation.contactEmail;
+
+          return {
+            id: reservation.id,
+            label,
+            city: reservation.city,
+            seats: reservation.rideOfferSeats ?? 0,
+            phone: reservation.contactPhone,
+            createdAt: reservation.createdAt,
+          };
+        })
+        .sort((a, b) => b.seats - a.seats || Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [activeReservations],
+  );
   const voteEligiblePeople = useMemo(
     () =>
       visibleGuestReservations.flatMap((reservation) =>
@@ -1774,6 +1811,10 @@ export default function Page() {
       setInvitationCodeTouched(true);
       return;
     }
+    if (form.canOfferRide && !form.rideSeats) {
+      setRideSeatsTouched(true);
+      return;
+    }
     if (!form.consentAccepted) {
       setPrivacyTouched(true);
       return;
@@ -1805,6 +1846,7 @@ export default function Page() {
           city: form.city.trim(),
           contactPhone: form.contactPhone.trim(),
           contactEmail: form.contactEmail.trim(),
+          rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
           people,
           createdAt: formatDateTime(),
         },
@@ -1813,7 +1855,18 @@ export default function Page() {
       setRegisterOpen(false);
       setRegisterStep("details");
       setPrivacyTouched(false);
-      setForm({ city: "", contactPhone: "", contactEmail: "", invitationCode: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
+      setRideSeatsTouched(false);
+      setForm({
+        city: "",
+        contactPhone: "",
+        contactEmail: "",
+        invitationCode: "",
+        discountCode: "",
+        canOfferRide: false,
+        rideSeats: "",
+        consentAccepted: false,
+        people: [createEmptyPerson()],
+      });
       setSubmitted(null);
       return;
     }
@@ -1826,25 +1879,41 @@ export default function Page() {
       qrCode: qrFromId(stamp),
       paid: false,
       paymentMethod: null,
-        preferredPaymentMethod: "bank",
+      preferredPaymentMethod: "bank",
       createdAt: formatDateTime(),
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
+      rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
       people,
     };
 
     setReservations((previous) => [reservation, ...previous]);
     setNotifications((previous) => [
-      { id: Date.now(), message: `Gauta nauja rezervacija: ${reservation.contactEmail}.`, createdAt: formatDateTime() },
+      {
+        id: Date.now(),
+        message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}`,
+        createdAt: formatDateTime(),
+      },
       ...previous,
     ]);
     setSubmitted(reservation);
     setCelebratingRegistration(true);
     window.setTimeout(() => setCelebratingRegistration(false), 2200);
-    setForm({ city: "", contactPhone: "", contactEmail: "", invitationCode: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
+    setForm({
+      city: "",
+      contactPhone: "",
+      contactEmail: "",
+      invitationCode: "",
+      discountCode: "",
+      canOfferRide: false,
+      rideSeats: "",
+      consentAccepted: false,
+      people: [createEmptyPerson()],
+    });
     setRegisterOpen(false);
     setRegisterStep("details");
     setPrivacyTouched(false);
     setInvitationCodeTouched(false);
+    setRideSeatsTouched(false);
   }
 
   function cancelPerson(reservationId: number, personId: string) {
@@ -2777,6 +2846,21 @@ export default function Page() {
                 </div>
               </SectionCard>
 
+              <SectionCard title="Transporto vietos" description="Čia matysi, kas registruodamasis pažymėjo, kad gali pavežti kitus svečius.">
+                <div className="stack">
+                  {rideOffers.length === 0 ? <div className="empty-state">Kol kas dar niekas nenurodė laisvų vietų automobilyje.</div> : null}
+                  {rideOffers.map((offer) => (
+                    <div className="panel" key={offer.id}>
+                      <strong>{offer.label}</strong>
+                      <p>Miestas: {offer.city}</p>
+                      <p>Telefono numeris: {offer.phone}</p>
+                      <p>Laisvos vietos automobilyje: {offer.seats}</p>
+                      <p className="admin-created-at">Registruota: {offer.createdAt}</p>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
               <SectionCard title="Atsakingi asmenys" description="Redaguojami viešai rodomi vaidmenys ir vardai.">
                 <div className="stack">
                   {responsiblePeople.map((item) => (
@@ -2895,6 +2979,7 @@ export default function Page() {
             setRegisterStep("details");
             setPrivacyTouched(false);
             setInvitationCodeTouched(false);
+            setRideSeatsTouched(false);
           }}
       >
         <form className="stack" onSubmit={submitReservation}>
@@ -2935,6 +3020,47 @@ export default function Page() {
                 </Field>
                 <p>Savanorių nuolaidos kodas gaunamas iš organizatoriaus ir leidžiamas naudoti tik patvirtintam renginio savanoriui, kuris prisidės prie vakarėlio darbų.</p>
                 {formDiscountActive ? <strong className="success-text">Savanorio nuolaida pritaikyta.</strong> : null}
+              </div>
+
+              <div className="highlight-box">
+                <label className="checkbox-row">
+                  <input
+                    checked={form.canOfferRide}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setField("canOfferRide", checked);
+                      if (!checked) {
+                        setField("rideSeats", "");
+                        setRideSeatsTouched(false);
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                  <span>Galiu pavežti ką nors</span>
+                </label>
+                {form.canOfferRide ? (
+                  <Field label="Kiek laisvų vietų turi automobilyje?">
+                    <select
+                      value={form.rideSeats}
+                      onChange={(event) => {
+                        setField("rideSeats", event.target.value);
+                        if (event.target.value) setRideSeatsTouched(false);
+                      }}
+                    >
+                      <option value="">Pasirink vietų skaičių</option>
+                      {Array.from({ length: 8 }, (_, index) => (
+                        <option key={index + 1} value={String(index + 1)}>
+                          {index + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : (
+                  <p>Jei turi vietos automobilyje, pažymėk šį laukelį. Tai padės organizuoti atvykimą tiems, kam reikės pavežimo.</p>
+                )}
+                {rideSeatsTouched && form.canOfferRide ? (
+                  <div className="validation-error">Pasirinkite, kiek laisvų vietų galite pasiūlyti automobilyje.</div>
+                ) : null}
               </div>
 
               <div className="stack">
@@ -2999,7 +3125,15 @@ export default function Page() {
               ) : null}
 
                 <div className="modal-actions">
-                  <button className="ghost-button" type="button" onClick={() => { setRegisterOpen(false); setInvitationCodeTouched(false); }}>
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={() => {
+                      setRegisterOpen(false);
+                      setInvitationCodeTouched(false);
+                      setRideSeatsTouched(false);
+                    }}
+                  >
                     Uždaryti
                   </button>
                   <button className="primary-button" type="submit">
