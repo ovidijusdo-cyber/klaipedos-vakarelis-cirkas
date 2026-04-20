@@ -155,6 +155,7 @@ const CHILD_AGE_LIMIT = 12;
 const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 120;
+const INVITATION_CODE = "530";
 
 const PROGRAM_ITEMS = [
   { time: "15:00", title: "Renkasi savanoriai puošti", note: "Atvyksta savanoriai, ruošiama salė ir dekoracijos." },
@@ -1457,6 +1458,7 @@ export default function Page() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [privacyTouched, setPrivacyTouched] = useState(false);
+  const [invitationCodeTouched, setInvitationCodeTouched] = useState(false);
   const [selectedTransferPersonId, setSelectedTransferPersonId] = useState("");
   const [transferForm, setTransferForm] = useState({ replacementName: "", replacementPhone: "" });
   const [countdown, setCountdown] = useState(() => getCountdownParts(EVENT_START_ISO));
@@ -1478,6 +1480,7 @@ export default function Page() {
     city: "",
     contactPhone: "",
     contactEmail: "",
+    invitationCode: "",
     discountCode: "",
     consentAccepted: false,
     people: [createEmptyPerson()],
@@ -1754,6 +1757,10 @@ export default function Page() {
 
   function submitReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (form.invitationCode.trim() !== INVITATION_CODE) {
+      setInvitationCodeTouched(true);
+      return;
+    }
     if (!form.consentAccepted) {
       setPrivacyTouched(true);
       return;
@@ -1793,7 +1800,7 @@ export default function Page() {
       setRegisterOpen(false);
       setRegisterStep("details");
       setPrivacyTouched(false);
-      setForm({ city: "", contactPhone: "", contactEmail: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
+      setForm({ city: "", contactPhone: "", contactEmail: "", invitationCode: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
       setSubmitted(null);
       return;
     }
@@ -1820,10 +1827,11 @@ export default function Page() {
     setSubmitted(reservation);
     setCelebratingRegistration(true);
     window.setTimeout(() => setCelebratingRegistration(false), 2200);
-    setForm({ city: "", contactPhone: "", contactEmail: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
+    setForm({ city: "", contactPhone: "", contactEmail: "", invitationCode: "", discountCode: "", consentAccepted: false, people: [createEmptyPerson()] });
     setRegisterOpen(false);
     setRegisterStep("details");
     setPrivacyTouched(false);
+    setInvitationCodeTouched(false);
   }
 
   function cancelPerson(reservationId: number, personId: string) {
@@ -2886,7 +2894,7 @@ export default function Page() {
 
       <ClownJumpGame scores={gameScores} onSaveScore={saveGameScore} />
 
-      <Modal
+        <Modal
         open={registerOpen}
         title="Registracijos forma"
         description="Įvesk bendrus kontaktus ir visus registruojamus asmenis."
@@ -2894,12 +2902,26 @@ export default function Page() {
             setRegisterOpen(false);
             setRegisterStep("details");
             setPrivacyTouched(false);
+            setInvitationCodeTouched(false);
           }}
       >
         <form className="stack" onSubmit={submitReservation}>
           {registerStep === "details" ? (
             <>
               <div className="form-grid three">
+                <Field label="Kvietimo numeris">
+                  <input
+                    required
+                    value={form.invitationCode}
+                    onChange={(event) => {
+                      setField("invitationCode", event.target.value);
+                      if (event.target.value.trim() === INVITATION_CODE) {
+                        setInvitationCodeTouched(false);
+                      }
+                    }}
+                    placeholder="Įrašyk kvietimo kodą"
+                  />
+                </Field>
                 <Field label="Miestas">
                   <input required value={form.city} onChange={(event) => setField("city", event.target.value)} />
                 </Field>
@@ -2977,12 +2999,15 @@ export default function Page() {
                   ir asmens duomenų tvarkymu registracijos tikslu. Duomenys bus ištrinti per 2–5 dienas po renginio.
                 </span>
               </label>
+              {invitationCodeTouched ? (
+                <div className="validation-error">Įveskite teisingą kvietimo numerį, kad galėtumėte tęsti registraciją.</div>
+              ) : null}
               {privacyTouched && !form.consentAccepted ? (
                 <div className="validation-error">Pirma spustelėkite, kad sutinkate su privatumo politika.</div>
               ) : null}
 
                 <div className="modal-actions">
-                  <button className="ghost-button" type="button" onClick={() => setRegisterOpen(false)}>
+                  <button className="ghost-button" type="button" onClick={() => { setRegisterOpen(false); setInvitationCodeTouched(false); }}>
                     Uždaryti
                   </button>
                   <button className="primary-button" type="submit">
