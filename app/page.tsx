@@ -262,6 +262,9 @@ const initialGameScores: GameScore[] = [
   { id: 3, name: "Lukas", score: 9, createdAt: "2026-04-14 18:35" },
 ];
 
+const LEADERBOARD_SIZE = 5;
+const MAX_STORED_GAME_SCORES = 100;
+
 const initialReservations: Reservation[] = [
   {
     id: 1,
@@ -622,12 +625,15 @@ function ClownJumpGame({
     }>
   >([]);
 
-  const topScores = useMemo(() => [...scores].sort((a, b) => b.score - a.score).slice(0, 5), [scores]);
+  const topScores = useMemo(
+    () => [...scores].sort((a, b) => b.score - a.score).slice(0, LEADERBOARD_SIZE),
+    [scores],
+  );
   const bestScore = topScores[0]?.score ?? 0;
   const totalScore = score + coins;
   const qualifiesForTopFive = useMemo(() => {
     if (totalScore <= 0) return false;
-    if (topScores.length < 5) return true;
+    if (topScores.length < LEADERBOARD_SIZE) return true;
     const threshold = topScores[topScores.length - 1]?.score ?? 0;
     return totalScore > threshold;
   }, [topScores, totalScore]);
@@ -1364,7 +1370,7 @@ function ClownJumpGame({
           <div className="leaderboard-card">
             <div className="vote-result-head">
               <strong>Dalyvių rekordai</strong>
-              <span>{topScores.length} įraš.</span>
+              <span>Top {LEADERBOARD_SIZE}</span>
             </div>
             <div className="stack">
               {topScores.length === 0 ? (
@@ -2033,7 +2039,6 @@ export default function Page() {
     setSongSuggestions(initialSongSuggestions);
     setEventIdeas(initialEventIdeas);
     setResponsiblePeople(initialResponsiblePeople);
-    setGameScores(initialGameScores);
     setSubmitted(null);
     setLookup("");
     setMyLookup("");
@@ -2102,7 +2107,7 @@ export default function Page() {
     setGameScores((previous) =>
       [...previous, { id: Date.now(), name, score, createdAt: now }]
         .sort((a, b) => b.score - a.score || Date.parse(b.createdAt) - Date.parse(a.createdAt))
-        .slice(0, 30),
+        .slice(0, MAX_STORED_GAME_SCORES),
     );
     setNotifications((previous) => [
       { id: Date.now(), message: `${name} iÅ¡saugojo Å¾aidimo rezultatÄ…: ${score} tÅ¡k.`, createdAt: now },
