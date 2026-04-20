@@ -2926,7 +2926,7 @@ export default function Page() {
                     placeholder="Jei turi, įvesk čia"
                   />
                 </Field>
-                <p>Jei kodas teisingas, bus pritaikyta 50% nuolaida suaugusių bilietams.</p>
+                <p>Savanorių nuolaidos kodas gaunamas iš organizatoriaus ir leidžiamas naudoti tik patvirtintam renginio savanoriui, kuris prisidės prie vakarėlio darbų.</p>
                 {formDiscountActive ? <strong className="success-text">Savanorio nuolaida pritaikyta.</strong> : null}
               </div>
 
