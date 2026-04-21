@@ -36,10 +36,25 @@ export async function POST(request: Request) {
     }
 
     const supabase = createSupabaseServerClient();
+    const { data: existingState, error: existingError } = await supabase
+      .from("event_state")
+      .select("payload")
+      .eq("id", STATE_ID)
+      .maybeSingle();
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    const mergedPayload = {
+      ...(existingState?.payload && typeof existingState.payload === "object" ? existingState.payload : {}),
+      ...payload,
+    };
+
     const { error } = await supabase.from("event_state").upsert(
       {
         id: STATE_ID,
-        payload,
+        payload: mergedPayload,
       },
       { onConflict: "id" },
     );

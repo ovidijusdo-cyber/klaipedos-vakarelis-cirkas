@@ -274,6 +274,21 @@ const initialGameScores: GameScore[] = [
 const LEADERBOARD_SIZE = 5;
 const MAX_STORED_GAME_SCORES = 100;
 
+function normalizeReservations(items: Reservation[]) {
+  return items.map((reservation) => ({
+    ...reservation,
+    preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
+    rideOfferSeats: reservation.rideOfferSeats ?? null,
+  }));
+}
+
+function normalizeWaitingList(items: WaitingItem[]) {
+  return items.map((item) => ({
+    ...item,
+    rideOfferSeats: item.rideOfferSeats ?? null,
+  }));
+}
+
 const initialReservations: Reservation[] = [
   {
     id: 1,
@@ -1488,6 +1503,7 @@ export default function Page() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
   const [highlightGuestKey, setHighlightGuestKey] = useState("");
+  const syncedStateRef = useRef<Record<string, string>>({});
   const [voteVoterLookup, setVoteVoterLookup] = useState("");
   const [selectedVoterId, setSelectedVoterId] = useState("");
   const [selectedVoteCategory, setSelectedVoteCategory] = useState("");
@@ -1535,30 +1551,37 @@ export default function Page() {
         }
 
         const parsed = data.payload;
-        if (parsed.reservations?.length) {
-          setReservations(
-            parsed.reservations.map((reservation) => ({
-              ...reservation,
-              preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
-              rideOfferSeats: reservation.rideOfferSeats ?? null,
-            })),
-          );
-        }
-        if (parsed.waitingList) {
-          setWaitingList(
-            parsed.waitingList.map((item) => ({
-              ...item,
-              rideOfferSeats: item.rideOfferSeats ?? null,
-            })),
-          );
-        }
-        if (parsed.notifications) setNotifications(parsed.notifications);
-        if (parsed.transfers) setTransfers(parsed.transfers);
-        if (parsed.votes) setVotes(parsed.votes);
-        if (parsed.songSuggestions?.length) setSongSuggestions(parsed.songSuggestions);
-        if (parsed.eventIdeas?.length) setEventIdeas(parsed.eventIdeas);
-        if (parsed.responsiblePeople?.length) setResponsiblePeople(parsed.responsiblePeople);
-        if (parsed.gameScores) setGameScores(parsed.gameScores);
+        const nextReservations = parsed.reservations?.length ? normalizeReservations(parsed.reservations) : initialReservations;
+        const nextWaitingList = parsed.waitingList ? normalizeWaitingList(parsed.waitingList) : [];
+        const nextNotifications = parsed.notifications ?? [];
+        const nextTransfers = parsed.transfers ?? [];
+        const nextVotes = parsed.votes ?? [];
+        const nextSongSuggestions = parsed.songSuggestions?.length ? parsed.songSuggestions : initialSongSuggestions;
+        const nextEventIdeas = parsed.eventIdeas?.length ? parsed.eventIdeas : initialEventIdeas;
+        const nextResponsiblePeople = parsed.responsiblePeople?.length ? parsed.responsiblePeople : initialResponsiblePeople;
+        const nextGameScores = parsed.gameScores?.length ? parsed.gameScores : initialGameScores;
+
+        setReservations(nextReservations);
+        setWaitingList(nextWaitingList);
+        setNotifications(nextNotifications);
+        setTransfers(nextTransfers);
+        setVotes(nextVotes);
+        setSongSuggestions(nextSongSuggestions);
+        setEventIdeas(nextEventIdeas);
+        setResponsiblePeople(nextResponsiblePeople);
+        setGameScores(nextGameScores);
+
+        syncedStateRef.current = {
+          reservations: JSON.stringify(nextReservations),
+          waitingList: JSON.stringify(nextWaitingList),
+          notifications: JSON.stringify(nextNotifications),
+          transfers: JSON.stringify(nextTransfers),
+          votes: JSON.stringify(nextVotes),
+          songSuggestions: JSON.stringify(nextSongSuggestions),
+          eventIdeas: JSON.stringify(nextEventIdeas),
+          responsiblePeople: JSON.stringify(nextResponsiblePeople),
+          gameScores: JSON.stringify(nextGameScores),
+        };
       } catch (error) {
         console.error("Failed to load remote state", error);
       } finally {
@@ -1576,6 +1599,25 @@ export default function Page() {
   useEffect(() => {
     if (!hydrated) return;
     const controller = new AbortController();
+    const currentPayload = {
+      reservations,
+      waitingList,
+      notifications,
+      transfers,
+      votes,
+      songSuggestions,
+      eventIdeas,
+      responsiblePeople,
+      gameScores,
+    };
+
+    const changedPayload = Object.fromEntries(
+      Object.entries(currentPayload).filter(([key, value]) => syncedStateRef.current[key] !== JSON.stringify(value)),
+    );
+
+    if (Object.keys(changedPayload).length === 0) {
+      return () => controller.abort();
+    }
 
     void fetch("/api/state", {
       method: "POST",
@@ -1583,24 +1625,24 @@ export default function Page() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        payload: {
-          reservations,
-          waitingList,
-          notifications,
-          transfers,
-          votes,
-          songSuggestions,
-          eventIdeas,
-          responsiblePeople,
-          gameScores,
-        },
+        payload: changedPayload,
       }),
       signal: controller.signal,
-    }).catch((error) => {
-      if (error.name !== "AbortError") {
-        console.error("Failed to save remote state", error);
-      }
-    });
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to save remote state");
+        }
+
+        Object.entries(changedPayload).forEach(([key, value]) => {
+          syncedStateRef.current[key] = JSON.stringify(value);
+        });
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          console.error("Failed to save remote state", error);
+        }
+      });
 
     return () => controller.abort();
   }, [eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
