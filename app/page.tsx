@@ -620,6 +620,14 @@ function TelegramIcon() {
   );
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg aria-hidden="true" className="button-icon" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.04 3.5a8.38 8.38 0 0 0-7.1 12.83L4 20.5l4.28-1.12A8.38 8.38 0 1 0 12.04 3.5Zm0 1.55a6.83 6.83 0 0 1 5.79 10.45 6.8 6.8 0 0 1-8.95 2.45l-.3-.18-2.52.66.68-2.45-.2-.32a6.83 6.83 0 0 1 5.5-10.61Zm-3.08 3.7c-.16 0-.42.06-.64.3-.22.25-.85.83-.85 2.02s.87 2.35.99 2.51c.12.16 1.68 2.68 4.14 3.65 2.04.81 2.46.65 2.9.61.45-.04 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.02-.38-1.94-1.2-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.02-.37.1-.49.11-.1.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.31-.74-1.79-.2-.47-.4-.4-.54-.41h-.47Z" />
+    </svg>
+  );
+}
+
 function CarIcon({ className = "button-icon" }: { className?: string }) {
   return (
     <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -3266,6 +3274,17 @@ export default function Page() {
       <footer className="site-footer">
         Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
       </footer>
+
+      <a
+        aria-label="Greitas kontaktas per WhatsApp"
+        className="floating-contact"
+        href="https://wa.me/37066352281"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <WhatsAppIcon />
+        <span>Klausti Ovidijaus</span>
+      </a>
 
         <Modal
         open={registerOpen}
