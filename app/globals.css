@@ -71,6 +71,14 @@ textarea {
   padding: 36px 20px 80px;
 }
 
+.site-footer {
+  margin: 34px auto 0;
+  padding: 18px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .page-glow {
   position: fixed;
   width: 360px;

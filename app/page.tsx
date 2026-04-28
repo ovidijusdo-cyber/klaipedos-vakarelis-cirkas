@@ -3076,6 +3076,10 @@ export default function Page() {
 
       <ClownJumpGame scores={gameScores} onSaveScore={saveGameScore} />
 
+      <footer className="site-footer">
+        Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
+      </footer>
+
         <Modal
         open={registerOpen}
         title="Registracijos forma"
