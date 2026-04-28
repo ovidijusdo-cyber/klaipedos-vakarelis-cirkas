@@ -2384,7 +2384,18 @@ export default function Page() {
 
           <div className="theme-reminder">
             <strong>Aprangos tema: CIRKAS</strong>
-            <p>Rengtis galima kuo įdomiau, žaismingiau arba turėti bent vieną cirko tematikos akcentą.</p>
+            <p>
+              Klounas, cirko direktorius, akrobatas, gimnastas, žonglierius, mimo artistas,
+              stipruolis, balionų artistas, popkornų pardavėjas, bilietų tikrintojas, cukraus
+              vata, cirko palapinė, kortų karalienė, lėlė, marionetė, ugnies artistas, cirko
+              muzikantas, trapecijos artistas, lankų šokėja, hula-hoop artistė, vienračio
+              artistas, cirko bilietas „VIP“, cirko afiša, teatro kaukė, šou atlikėjas, konfeti
+              žmogus, cirko šviesų ženklas, veidrodis, „Didžiojo šou“ žvaigždė, senų laikų cirko
+              personažas, cirko darbuotojas užkulisiuose, bilietų kasa, cirkas naktį, raudonai
+              baltas dryžuotas personažas, liūtas, tigras, zebras, dramblys, beždžionė, arklys,
+              ponis, meška, pudelis, gyvatė, papūga ir daug kitų. Tik prašome atminti, jog
+              rinktumėtės tokią tematiką, kuri būtų padori ir tinkama krikščioniui.
+            </p>
           </div>
 
           <div className="stats-grid">
