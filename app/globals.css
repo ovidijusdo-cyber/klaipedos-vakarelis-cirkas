@@ -493,27 +493,67 @@ textarea {
 
 .timeline {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  position: relative;
 }
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 247, 237, 0.86));
-  border: 1px solid rgba(251, 146, 60, 0.24);
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 247, 237, 0.86));
+  border: 1px solid rgba(251, 146, 60, 0.22);
+  box-shadow: 0 16px 34px rgba(154, 52, 18, 0.06);
 }
 
 .timeline-time {
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #ffedd5;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  min-height: 94px;
+  padding: 14px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fff7ed, #ffedd5);
   color: #c2410c;
   text-align: center;
-  font-weight: 700;
+  border: 1px solid rgba(251, 146, 60, 0.24);
+}
+
+.timeline-time span {
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.timeline-time strong {
+  color: #9a3412;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.timeline-content {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.timeline-content strong {
+  font-family: var(--font-heading), serif;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.timeline-content p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .pill-list {
@@ -2720,7 +2760,9 @@ th {
   }
 
   .timeline-time {
-    width: fit-content;
+    min-height: auto;
+    justify-items: start;
+    text-align: left;
   }
 
   .responsible-grid,

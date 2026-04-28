@@ -163,11 +163,11 @@ const MAX_PLACES = 120;
 const INVITATION_CODE = "530";
 
 const PROGRAM_ITEMS = [
-  { time: "Penktadienis, 29 d. · 19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
-  { time: "Šeštadienis · 16:00", title: "Atvyksta komanda", note: "Atvyksta kontrolieriai, pasirodantieji, organizatorius ir kiti savanoriai." },
-  { time: "Šeštadienis · 17:10", title: "Įžanginiai žodžiai ir malda", note: "Trumpa vakaro pradžia prieš pagrindinę programą." },
-  { time: "Šeštadienis · 17:15", title: "Vedėjų laikas", note: "Vakaro vedėjai perima programą ir pradeda veiklas." },
-  { time: "Ruošiama", title: "Kita informacija ruošiama", note: "Papildoma programa bus patikslinta vėliau." },
+  { day: "Penktadienis, 29 d.", time: "19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
+  { day: "Šeštadienis", time: "16:00", title: "Atvyksta komanda", note: "Atvyksta kontrolieriai, pasirodantieji, organizatorius ir kiti savanoriai." },
+  { day: "Šeštadienis", time: "17:10", title: "Įžanginiai žodžiai ir malda", note: "Trumpa vakaro pradžia prieš pagrindinę programą." },
+  { day: "Šeštadienis", time: "17:15", title: "Vedėjų laikas", note: "Vakaro vedėjai perima programą ir pradeda veiklas." },
+  { day: "Ruošiama", time: "TBA", title: "Kita informacija ruošiama", note: "Papildoma programa bus patikslinta vėliau." },
 ];
 
 const IMPORTANT_REMINDERS = [
@@ -2645,9 +2645,12 @@ export default function Page() {
         <SectionCard title="Programa" description="Atnaujinta vieša vakaro eiga.">
           <div className="timeline">
             {PROGRAM_ITEMS.map((item) => (
-              <div className="timeline-item" key={item.time}>
-                <div className="timeline-time">{item.time}</div>
-                <div>
+              <div className="timeline-item" key={`${item.day}-${item.time}-${item.title}`}>
+                <div className="timeline-time">
+                  <span>{item.day}</span>
+                  <strong>{item.time}</strong>
+                </div>
+                <div className="timeline-content">
                   <strong>{item.title}</strong>
                   <p>{item.note}</p>
                 </div>
