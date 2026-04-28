@@ -1551,15 +1551,15 @@ export default function Page() {
         }
 
         const parsed = data.payload;
-        const nextReservations = parsed.reservations?.length ? normalizeReservations(parsed.reservations) : initialReservations;
-        const nextWaitingList = parsed.waitingList ? normalizeWaitingList(parsed.waitingList) : [];
+        const nextReservations = Array.isArray(parsed.reservations) ? normalizeReservations(parsed.reservations) : initialReservations;
+        const nextWaitingList = Array.isArray(parsed.waitingList) ? normalizeWaitingList(parsed.waitingList) : [];
         const nextNotifications = parsed.notifications ?? [];
         const nextTransfers = parsed.transfers ?? [];
         const nextVotes = parsed.votes ?? [];
-        const nextSongSuggestions = parsed.songSuggestions?.length ? parsed.songSuggestions : initialSongSuggestions;
-        const nextEventIdeas = parsed.eventIdeas?.length ? parsed.eventIdeas : initialEventIdeas;
-        const nextResponsiblePeople = parsed.responsiblePeople?.length ? parsed.responsiblePeople : initialResponsiblePeople;
-        const nextGameScores = parsed.gameScores?.length ? parsed.gameScores : initialGameScores;
+        const nextSongSuggestions = Array.isArray(parsed.songSuggestions) ? parsed.songSuggestions : initialSongSuggestions;
+        const nextEventIdeas = Array.isArray(parsed.eventIdeas) ? parsed.eventIdeas : initialEventIdeas;
+        const nextResponsiblePeople = Array.isArray(parsed.responsiblePeople) ? parsed.responsiblePeople : initialResponsiblePeople;
+        const nextGameScores = Array.isArray(parsed.gameScores) ? parsed.gameScores : initialGameScores;
 
         setReservations(nextReservations);
         setWaitingList(nextWaitingList);
