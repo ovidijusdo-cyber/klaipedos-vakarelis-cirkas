@@ -38,6 +38,7 @@ type Reservation = {
   createdAt: string;
   discountPercent: number;
   rideOfferSeats: number | null;
+  needsRide: boolean;
   people: Person[];
 };
 
@@ -47,6 +48,7 @@ type WaitingItem = {
   contactPhone: string;
   contactEmail: string;
   rideOfferSeats: number | null;
+  needsRide: boolean;
   people: Person[];
   createdAt: string;
 };
@@ -279,6 +281,7 @@ function normalizeReservations(items: Reservation[]) {
     ...reservation,
     preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
     rideOfferSeats: reservation.rideOfferSeats ?? null,
+    needsRide: reservation.needsRide ?? false,
   }));
 }
 
@@ -286,6 +289,7 @@ function normalizeWaitingList(items: WaitingItem[]) {
   return items.map((item) => ({
     ...item,
     rideOfferSeats: item.rideOfferSeats ?? null,
+    needsRide: item.needsRide ?? false,
   }));
 }
 
@@ -302,6 +306,7 @@ const initialReservations: Reservation[] = [
     createdAt: "2026-04-14 10:20",
     discountPercent: 0,
     rideOfferSeats: null,
+    needsRide: false,
     people: [
       { id: "1-1", firstName: "Jonas", lastName: "Petraitis", type: "adult", active: true, arrived: false, arrivedAt: null },
       { id: "1-2", firstName: "Austėja", lastName: "Petraitė", type: "adult", active: true, arrived: false, arrivedAt: null },
@@ -341,6 +346,32 @@ function amount(reservation: Reservation) {
 
 function cashAmount(reservation: Reservation) {
   return amount(reservation) + counts(reservation).total;
+}
+
+function registrationStatus(reservation: Reservation) {
+  const reservationCounts = counts(reservation);
+
+  if (reservationCounts.total > 0 && reservationCounts.arrived === reservationCounts.total) {
+    return {
+      tone: "success",
+      title: "Atvykimas pažymėtas",
+      text: "Tavo grupė jau pažymėta kaip atvykusi į renginį.",
+    };
+  }
+
+  if (reservation.paid) {
+    return {
+      tone: "success",
+      title: "Registracija patvirtinta",
+      text: "Apmokėjimas pažymėtas, todėl vardai matomi svečių lentoje.",
+    };
+  }
+
+  return {
+    tone: "warning",
+    title: "Laukia apmokėjimo patvirtinimo",
+    text: "Rezervacija sukurta, bet svečių lentoje atsiras tik tada, kai organizatorius pažymės gautą apmokėjimą.",
+  };
 }
 
 function qrFromId(id: number) {
@@ -1492,6 +1523,8 @@ export default function Page() {
   const [cancelLookup, setCancelLookup] = useState("");
   const [transferLookup, setTransferLookup] = useState("");
   const [myLookup, setMyLookup] = useState("");
+  const [rideRequestOpen, setRideRequestOpen] = useState(false);
+  const [rideRequestLookup, setRideRequestLookup] = useState("");
   const [scannerValue, setScannerValue] = useState("");
   const [doorNotice, setDoorNotice] = useState<Notice | null>(null);
   const [songForm, setSongForm] = useState({ title: "", url: "" });
@@ -1529,6 +1562,7 @@ export default function Page() {
     discountCode: "",
     canOfferRide: false,
     rideSeats: "",
+    needsRide: false,
     consentAccepted: false,
     people: [createEmptyPerson()],
   });
@@ -1734,6 +1768,7 @@ export default function Page() {
     [formBaseTotal, formDiscountActive],
   );
   const myReservation = useMemo(() => lookupReservation(activeReservations, myLookup), [activeReservations, myLookup]);
+  const rideRequestReservation = useMemo(() => lookupReservation(activeReservations, rideRequestLookup), [activeReservations, rideRequestLookup]);
   const cancelReservation = useMemo(() => lookupReservation(activeReservations, cancelLookup), [activeReservations, cancelLookup]);
   const transferReservation = useMemo(() => lookupReservation(activeReservations, transferLookup), [activeReservations, transferLookup]);
   const foundReservation = useMemo(() => lookupReservation(activeReservations, lookup || scannerValue), [activeReservations, lookup, scannerValue]);
@@ -1772,6 +1807,27 @@ export default function Page() {
           };
         })
         .sort((a, b) => b.seats - a.seats || Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [activeReservations],
+  );
+  const rideRequests = useMemo(
+    () =>
+      activeReservations
+        .filter((reservation) => reservation.needsRide)
+        .map((reservation) => {
+          const active = activePeople(reservation);
+          const firstPerson = active[0];
+          const label = firstPerson ? maskName(firstPerson.firstName, firstPerson.lastName) : reservation.contactEmail;
+
+          return {
+            id: reservation.id,
+            label,
+            city: reservation.city,
+            phone: reservation.contactPhone,
+            email: reservation.contactEmail,
+            createdAt: reservation.createdAt,
+          };
+        })
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
     [activeReservations],
   );
   const voteEligiblePeople = useMemo(
@@ -1909,6 +1965,7 @@ export default function Page() {
           contactPhone: form.contactPhone.trim(),
           contactEmail: form.contactEmail.trim(),
           rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
+          needsRide: form.needsRide,
           people,
           createdAt: formatDateTime(),
         },
@@ -1926,6 +1983,7 @@ export default function Page() {
         discountCode: "",
         canOfferRide: false,
         rideSeats: "",
+        needsRide: false,
         consentAccepted: false,
         people: [createEmptyPerson()],
       });
@@ -1945,6 +2003,7 @@ export default function Page() {
       createdAt: formatDateTime(),
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
       rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
+      needsRide: form.needsRide,
       people,
     };
 
@@ -1952,7 +2011,7 @@ export default function Page() {
     setNotifications((previous) => [
       {
         id: Date.now(),
-        message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}`,
+        message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}${reservation.needsRide ? " Reikia pavežimo." : ""}`,
         createdAt: formatDateTime(),
       },
       ...previous,
@@ -1968,6 +2027,7 @@ export default function Page() {
       discountCode: "",
       canOfferRide: false,
       rideSeats: "",
+      needsRide: false,
       consentAccepted: false,
       people: [createEmptyPerson()],
     });
@@ -2144,6 +2204,35 @@ export default function Page() {
       { id: Date.now(), message: `Pažymėtas apmokėjimas rezervacijai #${reservationId}.`, createdAt: formatDateTime() },
       ...previous,
     ]);
+  }
+
+  function markNeedsRide(reservationId: number) {
+    const reservation = reservations.find((item) => item.id === reservationId);
+    const firstPerson = reservation ? activePeople(reservation)[0] : null;
+    const label = firstPerson ? `${firstPerson.firstName} ${firstPerson.lastName}`.trim() : reservation?.contactEmail ?? "Svečias";
+
+    setReservations((previous) =>
+      previous.map((item) =>
+        item.id === reservationId
+          ? {
+              ...item,
+              needsRide: true,
+              rideOfferSeats: null,
+            }
+          : item,
+      ),
+    );
+    setNotifications((previous) => [
+      {
+        id: Date.now(),
+        message: `${label} pažymėjo, kad reikia pavežimo.`,
+        createdAt: formatDateTime(),
+      },
+      ...previous,
+    ]);
+    setRideRequestLookup("");
+    setRideRequestOpen(false);
+    setDoorNotice({ type: "success", text: "Pavežimo poreikis pažymėtas." });
   }
 
   function exportReservations() {
@@ -2409,7 +2498,7 @@ export default function Page() {
               Noriu dalyvauti
             </button>
             <button className="secondary-button" type="button" onClick={() => setMyTicketOpen(true)}>
-              Mano bilietas
+              Mano registracijos būsena
             </button>
             <button className="ghost-button light" type="button" onClick={() => setTransferOpen(true)}>
               Susikeisti
@@ -2449,7 +2538,7 @@ export default function Page() {
               <li>Patvirtink privatumo politiką ir pereik į apmokėjimo žingsnį.</li>
                 <li>Atlik bankinį apmokėjimą per Revolut ir palauk, kol organizatorius pažymės, kad mokėjimas gautas.</li>
               <li>Kai apmokėjimas bus patvirtintas, tavo vardas atsiras svečių lentoje.</li>
-              <li>Per „Mano bilietas“ galėsi rasti savo QR kodą įėjimui.</li>
+              <li>Per „Mano registracijos būsena“ galėsi pasitikrinti patvirtinimą ir rasti savo QR kodą įėjimui.</li>
               <li>Jei pasikeistų planai, galėsi atšaukti dalyvavimą arba perduoti vietą kitam žmogui.</li>
             </ul>
             <div className="spotlight-subsection">
@@ -2645,6 +2734,16 @@ export default function Page() {
 
       {activePanel === "drivers" ? (
         <SectionCard title="Vairuotojai, kurie turi vietos" description="Svečiai, registracijoje pažymėję, kad gali pavežti kitus į vakarėlį.">
+          <div className="driver-action-panel">
+            <div>
+              <strong>Reikia transporto?</strong>
+              <p>Jei jau užsiregistravai ir matai, kad reikės pavežimo, pasižymėk čia. Organizatorius matys poreikį admin zonoje.</p>
+            </div>
+            <button className="secondary-button" type="button" onClick={() => setRideRequestOpen(true)}>
+              <CarIcon />
+              Man reikia pavežimo
+            </button>
+          </div>
           <div className="driver-grid">
             {rideOffers.length ? (
               rideOffers.map((offer) => (
@@ -2967,6 +3066,24 @@ export default function Page() {
                 </div>
               </SectionCard>
 
+              <SectionCard title="Reikia pavežimo" description="Svečiai, kurie registracijoje arba vėliau pažymėjo, kad jiems reikia transporto.">
+                <div className="stack">
+                  {rideRequests.length === 0 ? <div className="empty-state">Kol kas niekas nepažymėjo, kad reikia pavežimo.</div> : null}
+                  {rideRequests.map((request) => (
+                    <div className="panel transport-request-panel" key={request.id}>
+                      <div>
+                        <strong>{request.label}</strong>
+                        <p>Miestas: {request.city || "Nenurodytas"}</p>
+                        <p>Telefono numeris: {request.phone}</p>
+                        <p>El. paštas: {request.email}</p>
+                        <p className="admin-created-at">Registruota: {request.createdAt}</p>
+                      </div>
+                      <CarIcon className="transport-request-icon" />
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
               <SectionCard title="Atsakingi asmenys" description="Redaguojami viešai rodomi vaidmenys ir vardai.">
                 <div className="stack">
                   {responsiblePeople.map((item) => (
@@ -3139,6 +3256,9 @@ export default function Page() {
                     onChange={(event) => {
                       const checked = event.target.checked;
                       setField("canOfferRide", checked);
+                      if (checked) {
+                        setField("needsRide", false);
+                      }
                       if (!checked) {
                         setField("rideSeats", "");
                         setRideSeatsTouched(false);
@@ -3170,6 +3290,25 @@ export default function Page() {
                 )}
                 {rideSeatsTouched && form.canOfferRide ? (
                   <div className="validation-error">Pasirinkite, kiek laisvų vietų galite pasiūlyti automobilyje.</div>
+                ) : null}
+                <label className="checkbox-row">
+                  <input
+                    checked={form.needsRide}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setField("needsRide", checked);
+                      if (checked) {
+                        setField("canOfferRide", false);
+                        setField("rideSeats", "");
+                        setRideSeatsTouched(false);
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                  <span>Man reikia pavežimo</span>
+                </label>
+                {form.needsRide ? (
+                  <p>Organizatorius matys, kad tau reikia transporto, ir galės lengviau sujungti su vairuotojais.</p>
                 ) : null}
               </div>
 
@@ -3398,8 +3537,8 @@ export default function Page() {
 
       <Modal
         open={myTicketOpen}
-        title="Mano bilietas"
-        description="Įvesk savo telefoną, el. paštą, vardą arba QR kodą."
+        title="Mano registracijos būsena"
+        description="Įvesk savo telefoną, el. paštą, vardą arba QR kodą. Čia matysi patvirtinimą ir savo QR bilietą."
         onClose={() => setMyTicketOpen(false)}
       >
         <div className="stack">
@@ -3408,12 +3547,78 @@ export default function Page() {
           {myLookup && !myReservation ? <div className="empty-state warning">Rezervacija nerasta.</div> : null}
           {myReservation ? (
             <div className="ticket-card">
+              {(() => {
+                const status = registrationStatus(myReservation);
+                const reservationCounts = counts(myReservation);
+
+                return (
+                  <div className="ticket-status-stack">
+                    <div className={`ticket-status-card ${status.tone}`}>
+                      <span>Mano registracijos būsena</span>
+                      <strong>{status.title}</strong>
+                      <p>{status.text}</p>
+                    </div>
+                    <div className="ticket-status-grid">
+                      <div>
+                        <span>Apmokėjimas</span>
+                        <strong>{myReservation.paid ? "Patvirtintas" : "Laukia patvirtinimo"}</strong>
+                      </div>
+                      <div>
+                        <span>Dalyviai</span>
+                        <strong>{reservationCounts.total} asm.</strong>
+                      </div>
+                      <div>
+                        <span>Transportas</span>
+                        <strong>
+                          {myReservation.needsRide
+                            ? "Reikia pavežimo"
+                            : myReservation.rideOfferSeats
+                              ? `Siūlo ${myReservation.rideOfferSeats} viet.`
+                              : "Nepasirinkta"}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
               <strong>{myReservation.contactEmail}</strong>
               <p>QR: {myReservation.qrCode}</p>
               <div className="qr-panel">
                 <QRCodeSVG value={qrPayload(myReservation)} size={190} includeMargin />
               </div>
               <p>Parodyk šį QR prie įėjimo.</p>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={rideRequestOpen}
+        title="Man reikia pavežimo"
+        description="Surask savo registraciją ir pažymėk, kad tau reikės transporto iki vakarėlio."
+        onClose={() => setRideRequestOpen(false)}
+      >
+        <div className="stack">
+          <Field label="Paieška pagal tavo duomenis">
+            <input
+              value={rideRequestLookup}
+              onChange={(event) => setRideRequestLookup(event.target.value)}
+              placeholder="Vardas, tel. numeris arba el. paštas"
+            />
+          </Field>
+          {!rideRequestLookup.trim() ? <div className="empty-state">Įvesk savo vardą, telefono numerį arba el. paštą.</div> : null}
+          {rideRequestLookup.trim() && !rideRequestReservation ? <div className="empty-state warning">Registracija nerasta.</div> : null}
+          {rideRequestReservation ? (
+            <div className="ticket-card">
+              <strong>{rideRequestReservation.contactEmail}</strong>
+              <p>{activePeople(rideRequestReservation).map((person) => `${person.firstName} ${person.lastName}`.trim()).join(", ")}</p>
+              {rideRequestReservation.needsRide ? (
+                <div className="notice success">Pavežimo poreikis jau pažymėtas. Organizatorius tai matys admin zonoje.</div>
+              ) : (
+                <button className="primary-button" type="button" onClick={() => markNeedsRide(rideRequestReservation.id)}>
+                  Pažymėti, kad man reikia pavežimo
+                </button>
+              )}
             </div>
           ) : null}
         </div>
