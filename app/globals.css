@@ -528,6 +528,29 @@ textarea {
   border: 1px solid #fed7aa;
 }
 
+.reminder-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reminder-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #9a3412;
+  font-weight: 800;
+  text-decoration: none;
+  border: 1px solid #fdba74;
+}
+
+.reminder-links a:hover {
+  background: #ffedd5;
+}
+
 .guest-grid {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));

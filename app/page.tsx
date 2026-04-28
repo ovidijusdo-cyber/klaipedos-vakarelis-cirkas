@@ -170,8 +170,20 @@ const PROGRAM_ITEMS = [
 ];
 
 const IMPORTANT_REMINDERS = [
-  "Galima saikingai vartoti savo atsineštą alkoholį. Renginyje bus paskirti atsakingi broliai, kurie stebės situaciją. Prašome būti atsargiems bei įvertinti savo galimybes. Viskas privalo būti padoriai.",
-  "Renginio laikas prasidės 18:00. Prašome Jūsų nevėluoti, kadangi norėsime pradėti laiku.",
+  {
+    text: "Saikingai vartoti alkoholį vakarėlyje galima. Prašome visų, kurie nuspręs vartoti alkoholį, elgtis atsakingai ir saikingai. Naudinga prisiminti mintis iš jw.org straipsnio „Kaip krikščioniui dera žiūrėti į alkoholio vartojimą“, kuriame pabrėžiama savitvarda, nuosaikumas ir pagarba kitiems. Taip pat „BIBLIJOS POŽIŪRIS - Svaigalai“.",
+    links: [
+      {
+        label: "Kaip krikščioniui dera žiūrėti į alkoholio vartojimą",
+        url: "https://www.jw.org/lt/biblioteka/zurnalai/sargybos-bokstas-studijoms-2023-gruodis/Kaip-krik%C5%A1%C4%8Dioniui-dera-%C5%BEi%C5%ABr%C4%97ti-%C4%AF-alkoholio-vartojim%C4%85",
+      },
+      {
+        label: "Biblijos požiūris - Svaigalai",
+        url: "https://www.jw.org/lt/biblioteka/zurnalai/g201308/ar-vartoti-alkoholi-smerktina",
+      },
+    ],
+  },
+  { text: "Renginio laikas prasidės 17:00. Prašome Jūsų nevėluoti, kadangi norėsime pradėti laiku." },
   "Po renginio galintys prisidėti prie salės sutvarkymo, mielai esate kviečiami.",
   "Vienkartiniai indai bus paruošti vietoje.",
   "Prašome atsinešti gaiviųjų gėrimų ir savo pagamintų patiekalų, bus bendras švediškas stalas. Kviečiame kiekvieną svečią šiek tiek pasiruošti ir atsinešti savo gamybos patiekalą ar užkandį, kad stalas būtų kūrybingas ir įvairus, venkime vien tik traškučių, guminukų ar kitų saldumynų. Laukiami vaisiai, naminiai pyragai, tortai, įdomūs užkandžiai ar kažkas, kuo nustebintumėt kitus. Norime turėti gerą energiją šokiams, o tai bus tik su geru maistu.",
@@ -2624,11 +2636,24 @@ export default function Page() {
       {activePanel === "important" ? (
         <SectionCard title="Svarbu" description="Trumpi organizatoriaus priminimai svečiams.">
           <div className="pill-list">
-            {IMPORTANT_REMINDERS.map((item) => (
-              <div className="pill" key={item}>
-                {item}
+            {IMPORTANT_REMINDERS.map((item) => {
+              const reminder = typeof item === "string" ? { text: item, links: [] } : item;
+
+              return (
+              <div className="pill" key={reminder.text}>
+                <span>{reminder.text}</span>
+                {reminder.links?.length ? (
+                  <div className="reminder-links">
+                    {reminder.links.map((link) => (
+                      <a href={link.url} key={link.url} target="_blank" rel="noreferrer">
+                        {link.label}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-            ))}
+            );
+            })}
           </div>
         </SectionCard>
       ) : null}
