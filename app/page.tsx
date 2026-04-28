@@ -147,13 +147,13 @@ const BANK_ACCOUNT = {
 };
 const TELEGRAM_GROUP_URL = "https://t.me/+2Lo4XbXkjcM3NTBk";
 const EVENT_NAME = "2026 m. Klaipėdos vakarėlis „CIRKAS”";
-const EVENT_DATE = "2026 m. gegužės 30 d.";
-const EVENT_START_ISO = "2026-05-30T17:30:00+03:00";
+const EVENT_DATE = "2026 m. gegužės 30 d., 17:00–23:00";
+const EVENT_START_ISO = "2026-05-30T17:00:00+03:00";
 const EVENT_PLACE = "Priekulės kultūros centras";
 const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Priekul%C4%97s+kult%C5%ABros+centras";
 const WAZE_URL = "https://waze.com/ul?q=Priekul%C4%97s%20kult%C5%ABros%20centras";
-const ADULT_PRICE = 10;
-const CHILD_AGE_LIMIT = 12;
+const ADULT_PRICE = 8;
+const CHILD_AGE_LIMIT = 13;
 const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 120;
@@ -2346,7 +2346,7 @@ export default function Page() {
             </div>
             <div className="chip">
               <span>Kaina</span>
-              <strong>13+ m. – 10 €, vaikai – nemokamai</strong>
+              <strong>13+ m. – 8 €, vaikams iki 13 m. – nemokamai</strong>
             </div>
           </div>
 
@@ -3135,7 +3135,7 @@ export default function Page() {
                     />
                     <select value={person.type} onChange={(event) => setPerson(index, "type", event.target.value as PersonType)}>
                       <option value="adult">Nuo 13 m.</option>
-                      <option value="child">Vaikas iki 12 m.</option>
+                      <option value="child">Vaikas iki 13 m.</option>
                     </select>
                     <button className="ghost-button" disabled={form.people.length === 1} type="button" onClick={() => removePerson(index)}>
                       Pašalinti
