@@ -116,7 +116,7 @@ type Notice = {
   text: string;
 };
 
-type PublicPanel = "guests" | "program" | "important" | "songs" | "responsible" | "qr" | "admin";
+type PublicPanel = "guests" | "program" | "important" | "songs" | "responsible" | "drivers" | "qr" | "admin";
 
 type PendingCancel = {
   reservationId: number;
@@ -570,6 +570,18 @@ function TelegramIcon() {
     <svg aria-hidden="true" className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M21 4 3.8 10.6c-.8.3-.8 1.5 0 1.8l4.1 1.4 1.5 4.7c.2.8 1.2 1 1.8.4L13.8 16l4.3 3.2c.7.5 1.7.1 1.9-.8L23 5.8C23.2 4.7 22 3.9 21 4Z" />
       <path d="m7.9 13.8 10-7.3" />
+    </svg>
+  );
+}
+
+function CarIcon({ className = "button-icon" }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6.5 17.5h11" />
+      <path d="M5 13l1.8-4.2A3 3 0 0 1 9.6 7h4.8a3 3 0 0 1 2.8 1.8L19 13" />
+      <path d="M4.5 13h15a1.5 1.5 0 0 1 1.5 1.5V18h-2a2 2 0 0 1-4 0H9a2 2 0 0 1-4 0H3v-3.5A1.5 1.5 0 0 1 4.5 13Z" />
+      <circle cx="7" cy="18" r="1.5" />
+      <circle cx="17" cy="18" r="1.5" />
     </svg>
   );
 }
@@ -1747,7 +1759,7 @@ export default function Page() {
           const active = activePeople(reservation);
           const firstPerson = active[0];
           const label = firstPerson
-            ? `${firstPerson.firstName} ${firstPerson.lastName}`.trim()
+            ? maskName(firstPerson.firstName, firstPerson.lastName)
             : reservation.contactEmail;
 
           return {
@@ -2479,6 +2491,9 @@ export default function Page() {
         <button className={activePanel === "responsible" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("responsible")}>
           Atsakingi asmenys
         </button>
+        <button className={activePanel === "drivers" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("drivers")}>
+          Vairuotojai, kurie turi vietos
+        </button>
         <button className="panel-tab" type="button" onClick={() => { setVoteStep(1); setVoteOpen(true); }}>
           Balsavimo dėžutė
         </button>
@@ -2613,6 +2628,36 @@ export default function Page() {
                   <p>{item.names || "Bus papildyta"}</p>
                 </div>
               ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {activePanel === "drivers" ? (
+        <SectionCard title="Vairuotojai, kurie turi vietos" description="Svečiai, registracijoje pažymėję, kad gali pavežti kitus į vakarėlį.">
+          <div className="driver-grid">
+            {rideOffers.length ? (
+              rideOffers.map((offer) => (
+                <div className="driver-card" key={offer.id}>
+                  <div className="driver-card-icon">
+                    <CarIcon className="driver-icon" />
+                  </div>
+                  <div>
+                    <strong>{offer.label}</strong>
+                    <p>{offer.city || "Miestas nenurodytas"}</p>
+                  </div>
+                  <div className="driver-seats">
+                    <span>{offer.seats}</span>
+                    <small>{offer.seats === 1 ? "laisva vieta" : "laisvos vietos"}</small>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">Kol kas niekas nepažymėjo, kad gali pavežti kitus svečius.</div>
+            )}
+          </div>
+          <div className="driver-contact-note">
+            <CarIcon />
+            <span>Jeigu nežinote asmens, susisiekite su organizatoriumi.</span>
           </div>
         </SectionCard>
       ) : null}
