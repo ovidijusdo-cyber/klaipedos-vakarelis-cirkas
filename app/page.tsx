@@ -39,6 +39,7 @@ type Reservation = {
   discountPercent: number;
   rideOfferSeats: number | null;
   needsRide: boolean;
+  adminNote: string;
   people: Person[];
 };
 
@@ -294,6 +295,7 @@ function normalizeReservations(items: Reservation[]) {
     preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
     rideOfferSeats: reservation.rideOfferSeats ?? null,
     needsRide: reservation.needsRide ?? false,
+    adminNote: reservation.adminNote ?? "",
   }));
 }
 
@@ -319,6 +321,7 @@ const initialReservations: Reservation[] = [
     discountPercent: 0,
     rideOfferSeats: null,
     needsRide: false,
+    adminNote: "",
     people: [
       { id: "1-1", firstName: "Jonas", lastName: "Petraitis", type: "adult", active: true, arrived: false, arrivedAt: null },
       { id: "1-2", firstName: "Austėja", lastName: "Petraitė", type: "adult", active: true, arrived: false, arrivedAt: null },
@@ -2016,6 +2019,7 @@ export default function Page() {
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
       rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
       needsRide: form.needsRide,
+      adminNote: "",
       people,
     };
 
@@ -2247,9 +2251,13 @@ export default function Page() {
     setDoorNotice({ type: "success", text: "Pavežimo poreikis pažymėtas." });
   }
 
+  function updateAdminNote(reservationId: number, adminNote: string) {
+    setReservations((previous) => previous.map((item) => (item.id === reservationId ? { ...item, adminNote } : item)));
+  }
+
   function exportReservations() {
     const rows = [
-      ["ID", "QR", "Miestas", "Telefonas", "El. paštas", "Apmokėta", "Mokėjimo būdas", "Asmenų kiekis", "Atvyko", "Suma", "Sukurta"].join(";"),
+      ["ID", "QR", "Miestas", "Telefonas", "El. paštas", "Apmokėta", "Mokėjimo būdas", "Asmenų kiekis", "Atvyko", "Suma", "Sukurta", "Admin pastaba"].join(";"),
       ...activeReservations.map((reservation) =>
         [
           reservation.id,
@@ -2263,6 +2271,7 @@ export default function Page() {
           counts(reservation).arrived,
           amount(reservation),
           reservation.createdAt,
+          reservation.adminNote.replaceAll(";", ","),
         ].join(";"),
       ),
     ];
@@ -2583,6 +2592,21 @@ export default function Page() {
             <div className="panel qr-panel">
               <QRCodeSVG value={qrPayload(submitted)} size={170} includeMargin />
             </div>
+          </div>
+          <div className="next-steps-box">
+            <div>
+              <span className="muted-label">Ką daryti toliau?</span>
+              <h3>Tavo registracija priimta, liko keli trumpi žingsniai</h3>
+            </div>
+            <ol>
+              <li>Atlik bankinį pavedimą pagal apmokėjimo lange pateiktus Revolut / banko duomenis.</li>
+              <li>Mokėjimo paskirtyje įrašyk vardus, už kuriuos daromas pavedimas vakarėliui.</li>
+              <li>Palauk, kol organizatorius admin zonoje pažymės, kad apmokėjimas gautas.</li>
+              <li>Kai apmokėjimas bus patvirtintas, tavo vardas atsiras svečių lentoje.</li>
+              <li>Per „Mano registracijos būsena“ galėsi pasitikrinti patvirtinimą ir rasti QR bilietą.</li>
+              <li>Prisijunk prie Telegram grupės ir perskaityk skiltį „Svarbu“.</li>
+              <li>Jei reikės pavežimo arba gali pavežti kitus, pažymėk tai transporto skiltyje.</li>
+            </ol>
           </div>
         </SectionCard>
       ) : null}
@@ -2984,6 +3008,15 @@ export default function Page() {
                           ))}
                         </div>
 
+                        <label className="admin-note-box">
+                          <span>Admin pastaba</span>
+                          <textarea
+                            value={reservation.adminNote}
+                            onChange={(event) => updateAdminNote(reservation.id, event.target.value)}
+                            placeholder="Pvz. parašė dėl transporto, sumokėjo už 2, reikia patikrinti pavedimą..."
+                          />
+                        </label>
+
                         <div className="admin-payment-row">
                           <div className="payment-status-block">
                             <strong>Laukia patikrinimo</strong>
@@ -3051,6 +3084,15 @@ export default function Page() {
                             </div>
                           ))}
                         </div>
+
+                        <label className="admin-note-box">
+                          <span>Admin pastaba</span>
+                          <textarea
+                            value={reservation.adminNote}
+                            onChange={(event) => updateAdminNote(reservation.id, event.target.value)}
+                            placeholder="Pvz. ateis vėliau, keitė vietą, reikia susisiekti..."
+                          />
+                        </label>
 
                         <div className="admin-payment-row">
                           <div className="payment-status-block">

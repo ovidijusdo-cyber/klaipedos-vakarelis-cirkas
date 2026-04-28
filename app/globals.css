@@ -1742,6 +1742,30 @@ textarea {
   margin-top: 18px;
 }
 
+.next-steps-box {
+  margin-top: 18px;
+  padding: 20px;
+  border-radius: 26px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.95), rgba(240, 253, 250, 0.9));
+}
+
+.next-steps-box h3 {
+  margin: 6px 0 14px;
+}
+
+.next-steps-box ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text);
+}
+
+.next-steps-box li {
+  padding-left: 4px;
+}
+
 .qr-panel {
   display: flex;
   justify-content: center;
@@ -2128,6 +2152,23 @@ textarea {
 .payment-status-block p {
   margin: 4px 0 0;
   color: var(--muted);
+}
+
+.admin-note-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-note-box span {
+  font-weight: 900;
+  color: var(--text);
+}
+
+.admin-note-box textarea {
+  min-height: 76px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .payment-status-block strong {
