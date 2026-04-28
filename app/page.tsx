@@ -160,11 +160,11 @@ const MAX_PLACES = 120;
 const INVITATION_CODE = "530";
 
 const PROGRAM_ITEMS = [
-  { time: "15:00", title: "Renkasi savanoriai puošti", note: "Atvyksta savanoriai, ruošiama salė ir dekoracijos." },
-  { time: "17:30", title: "Įėjimas svečiams", note: "Prasideda svečių pasitikimas ir registracija prie įėjimo." },
-  { time: "18:30", title: "Renginio pradžia", note: "Oficiali vakaro pradžia, vedėjų pasveikinimas ir pirmos veiklos." },
-  { time: "19:00", title: "Žaidimai ir šokiai", note: "Žaidimai, muzika, staigmenos ir cirko tematikos linksmybės." },
-  { time: "22:00", title: "Laisva vakaro dalis", note: "Diskoteka, bendravimas ir vakaro užbaigimas." },
+  { time: "Penktadienis, 29 d. · 19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
+  { time: "Šeštadienis · 16:00", title: "Atvyksta komanda", note: "Atvyksta kontrolieriai, pasirodantieji, organizatorius ir kiti savanoriai." },
+  { time: "Šeštadienis · 17:10", title: "Įžanginiai žodžiai ir malda", note: "Trumpa vakaro pradžia prieš pagrindinę programą." },
+  { time: "Šeštadienis · 17:15", title: "Vedėjų laikas", note: "Vakaro vedėjai perima programą ir pradeda veiklas." },
+  { time: "Ruošiama", title: "Kita informacija ruošiama", note: "Papildoma programa bus patikslinta vėliau." },
 ];
 
 const IMPORTANT_REMINDERS = [
