@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
 
 const STATE_ID = "main";
+const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 export async function GET() {
   try {
@@ -30,6 +35,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const payload = body?.payload;
+    const incomingSectionUpdatedAt = isRecord(body?.sectionUpdatedAt) ? body.sectionUpdatedAt : {};
 
     if (!payload || typeof payload !== "object") {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -46,10 +52,36 @@ export async function POST(request: Request) {
       throw existingError;
     }
 
-    const mergedPayload = {
-      ...(existingState?.payload && typeof existingState.payload === "object" ? existingState.payload : {}),
-      ...payload,
-    };
+    const existingPayload = isRecord(existingState?.payload) ? existingState.payload : {};
+    const existingSectionUpdatedAt = isRecord(existingPayload[SECTION_TIMESTAMPS_KEY])
+      ? (existingPayload[SECTION_TIMESTAMPS_KEY] as Record<string, unknown>)
+      : {};
+    const nextSectionUpdatedAt: Record<string, number> = {};
+
+    Object.entries(existingSectionUpdatedAt).forEach(([key, value]) => {
+      const timestamp = Number(value);
+      if (Number.isFinite(timestamp)) {
+        nextSectionUpdatedAt[key] = timestamp;
+      }
+    });
+
+    const mergedPayload: Record<string, unknown> = { ...existingPayload };
+
+    Object.entries(payload as Record<string, unknown>).forEach(([key, value]) => {
+      if (key === SECTION_TIMESTAMPS_KEY) return;
+
+      const incomingTimestamp = Number(incomingSectionUpdatedAt[key] ?? Date.now());
+      const currentTimestamp = nextSectionUpdatedAt[key] ?? 0;
+
+      if (!Number.isFinite(incomingTimestamp) || incomingTimestamp < currentTimestamp) {
+        return;
+      }
+
+      mergedPayload[key] = value;
+      nextSectionUpdatedAt[key] = incomingTimestamp;
+    });
+
+    mergedPayload[SECTION_TIMESTAMPS_KEY] = nextSectionUpdatedAt;
 
     const { error } = await supabase.from("event_state").upsert(
       {

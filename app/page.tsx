@@ -1619,32 +1619,40 @@ export default function Page() {
       return () => controller.abort();
     }
 
-    void fetch("/api/state", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        payload: changedPayload,
-      }),
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to save remote state");
-        }
+    const saveTimer = window.setTimeout(() => {
+      const sectionUpdatedAt = Object.fromEntries(Object.keys(changedPayload).map((key) => [key, Date.now()]));
 
-        Object.entries(changedPayload).forEach(([key, value]) => {
-          syncedStateRef.current[key] = JSON.stringify(value);
-        });
+      void fetch("/api/state", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          payload: changedPayload,
+          sectionUpdatedAt,
+        }),
+        signal: controller.signal,
       })
-      .catch((error) => {
-        if (error.name !== "AbortError") {
-          console.error("Failed to save remote state", error);
-        }
-      });
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to save remote state");
+          }
 
-    return () => controller.abort();
+          Object.entries(changedPayload).forEach(([key, value]) => {
+            syncedStateRef.current[key] = JSON.stringify(value);
+          });
+        })
+        .catch((error) => {
+          if (error.name !== "AbortError") {
+            console.error("Failed to save remote state", error);
+          }
+        });
+    }, 800);
+
+    return () => {
+      window.clearTimeout(saveTimer);
+      controller.abort();
+    };
   }, [eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
