@@ -2462,7 +2462,7 @@ export default function Page() {
             <h1>{EVENT_NAME}</h1>
             <p>
               Kviečiame į spalvingą vakarėlį, kuriame lauks žaidimai, šokiai, gera muzika, smagi
-              kompanija ir daug gražių nuotraukų bei prisiminimų.
+              kompanija, daug dūmų, lazerių, šviesų, didelė scena, erdvi salė ir tik smagūs potyriai.
             </p>
 
           <div className="chip-grid">
