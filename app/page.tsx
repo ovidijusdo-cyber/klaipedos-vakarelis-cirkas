@@ -1573,6 +1573,8 @@ export default function Page() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
   const [adminUnlocking, setAdminUnlocking] = useState(false);
+  const [backupCreating, setBackupCreating] = useState(false);
+  const [backupMessage, setBackupMessage] = useState("");
   const [submitted, setSubmitted] = useState<Reservation | null>(null);
   const [lookup, setLookup] = useState("");
   const [cancelLookup, setCancelLookup] = useState("");
@@ -2426,6 +2428,45 @@ export default function Page() {
       setDoorNotice({ type: "warning", text: "Nepavyko patikrinti PIN. Pabandyk dar kartą." });
     } finally {
       setAdminUnlocking(false);
+    }
+  }
+
+  async function createManualBackup() {
+    if (!adminUnlocked || !adminPin.trim()) {
+      setBackupMessage("Pirma atrakink admin zoną.");
+      return;
+    }
+
+    setBackupCreating(true);
+    setBackupMessage("Kuriama atsarginė kopija...");
+
+    try {
+      // Autosave runs shortly after admin changes; this pause helps include very recent edits.
+      await new Promise((resolve) => window.setTimeout(resolve, 1100));
+      const response = await fetch("/api/backup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ adminPin }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Backup failed");
+      }
+
+      const data = (await response.json()) as { backupDate?: string };
+      const backupDate = data.backupDate ? ` (${data.backupDate})` : "";
+      setBackupMessage(`Atsarginė kopija sukurta${backupDate}.`);
+      setNotifications((previous) => [
+        { id: createNumericId(), message: `Rankiniu būdu sukurta atsarginė kopija${backupDate}.`, createdAt: formatDateTime() },
+        ...previous,
+      ]);
+    } catch (error) {
+      console.error("Failed to create manual backup", error);
+      setBackupMessage("Nepavyko sukurti atsarginės kopijos. Pabandyk dar kartą.");
+    } finally {
+      setBackupCreating(false);
     }
   }
 
@@ -3375,7 +3416,11 @@ export default function Page() {
                 <button className="secondary-button" type="button" onClick={exportReservations}>
                   Eksportuoti CSV
                 </button>
+                <button className="primary-button" type="button" onClick={createManualBackup} disabled={backupCreating}>
+                  {backupCreating ? "Kuriama kopija..." : "Daryti atsarginę kopiją"}
+                </button>
               </div>
+              {backupMessage ? <div className="notice success">{backupMessage}</div> : null}
             </div>
           )}
         </SectionCard>
