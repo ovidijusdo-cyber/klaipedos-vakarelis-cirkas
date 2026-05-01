@@ -259,14 +259,9 @@ const VOTING_CATEGORIES: VotingCategory[] = [
   { id: "best_surprise", label: "Netikėčiausias vakaro akcentas" },
 ];
 
-const initialSongSuggestions: SongSuggestion[] = [
-  { id: 1, title: "Pavyzdys: šokių hitas", url: "https://open.spotify.com/", source: "Spotify" },
-  { id: 2, title: "Pavyzdys: linksma daina", url: "https://www.youtube.com/", source: "YouTube" },
-];
+const initialSongSuggestions: SongSuggestion[] = [];
 
-const initialEventIdeas: EventIdea[] = [
-  { id: 1, text: "Pavyzdys: cirko tematikos žaidimas su prizais." },
-];
+const initialEventIdeas: EventIdea[] = [];
 
 const initialResponsiblePeople: ResponsiblePerson[] = [
   { id: 1, role: "Organizatorius", names: "" },
@@ -280,23 +275,29 @@ const initialResponsiblePeople: ResponsiblePerson[] = [
   { id: 9, role: "Savanoriai", names: "" },
 ];
 
-const initialGameScores: GameScore[] = [
-  { id: 1, name: "Jonas", score: 18, createdAt: "2026-04-14 18:10" },
-  { id: 2, name: "AustÄ—ja", score: 14, createdAt: "2026-04-14 18:22" },
-  { id: 3, name: "Lukas", score: 9, createdAt: "2026-04-14 18:35" },
-];
+const initialGameScores: GameScore[] = [];
 
 const LEADERBOARD_SIZE = 5;
 const MAX_STORED_GAME_SCORES = 100;
+const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
+const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
+const DEMO_GAME_SCORES = new Set(["Jonas:18", "AustÄ—ja:14", "Austėja:14", "Lukas:9"]);
+const DEMO_SONG_TITLES = new Set(["Pavyzdys: šokių hitas", "Pavyzdys: linksma daina"]);
+const DEMO_EVENT_IDEAS = new Set(["Pavyzdys: cirko tematikos žaidimas su prizais."]);
 
 function normalizeReservations(items: Reservation[]) {
-  return items.map((reservation) => ({
-    ...reservation,
-    preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
-    rideOfferSeats: reservation.rideOfferSeats ?? null,
-    needsRide: reservation.needsRide ?? false,
-    adminNote: reservation.adminNote ?? "",
-  }));
+  return items
+    .filter((reservation) => {
+      const email = reservation.contactEmail?.toLowerCase();
+      return !DEMO_RESERVATION_EMAILS.has(email) && !DEMO_RESERVATION_CODES.has(reservation.qrCode);
+    })
+    .map((reservation) => ({
+      ...reservation,
+      preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
+      rideOfferSeats: reservation.rideOfferSeats ?? null,
+      needsRide: reservation.needsRide ?? false,
+      adminNote: reservation.adminNote ?? "",
+    }));
 }
 
 function normalizeWaitingList(items: WaitingItem[]) {
@@ -307,28 +308,19 @@ function normalizeWaitingList(items: WaitingItem[]) {
   }));
 }
 
-const initialReservations: Reservation[] = [
-  {
-    id: 1,
-    city: "Klaipėda",
-    contactPhone: "+37060000001",
-    contactEmail: "jonas@example.com",
-    qrCode: "CIRKAS-0001",
-    paid: true,
-    paymentMethod: "bank",
-    preferredPaymentMethod: "bank",
-    createdAt: "2026-04-14 10:20",
-    discountPercent: 0,
-    rideOfferSeats: null,
-    needsRide: false,
-    adminNote: "",
-    people: [
-      { id: "1-1", firstName: "Jonas", lastName: "Petraitis", type: "adult", active: true, arrived: false, arrivedAt: null },
-      { id: "1-2", firstName: "Austėja", lastName: "Petraitė", type: "adult", active: true, arrived: false, arrivedAt: null },
-      { id: "1-3", firstName: "Lukas", lastName: "Petraitis", type: "child", active: true, arrived: false, arrivedAt: null },
-    ],
-  },
-];
+function normalizeGameScores(items: GameScore[]) {
+  return items.filter((score) => !DEMO_GAME_SCORES.has(`${score.name}:${score.score}`));
+}
+
+function normalizeSongSuggestions(items: SongSuggestion[]) {
+  return items.filter((suggestion) => !DEMO_SONG_TITLES.has(suggestion.title));
+}
+
+function normalizeEventIdeas(items: EventIdea[]) {
+  return items.filter((idea) => !DEMO_EVENT_IDEAS.has(idea.text));
+}
+
+const initialReservations: Reservation[] = [];
 
 function createEmptyPerson(): PersonForm {
   return {
@@ -1572,6 +1564,7 @@ export default function Page() {
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
   const [highlightGuestKey, setHighlightGuestKey] = useState("");
   const syncedStateRef = useRef<Record<string, string>>({});
+  const remoteStateLoadedRef = useRef(false);
   const [voteVoterLookup, setVoteVoterLookup] = useState("");
   const [selectedVoterId, setSelectedVoterId] = useState("");
   const [selectedVoteCategory, setSelectedVoteCategory] = useState("");
@@ -1614,21 +1607,28 @@ export default function Page() {
           } | null;
         };
 
-        if (ignore || !data.payload) {
+        if (ignore) {
           setHydrated(true);
           return;
         }
 
-        const parsed = data.payload;
-        const nextReservations = Array.isArray(parsed.reservations) ? normalizeReservations(parsed.reservations) : initialReservations;
-        const nextWaitingList = Array.isArray(parsed.waitingList) ? normalizeWaitingList(parsed.waitingList) : [];
+        const parsed = data.payload ?? {};
+        const rawReservations = Array.isArray(parsed.reservations) ? parsed.reservations : [];
+        const rawWaitingList = Array.isArray(parsed.waitingList) ? parsed.waitingList : [];
+        const rawSongSuggestions = Array.isArray(parsed.songSuggestions) ? parsed.songSuggestions : [];
+        const rawEventIdeas = Array.isArray(parsed.eventIdeas) ? parsed.eventIdeas : [];
+        const rawResponsiblePeople = Array.isArray(parsed.responsiblePeople) ? parsed.responsiblePeople : initialResponsiblePeople;
+        const rawGameScores = Array.isArray(parsed.gameScores) ? parsed.gameScores : [];
+
+        const nextReservations = normalizeReservations(rawReservations);
+        const nextWaitingList = normalizeWaitingList(rawWaitingList);
         const nextNotifications = parsed.notifications ?? [];
         const nextTransfers = parsed.transfers ?? [];
         const nextVotes = parsed.votes ?? [];
-        const nextSongSuggestions = Array.isArray(parsed.songSuggestions) ? parsed.songSuggestions : initialSongSuggestions;
-        const nextEventIdeas = Array.isArray(parsed.eventIdeas) ? parsed.eventIdeas : initialEventIdeas;
-        const nextResponsiblePeople = Array.isArray(parsed.responsiblePeople) ? parsed.responsiblePeople : initialResponsiblePeople;
-        const nextGameScores = Array.isArray(parsed.gameScores) ? parsed.gameScores : initialGameScores;
+        const nextSongSuggestions = normalizeSongSuggestions(rawSongSuggestions);
+        const nextEventIdeas = normalizeEventIdeas(rawEventIdeas);
+        const nextResponsiblePeople = rawResponsiblePeople;
+        const nextGameScores = normalizeGameScores(rawGameScores);
 
         setReservations(nextReservations);
         setWaitingList(nextWaitingList);
@@ -1641,16 +1641,17 @@ export default function Page() {
         setGameScores(nextGameScores);
 
         syncedStateRef.current = {
-          reservations: JSON.stringify(nextReservations),
-          waitingList: JSON.stringify(nextWaitingList),
+          reservations: JSON.stringify(rawReservations),
+          waitingList: JSON.stringify(rawWaitingList),
           notifications: JSON.stringify(nextNotifications),
           transfers: JSON.stringify(nextTransfers),
           votes: JSON.stringify(nextVotes),
-          songSuggestions: JSON.stringify(nextSongSuggestions),
-          eventIdeas: JSON.stringify(nextEventIdeas),
-          responsiblePeople: JSON.stringify(nextResponsiblePeople),
-          gameScores: JSON.stringify(nextGameScores),
+          songSuggestions: JSON.stringify(rawSongSuggestions),
+          eventIdeas: JSON.stringify(rawEventIdeas),
+          responsiblePeople: JSON.stringify(rawResponsiblePeople),
+          gameScores: JSON.stringify(rawGameScores),
         };
+        remoteStateLoadedRef.current = true;
       } catch (error) {
         console.error("Failed to load remote state", error);
       } finally {
@@ -1667,6 +1668,7 @@ export default function Page() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (!remoteStateLoadedRef.current) return;
     const controller = new AbortController();
     const currentPayload = {
       reservations,
