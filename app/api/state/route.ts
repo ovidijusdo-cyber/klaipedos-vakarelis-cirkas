@@ -3,9 +3,56 @@ import { createSupabaseServerClient } from "../../../lib/supabase/server";
 
 const STATE_ID = "main";
 const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
+const DELETED_RESERVATION_IDS_KEY = "deletedReservationIds";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergeById(
+  existingValue: unknown,
+  incomingValue: unknown,
+  deletedIds: Set<number> = new Set(),
+  options: { overwriteExisting?: boolean } = {},
+) {
+  const overwriteExisting = options.overwriteExisting ?? true;
+  const byId = new Map<number, Record<string, unknown>>();
+
+  if (Array.isArray(existingValue)) {
+    existingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const id = Number(item.id);
+      if (!Number.isFinite(id) || deletedIds.has(id)) return;
+      if (overwriteExisting || !byId.has(id)) {
+        byId.set(id, item);
+      }
+    });
+  }
+
+  if (Array.isArray(incomingValue)) {
+    incomingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const id = Number(item.id);
+      if (!Number.isFinite(id) || deletedIds.has(id)) return;
+      byId.set(id, item);
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
+function mergeDeletedIds(existingValue: unknown, incomingValue: unknown) {
+  const ids = new Set<number>();
+
+  [existingValue, incomingValue].forEach((value) => {
+    if (!Array.isArray(value)) return;
+    value.forEach((item) => {
+      const id = Number(item);
+      if (Number.isFinite(id)) ids.add(id);
+    });
+  });
+
+  return Array.from(ids);
 }
 
 export async function GET() {
@@ -53,6 +100,7 @@ export async function POST(request: Request) {
     }
 
     const existingPayload = isRecord(existingState?.payload) ? existingState.payload : {};
+    const incomingPayload = payload as Record<string, unknown>;
     const existingSectionUpdatedAt = isRecord(existingPayload[SECTION_TIMESTAMPS_KEY])
       ? (existingPayload[SECTION_TIMESTAMPS_KEY] as Record<string, unknown>)
       : {};
@@ -66,20 +114,45 @@ export async function POST(request: Request) {
     });
 
     const mergedPayload: Record<string, unknown> = { ...existingPayload };
+    const mergedDeletedReservationIds = mergeDeletedIds(
+      existingPayload[DELETED_RESERVATION_IDS_KEY],
+      incomingPayload[DELETED_RESERVATION_IDS_KEY],
+    );
+    const deletedReservationIds = new Set(mergedDeletedReservationIds);
 
-    Object.entries(payload as Record<string, unknown>).forEach(([key, value]) => {
+    Object.entries(incomingPayload).forEach(([key, value]) => {
       if (key === SECTION_TIMESTAMPS_KEY) return;
+      if (key === DELETED_RESERVATION_IDS_KEY) {
+        mergedPayload[key] = mergedDeletedReservationIds;
+        return;
+      }
 
       const incomingTimestamp = Number(incomingSectionUpdatedAt[key] ?? Date.now());
       const currentTimestamp = nextSectionUpdatedAt[key] ?? 0;
 
       if (!Number.isFinite(incomingTimestamp) || incomingTimestamp < currentTimestamp) {
+        if (key === "reservations") {
+          mergedPayload[key] = mergeById(existingPayload[key], value, deletedReservationIds, { overwriteExisting: false });
+        } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
+          mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), { overwriteExisting: false });
+        }
         return;
       }
 
-      mergedPayload[key] = value;
+      if (key === "reservations") {
+        mergedPayload[key] = mergeById(existingPayload[key], value, deletedReservationIds);
+      } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
+        mergedPayload[key] = mergeById(existingPayload[key], value);
+      } else {
+        mergedPayload[key] = value;
+      }
       nextSectionUpdatedAt[key] = incomingTimestamp;
     });
+
+    if (mergedDeletedReservationIds.length > 0) {
+      mergedPayload[DELETED_RESERVATION_IDS_KEY] = mergedDeletedReservationIds;
+      mergedPayload.reservations = mergeById(mergedPayload.reservations, [], deletedReservationIds);
+    }
 
     mergedPayload[SECTION_TIMESTAMPS_KEY] = nextSectionUpdatedAt;
 

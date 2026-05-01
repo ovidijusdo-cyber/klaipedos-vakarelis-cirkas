@@ -1523,6 +1523,7 @@ export default function Page() {
   const [eventIdeas, setEventIdeas] = useState<EventIdea[]>(initialEventIdeas);
   const [responsiblePeople, setResponsiblePeople] = useState<ResponsiblePerson[]>(initialResponsiblePeople);
   const [gameScores, setGameScores] = useState<GameScore[]>(initialGameScores);
+  const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
 
   const [registerOpen, setRegisterOpen] = useState(false);
   const [myTicketOpen, setMyTicketOpen] = useState(false);
@@ -1604,6 +1605,7 @@ export default function Page() {
             eventIdeas?: EventIdea[];
             responsiblePeople?: ResponsiblePerson[];
             gameScores?: GameScore[];
+            deletedReservationIds?: number[];
           } | null;
         };
 
@@ -1619,6 +1621,9 @@ export default function Page() {
         const rawEventIdeas = Array.isArray(parsed.eventIdeas) ? parsed.eventIdeas : [];
         const rawResponsiblePeople = Array.isArray(parsed.responsiblePeople) ? parsed.responsiblePeople : initialResponsiblePeople;
         const rawGameScores = Array.isArray(parsed.gameScores) ? parsed.gameScores : [];
+        const nextDeletedReservationIds = Array.isArray(parsed.deletedReservationIds)
+          ? parsed.deletedReservationIds.map(Number).filter(Number.isFinite)
+          : [];
 
         const nextReservations = normalizeReservations(rawReservations);
         const nextWaitingList = normalizeWaitingList(rawWaitingList);
@@ -1639,6 +1644,7 @@ export default function Page() {
         setEventIdeas(nextEventIdeas);
         setResponsiblePeople(nextResponsiblePeople);
         setGameScores(nextGameScores);
+        setDeletedReservationIds(nextDeletedReservationIds);
 
         syncedStateRef.current = {
           reservations: JSON.stringify(rawReservations),
@@ -1650,6 +1656,7 @@ export default function Page() {
           eventIdeas: JSON.stringify(rawEventIdeas),
           responsiblePeople: JSON.stringify(rawResponsiblePeople),
           gameScores: JSON.stringify(rawGameScores),
+          deletedReservationIds: JSON.stringify(nextDeletedReservationIds),
         };
         remoteStateLoadedRef.current = true;
       } catch (error) {
@@ -1680,6 +1687,7 @@ export default function Page() {
       eventIdeas,
       responsiblePeople,
       gameScores,
+      deletedReservationIds,
     };
 
     const changedPayload = Object.fromEntries(
@@ -1724,7 +1732,7 @@ export default function Page() {
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -2102,6 +2110,7 @@ export default function Page() {
     if (!pendingDelete) return;
 
     setReservations((previous) => previous.filter((item) => item.id !== pendingDelete.reservationId));
+    setDeletedReservationIds((previous) => (previous.includes(pendingDelete.reservationId) ? previous : [...previous, pendingDelete.reservationId]));
     setNotifications((previous) => [
       {
         id: Date.now(),
