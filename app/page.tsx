@@ -34,6 +34,7 @@ type Reservation = {
   qrCode: string;
   paid: boolean;
   paymentMethod: PaymentMethod;
+  paidAt?: string | null;
   preferredPaymentMethod: PaymentMethod;
   createdAt: string;
   discountPercent: number;
@@ -293,6 +294,7 @@ function normalizeReservations(items: Reservation[]) {
     .map((reservation) => ({
       ...reservation,
       preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
+      paidAt: reservation.paidAt ?? null,
       rideOfferSeats: reservation.rideOfferSeats ?? null,
       needsRide: reservation.needsRide ?? false,
       adminNote: reservation.adminNote ?? "",
@@ -483,6 +485,11 @@ function formatDateTime(date = new Date()) {
 function reservationTimestamp(reservation: Reservation) {
   const value = Date.parse(reservation.createdAt);
   return Number.isNaN(value) ? reservation.id : value;
+}
+
+function paidTimestamp(reservation: Reservation) {
+  const value = Date.parse(reservation.paidAt ?? reservation.createdAt);
+  return Number.isNaN(value) ? reservationTimestamp(reservation) : value;
 }
 
 function downloadFile(filename: string, content: string, mimeType: string) {
@@ -1818,7 +1825,10 @@ export default function Page() {
   }, [doorNotice]);
 
   const activeReservations = useMemo(() => reservations.filter((reservation) => activePeople(reservation).length > 0), [reservations]);
-  const visibleGuestReservations = useMemo(() => activeReservations.filter((reservation) => reservation.paid), [activeReservations]);
+  const visibleGuestReservations = useMemo(
+    () => activeReservations.filter((reservation) => reservation.paid).sort((a, b) => paidTimestamp(b) - paidTimestamp(a)),
+    [activeReservations],
+  );
   const paidReservations = useMemo(() => activeReservations.filter((reservation) => reservation.paid), [activeReservations]);
   const occupied = useMemo(() => activeReservations.reduce((sum, reservation) => sum + counts(reservation).total, 0), [activeReservations]);
   const remaining = Math.max(0, MAX_PLACES - occupied);
@@ -1856,7 +1866,7 @@ export default function Page() {
     () =>
       activeReservations
         .filter((reservation) => reservation.paid)
-        .sort((a, b) => reservationTimestamp(b) - reservationTimestamp(a)),
+        .sort((a, b) => paidTimestamp(b) - paidTimestamp(a)),
     [activeReservations],
   );
   const rideOffers = useMemo(
@@ -2038,6 +2048,7 @@ export default function Page() {
       qrCode: qrFromId(id),
       paid: false,
       paymentMethod: null,
+      paidAt: null,
       preferredPaymentMethod: "bank",
       createdAt,
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
@@ -2294,7 +2305,18 @@ export default function Page() {
       window.setTimeout(() => setHighlightGuestKey(""), 2600);
     }
 
-    setReservations((previous) => previous.map((item) => (item.id === reservationId ? { ...item, paid: true, paymentMethod } : item)));
+    setReservations((previous) =>
+      previous.map((item) =>
+        item.id === reservationId
+          ? {
+              ...item,
+              paid: true,
+              paymentMethod,
+              paidAt: new Date().toISOString(),
+            }
+          : item,
+      ),
+    );
     setNotifications((previous) => [
       { id: createNumericId(), message: `Pažymėtas apmokėjimas rezervacijai #${reservationId}.`, createdAt: formatDateTime() },
       ...previous,
