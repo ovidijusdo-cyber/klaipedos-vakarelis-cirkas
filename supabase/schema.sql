@@ -4,6 +4,16 @@ create table if not exists public.event_state (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.event_state_backups (
+  id bigserial primary key,
+  state_id text not null default 'main',
+  backup_date date not null,
+  payload jsonb not null,
+  source_updated_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  unique (state_id, backup_date)
+);
+
 create or replace function public.set_event_state_updated_at()
 returns trigger
 language plpgsql
