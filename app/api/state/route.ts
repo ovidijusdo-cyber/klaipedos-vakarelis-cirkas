@@ -5,6 +5,12 @@ const STATE_ID = "main";
 const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
 const DELETED_RESERVATION_IDS_KEY = "deletedReservationIds";
 const MAX_SAVE_RETRIES = 5;
+const ADMIN_PIN = process.env.ADMIN_PIN;
+const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
+const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
+const DEMO_GAME_SCORES = new Set(["Jonas:18", "AustÄ—ja:14", "Austėja:14", "Lukas:9"]);
+const DEMO_SONG_TITLES = new Set(["Pavyzdys: šokių hitas", "Pavyzdys: linksma daina"]);
+const DEMO_EVENT_IDEAS = new Set(["Pavyzdys: cirko tematikos žaidimas su prizais."]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -25,10 +31,7 @@ function mergeById(
       if (!isRecord(item)) return;
       const id = Number(item.id);
       if (!Number.isFinite(id) || deletedIds.has(id)) return;
-      const canOverwrite = overwriteIds ? overwriteIds.has(id) : overwriteExisting;
-      if (canOverwrite || !byId.has(id)) {
-        byId.set(id, item);
-      }
+      byId.set(id, item);
     });
   }
 
@@ -37,7 +40,10 @@ function mergeById(
       if (!isRecord(item)) return;
       const id = Number(item.id);
       if (!Number.isFinite(id) || deletedIds.has(id)) return;
-      byId.set(id, item);
+      const canOverwrite = overwriteIds ? overwriteIds.has(id) : overwriteExisting;
+      if (canOverwrite || !byId.has(id)) {
+        byId.set(id, item);
+      }
     });
   }
 
@@ -58,6 +64,70 @@ function mergeDeletedIds(existingValue: unknown, incomingValue: unknown) {
   return Array.from(ids);
 }
 
+function sanitizePublicReservation(existingItem: Record<string, unknown> | undefined, incomingItem: Record<string, unknown>) {
+  const existingPeople = Array.isArray(existingItem?.people) ? existingItem.people.filter(isRecord) : [];
+  const existingPeopleById = new Map(existingPeople.map((person) => [String(person.id ?? ""), person]));
+  const incomingPeople = Array.isArray(incomingItem.people) ? incomingItem.people.filter(isRecord) : [];
+
+  return {
+    ...existingItem,
+    ...incomingItem,
+    paid: Boolean(existingItem?.paid ?? false),
+    paymentMethod: existingItem?.paymentMethod ?? null,
+    preferredPaymentMethod: existingItem?.preferredPaymentMethod ?? incomingItem.preferredPaymentMethod ?? "bank",
+    discountPercent: existingItem?.discountPercent ?? incomingItem.discountPercent ?? 0,
+    adminNote: String(existingItem?.adminNote ?? ""),
+    createdAt: existingItem?.createdAt ?? incomingItem.createdAt,
+    people: incomingPeople.map((person) => {
+      const existingPerson = existingPeopleById.get(String(person.id ?? ""));
+
+      return {
+        ...existingPerson,
+        ...person,
+        arrived: Boolean(existingPerson?.arrived ?? false),
+        arrivedAt: existingPerson?.arrivedAt ?? null,
+      };
+    }),
+  };
+}
+
+function mergeReservations(
+  existingValue: unknown,
+  incomingValue: unknown,
+  deletedIds: Set<number>,
+  options: { overwriteExisting?: boolean; overwriteIds?: Set<number>; isAdmin: boolean },
+) {
+  if (options.isAdmin) {
+    return mergeById(existingValue, incomingValue, deletedIds, options);
+  }
+
+  const overwriteExisting = options.overwriteExisting ?? true;
+  const overwriteIds = options.overwriteIds;
+  const byId = new Map<number, Record<string, unknown>>();
+
+  if (Array.isArray(existingValue)) {
+    existingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const id = Number(item.id);
+      if (!Number.isFinite(id) || deletedIds.has(id)) return;
+      byId.set(id, item);
+    });
+  }
+
+  if (Array.isArray(incomingValue)) {
+    incomingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const id = Number(item.id);
+      if (!Number.isFinite(id) || deletedIds.has(id)) return;
+      const canOverwrite = overwriteIds ? overwriteIds.has(id) : overwriteExisting;
+      if (!canOverwrite && byId.has(id)) return;
+      byId.set(id, sanitizePublicReservation(byId.get(id), item));
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
 function getChangedIdSet(value: unknown) {
   const ids = new Set<number>();
   if (!Array.isArray(value)) return ids;
@@ -68,6 +138,40 @@ function getChangedIdSet(value: unknown) {
   });
 
   return ids;
+}
+
+function sanitizeStoredPayload(payload: Record<string, unknown>) {
+  if (Array.isArray(payload.reservations)) {
+    payload.reservations = payload.reservations.filter((item) => {
+      if (!isRecord(item)) return false;
+      const email = String(item.contactEmail ?? "").toLowerCase();
+      const qrCode = String(item.qrCode ?? "");
+      return !DEMO_RESERVATION_EMAILS.has(email) && !DEMO_RESERVATION_CODES.has(qrCode);
+    });
+  }
+
+  if (Array.isArray(payload.gameScores)) {
+    payload.gameScores = payload.gameScores.filter((item) => {
+      if (!isRecord(item)) return false;
+      return !DEMO_GAME_SCORES.has(`${String(item.name ?? "")}:${Number(item.score)}`);
+    });
+  }
+
+  if (Array.isArray(payload.songSuggestions)) {
+    payload.songSuggestions = payload.songSuggestions.filter((item) => {
+      if (!isRecord(item)) return false;
+      return !DEMO_SONG_TITLES.has(String(item.title ?? ""));
+    });
+  }
+
+  if (Array.isArray(payload.eventIdeas)) {
+    payload.eventIdeas = payload.eventIdeas.filter((item) => {
+      if (!isRecord(item)) return false;
+      return !DEMO_EVENT_IDEAS.has(String(item.text ?? ""));
+    });
+  }
+
+  return payload;
 }
 
 export async function GET() {
@@ -83,8 +187,10 @@ export async function GET() {
       throw error;
     }
 
+    const payload = isRecord(data?.payload) ? sanitizeStoredPayload({ ...data.payload }) : null;
+
     return NextResponse.json({
-      payload: data?.payload ?? null,
+      payload,
       updatedAt: data?.updated_at ?? null,
     });
   } catch (error) {
@@ -97,6 +203,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const payload = body?.payload;
+    const isAdminRequest = Boolean(ADMIN_PIN) && body?.adminPin === ADMIN_PIN;
     const incomingSectionUpdatedAt = isRecord(body?.sectionUpdatedAt) ? body.sectionUpdatedAt : {};
     const incomingChangedIds = isRecord(body?.changedIds) ? body.changedIds : {};
 
@@ -134,25 +241,29 @@ export async function POST(request: Request) {
       const mergedPayload: Record<string, unknown> = { ...existingPayload };
       const mergedDeletedReservationIds = mergeDeletedIds(
         existingPayload[DELETED_RESERVATION_IDS_KEY],
-        incomingPayload[DELETED_RESERVATION_IDS_KEY],
+        isAdminRequest ? incomingPayload[DELETED_RESERVATION_IDS_KEY] : [],
       );
       const deletedReservationIds = new Set(mergedDeletedReservationIds);
 
       Object.entries(incomingPayload).forEach(([key, value]) => {
         if (key === SECTION_TIMESTAMPS_KEY) return;
         if (key === DELETED_RESERVATION_IDS_KEY) {
-          mergedPayload[key] = mergedDeletedReservationIds;
+          if (isAdminRequest) {
+            mergedPayload[key] = mergedDeletedReservationIds;
+          }
           return;
         }
+        if (!isAdminRequest && key === "responsiblePeople") return;
 
         const incomingTimestamp = Number(incomingSectionUpdatedAt[key] ?? Date.now());
         const currentTimestamp = nextSectionUpdatedAt[key] ?? 0;
 
         if (!Number.isFinite(incomingTimestamp) || incomingTimestamp < currentTimestamp) {
           if (key === "reservations") {
-            mergedPayload[key] = mergeById(existingPayload[key], value, deletedReservationIds, {
+            mergedPayload[key] = mergeReservations(existingPayload[key], value, deletedReservationIds, {
               overwriteExisting: false,
               overwriteIds: getChangedIdSet(incomingChangedIds[key]),
+              isAdmin: isAdminRequest,
             });
           } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
             mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
@@ -164,15 +275,18 @@ export async function POST(request: Request) {
         }
 
         if (key === "reservations") {
-          mergedPayload[key] = mergeById(existingPayload[key], value, deletedReservationIds, {
+          mergedPayload[key] = mergeReservations(existingPayload[key], value, deletedReservationIds, {
             overwriteIds: getChangedIdSet(incomingChangedIds[key]),
+            isAdmin: isAdminRequest,
           });
         } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
           mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
             overwriteIds: getChangedIdSet(incomingChangedIds[key]),
           });
-        } else {
+        } else if (isAdminRequest) {
           mergedPayload[key] = value;
+        } else {
+          return;
         }
         nextSectionUpdatedAt[key] = incomingTimestamp;
       });
@@ -183,6 +297,7 @@ export async function POST(request: Request) {
       }
 
       mergedPayload[SECTION_TIMESTAMPS_KEY] = nextSectionUpdatedAt;
+      sanitizeStoredPayload(mergedPayload);
 
       let query = supabase
         .from("event_state")

@@ -136,7 +136,6 @@ type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
 };
 
-const ADMIN_PIN = "programuotojas307";
 const REVOLUT_PAYMENT_URL = "https://revolut.me/ovidij1c5";
 const REVOLUT_APP_URL = "https://app.revolut.com/";
 const BANK_ACCOUNT = {
@@ -349,6 +348,10 @@ function changedRecordIds(previousJson: string | undefined, nextValue: unknown) 
 }
 
 const initialReservations: Reservation[] = [];
+
+function createNumericId() {
+  return Date.now() * 1000 + Math.floor(Math.random() * 1000);
+}
 
 function createEmptyPerson(): PersonForm {
   return {
@@ -1562,6 +1565,7 @@ export default function Page() {
 
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
+  const [adminUnlocking, setAdminUnlocking] = useState(false);
   const [submitted, setSubmitted] = useState<Reservation | null>(null);
   const [lookup, setLookup] = useState("");
   const [cancelLookup, setCancelLookup] = useState("");
@@ -1675,15 +1679,15 @@ export default function Page() {
         setDeletedReservationIds(nextDeletedReservationIds);
 
         syncedStateRef.current = {
-          reservations: JSON.stringify(rawReservations),
-          waitingList: JSON.stringify(rawWaitingList),
+          reservations: JSON.stringify(nextReservations),
+          waitingList: JSON.stringify(nextWaitingList),
           notifications: JSON.stringify(nextNotifications),
           transfers: JSON.stringify(nextTransfers),
           votes: JSON.stringify(nextVotes),
-          songSuggestions: JSON.stringify(rawSongSuggestions),
-          eventIdeas: JSON.stringify(rawEventIdeas),
-          responsiblePeople: JSON.stringify(rawResponsiblePeople),
-          gameScores: JSON.stringify(rawGameScores),
+          songSuggestions: JSON.stringify(nextSongSuggestions),
+          eventIdeas: JSON.stringify(nextEventIdeas),
+          responsiblePeople: JSON.stringify(nextResponsiblePeople),
+          gameScores: JSON.stringify(nextGameScores),
           deletedReservationIds: JSON.stringify(nextDeletedReservationIds),
         };
         remoteStateLoadedRef.current = true;
@@ -1743,6 +1747,7 @@ export default function Page() {
           payload: changedPayload,
           sectionUpdatedAt,
           changedIds,
+          adminPin: adminUnlocked ? adminPin : undefined,
         }),
         signal: controller.signal,
       })
@@ -1766,7 +1771,7 @@ export default function Page() {
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [adminPin, adminUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -1975,14 +1980,14 @@ export default function Page() {
     if (lowerUrl.includes("spotify")) source = "Spotify";
     if (lowerUrl.includes("youtube") || lowerUrl.includes("youtu.be")) source = "YouTube";
 
-    setSongSuggestions((previous) => [{ id: Date.now(), title, url, source }, ...previous]);
+    setSongSuggestions((previous) => [{ id: createNumericId(), title, url, source }, ...previous]);
     setSongForm({ title: "", url: "" });
   }
 
   function addEventIdea() {
     const text = ideaForm.trim();
     if (!text) return;
-    setEventIdeas((previous) => [{ id: Date.now(), text }, ...previous]);
+    setEventIdeas((previous) => [{ id: createNumericId(), text }, ...previous]);
     setIdeaForm("");
   }
 
@@ -2009,7 +2014,7 @@ export default function Page() {
 
   function finalizeReservation() {
     if (!form.consentAccepted) return;
-    const stamp = Date.now();
+    const stamp = createNumericId();
     const people = form.people
       .filter((person) => person.firstName.trim())
       .map((person, index) => ({
@@ -2078,7 +2083,7 @@ export default function Page() {
     setReservations((previous) => [reservation, ...previous]);
     setNotifications((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}${reservation.needsRide ? " Reikia pavežimo." : ""}`,
         createdAt: formatDateTime(),
       },
@@ -2120,7 +2125,7 @@ export default function Page() {
 
     if (reservation && person) {
       setNotifications((previous) => [
-        { id: Date.now(), message: `${person.firstName} ${person.lastName} atšaukė dalyvavimą.`, createdAt: formatDateTime() },
+        { id: createNumericId(), message: `${person.firstName} ${person.lastName} atšaukė dalyvavimą.`, createdAt: formatDateTime() },
         ...previous,
       ]);
     }
@@ -2147,7 +2152,7 @@ export default function Page() {
     setDeletedReservationIds((previous) => (previous.includes(pendingDelete.reservationId) ? previous : [...previous, pendingDelete.reservationId]));
     setNotifications((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         message: `Ištrinta rezervacija: ${pendingDelete.label}.`,
         createdAt: formatDateTime(),
       },
@@ -2193,7 +2198,7 @@ export default function Page() {
 
     setTransfers((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         reservationId: transferReservation.id,
         originalName,
         replacementName,
@@ -2205,7 +2210,7 @@ export default function Page() {
 
     setNotifications((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         message: `Gautas susikeitimas: ${originalName} pakeistas į ${replacementName}.`,
         createdAt: now,
       },
@@ -2270,7 +2275,7 @@ export default function Page() {
 
     setReservations((previous) => previous.map((item) => (item.id === reservationId ? { ...item, paid: true, paymentMethod } : item)));
     setNotifications((previous) => [
-      { id: Date.now(), message: `Pažymėtas apmokėjimas rezervacijai #${reservationId}.`, createdAt: formatDateTime() },
+      { id: createNumericId(), message: `Pažymėtas apmokėjimas rezervacijai #${reservationId}.`, createdAt: formatDateTime() },
       ...previous,
     ]);
   }
@@ -2293,7 +2298,7 @@ export default function Page() {
     );
     setNotifications((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         message: `${label} pažymėjo, kad reikia pavežimo.`,
         createdAt: formatDateTime(),
       },
@@ -2331,12 +2336,34 @@ export default function Page() {
     downloadFile("cirkas-rezervacijos.csv", rows.join("\n"), "text/csv;charset=utf-8");
   }
 
-  function unlockAdmin() {
-    if (adminPin === ADMIN_PIN) {
-      setAdminUnlocked(true);
-      setDoorNotice({ type: "success", text: "Admin zona atrakinta." });
-    } else {
+  async function unlockAdmin() {
+    if (!adminPin.trim()) {
+      setDoorNotice({ type: "warning", text: "Įvesk PIN kodą." });
+      return;
+    }
+
+    setAdminUnlocking(true);
+    try {
+      const response = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pin: adminPin }),
+      });
+
+      if (response.ok) {
+        setAdminUnlocked(true);
+        setDoorNotice({ type: "success", text: "Admin zona atrakinta." });
+        return;
+      }
+
       setDoorNotice({ type: "warning", text: "Neteisingas PIN kodas." });
+    } catch (error) {
+      console.error("Failed to unlock admin", error);
+      setDoorNotice({ type: "warning", text: "Nepavyko patikrinti PIN. Pabandyk dar kartą." });
+    } finally {
+      setAdminUnlocking(false);
     }
   }
 
@@ -2366,7 +2393,7 @@ export default function Page() {
     const now = formatDateTime();
     setVotes((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         categoryId: selectedVoteCategory,
         voterPersonId: selectedVoterId,
         targetPersonId,
@@ -2376,7 +2403,7 @@ export default function Page() {
     ]);
     setNotifications((previous) => [
       {
-        id: Date.now(),
+        id: createNumericId(),
         message: `Gautas balsas kategorijoje „${VOTING_CATEGORIES.find((item) => item.id === selectedVoteCategory)?.label ?? ""}“.`,
         createdAt: now,
       },
@@ -2389,12 +2416,12 @@ export default function Page() {
   function saveGameScore(name: string, score: number) {
     const now = formatDateTime();
     setGameScores((previous) =>
-      [...previous, { id: Date.now(), name, score, createdAt: now }]
+      [...previous, { id: createNumericId(), name, score, createdAt: now }]
         .sort((a, b) => b.score - a.score || Date.parse(b.createdAt) - Date.parse(a.createdAt))
         .slice(0, MAX_STORED_GAME_SCORES),
     );
     setNotifications((previous) => [
-      { id: Date.now(), message: `${name} iÅ¡saugojo Å¾aidimo rezultatÄ…: ${score} tÅ¡k.`, createdAt: now },
+      { id: createNumericId(), message: `${name} išsaugojo žaidimo rezultatą: ${score} tšk.`, createdAt: now },
       ...previous,
     ]);
   }
@@ -2885,8 +2912,8 @@ export default function Page() {
                 <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
               </Field>
                 <div className="stack-inline">
-                  <button className="primary-button" type="button" onClick={unlockAdmin}>
-                    Atrakinti QR tikrinimą
+                  <button className="primary-button" type="button" onClick={unlockAdmin} disabled={adminUnlocking}>
+                    {adminUnlocking ? "Tikrinama..." : "Atrakinti QR tikrinimą"}
                   </button>
                 </div>
                 {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
@@ -2994,8 +3021,8 @@ export default function Page() {
               <Field label="Admin PIN">
                 <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
               </Field>
-                <button className="primary-button" type="button" onClick={unlockAdmin}>
-                  Atrakinti
+                <button className="primary-button" type="button" onClick={unlockAdmin} disabled={adminUnlocking}>
+                  {adminUnlocking ? "Tikrinama..." : "Atrakinti"}
                 </button>
               </div>
           ) : (
