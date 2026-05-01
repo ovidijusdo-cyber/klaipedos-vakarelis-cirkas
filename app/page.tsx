@@ -1581,6 +1581,7 @@ export default function Page() {
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
+  const [pendingRegistration, setPendingRegistration] = useState<Reservation | null>(null);
   const [privacyTouched, setPrivacyTouched] = useState(false);
   const [invitationCodeTouched, setInvitationCodeTouched] = useState(false);
   const [rideSeatsTouched, setRideSeatsTouched] = useState(false);
@@ -1995,6 +1996,108 @@ export default function Page() {
     setResponsiblePeople((previous) => previous.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
   }
 
+  function resetRegistrationForm() {
+    setForm({
+      city: "",
+      contactPhone: "",
+      contactEmail: "",
+      invitationCode: "",
+      discountCode: "",
+      canOfferRide: false,
+      rideSeats: "",
+      needsRide: false,
+      consentAccepted: false,
+      people: [createEmptyPerson()],
+    });
+    setRegisterStep("details");
+    setPrivacyTouched(false);
+    setInvitationCodeTouched(false);
+    setRideSeatsTouched(false);
+  }
+
+  function buildReservationFromForm(id = createNumericId(), createdAt = formatDateTime()): Reservation | null {
+    const people = form.people
+      .filter((person) => person.firstName.trim())
+      .map((person, index) => ({
+        id: `${id}-${index + 1}`,
+        firstName: person.firstName.trim(),
+        lastName: person.lastName.trim(),
+        type: person.type,
+        active: true,
+        arrived: false,
+        arrivedAt: null,
+      }));
+
+    if (!people.length) return null;
+
+    return {
+      id,
+      city: form.city.trim(),
+      contactPhone: form.contactPhone.trim(),
+      contactEmail: form.contactEmail.trim(),
+      qrCode: qrFromId(id),
+      paid: false,
+      paymentMethod: null,
+      preferredPaymentMethod: "bank",
+      createdAt,
+      discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
+      rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
+      needsRide: form.needsRide,
+      adminNote: "",
+      people,
+    };
+  }
+
+  function savePendingRegistration() {
+    const existingReservation = pendingRegistration ? reservations.find((reservation) => reservation.id === pendingRegistration.id) : null;
+    const reservation = buildReservationFromForm(existingReservation?.id, existingReservation?.createdAt);
+    if (!reservation) return null;
+
+    const existingCount = existingReservation ? counts(existingReservation).total : 0;
+    if (occupied - existingCount + counts(reservation).total > MAX_PLACES) {
+      setWaitingList((previous) => [
+        {
+          id: reservation.id,
+          city: reservation.city,
+          contactPhone: reservation.contactPhone,
+          contactEmail: reservation.contactEmail,
+          rideOfferSeats: reservation.rideOfferSeats,
+          needsRide: reservation.needsRide,
+          people: reservation.people,
+          createdAt: reservation.createdAt,
+        },
+        ...previous,
+      ]);
+      setSubmitted(null);
+      setPendingRegistration(null);
+      resetRegistrationForm();
+      setRegisterOpen(false);
+      return null;
+    }
+
+    setReservations((previous) => {
+      if (previous.some((item) => item.id === reservation.id)) {
+        return previous.map((item) => (item.id === reservation.id ? reservation : item));
+      }
+
+      return [reservation, ...previous];
+    });
+
+    if (!existingReservation) {
+      setNotifications((previous) => [
+        {
+          id: createNumericId(),
+          message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}${reservation.needsRide ? " Reikia pavežimo." : ""}`,
+          createdAt: formatDateTime(),
+        },
+        ...previous,
+      ]);
+    }
+
+    setPendingRegistration(reservation);
+    return reservation;
+  }
+
   function submitReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (form.invitationCode.trim() !== INVITATION_CODE) {
@@ -2009,106 +2112,24 @@ export default function Page() {
       setPrivacyTouched(true);
       return;
     }
+
+    const reservation = savePendingRegistration();
+    if (!reservation) return;
+
     setRegisterStep("payment");
   }
 
   function finalizeReservation() {
     if (!form.consentAccepted) return;
-    const stamp = createNumericId();
-    const people = form.people
-      .filter((person) => person.firstName.trim())
-      .map((person, index) => ({
-        id: `${stamp}-${index + 1}`,
-        firstName: person.firstName.trim(),
-        lastName: person.lastName.trim(),
-        type: person.type,
-        active: true,
-        arrived: false,
-        arrivedAt: null,
-      }));
+    const reservation = pendingRegistration ?? savePendingRegistration();
+    if (!reservation) return;
 
-    if (!people.length) return;
-
-    if (occupied + people.length > MAX_PLACES) {
-      setWaitingList((previous) => [
-        {
-          id: stamp,
-          city: form.city.trim(),
-          contactPhone: form.contactPhone.trim(),
-          contactEmail: form.contactEmail.trim(),
-          rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
-          needsRide: form.needsRide,
-          people,
-          createdAt: formatDateTime(),
-        },
-        ...previous,
-      ]);
-      setRegisterOpen(false);
-      setRegisterStep("details");
-      setPrivacyTouched(false);
-      setRideSeatsTouched(false);
-      setForm({
-        city: "",
-        contactPhone: "",
-        contactEmail: "",
-        invitationCode: "",
-        discountCode: "",
-        canOfferRide: false,
-        rideSeats: "",
-        needsRide: false,
-        consentAccepted: false,
-        people: [createEmptyPerson()],
-      });
-      setSubmitted(null);
-      return;
-    }
-
-    const reservation: Reservation = {
-      id: stamp,
-      city: form.city.trim(),
-      contactPhone: form.contactPhone.trim(),
-      contactEmail: form.contactEmail.trim(),
-      qrCode: qrFromId(stamp),
-      paid: false,
-      paymentMethod: null,
-      preferredPaymentMethod: "bank",
-      createdAt: formatDateTime(),
-      discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
-      rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
-      needsRide: form.needsRide,
-      adminNote: "",
-      people,
-    };
-
-    setReservations((previous) => [reservation, ...previous]);
-    setNotifications((previous) => [
-      {
-        id: createNumericId(),
-        message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}${reservation.needsRide ? " Reikia pavežimo." : ""}`,
-        createdAt: formatDateTime(),
-      },
-      ...previous,
-    ]);
     setSubmitted(reservation);
     setCelebratingRegistration(true);
     window.setTimeout(() => setCelebratingRegistration(false), 2200);
-    setForm({
-      city: "",
-      contactPhone: "",
-      contactEmail: "",
-      invitationCode: "",
-      discountCode: "",
-      canOfferRide: false,
-      rideSeats: "",
-      needsRide: false,
-      consentAccepted: false,
-      people: [createEmptyPerson()],
-    });
+    resetRegistrationForm();
     setRegisterOpen(false);
-    setRegisterStep("details");
-    setPrivacyTouched(false);
-    setInvitationCodeTouched(false);
-    setRideSeatsTouched(false);
+    setPendingRegistration(null);
   }
 
   function cancelPerson(reservationId: number, personId: string) {
@@ -2595,7 +2616,7 @@ export default function Page() {
           </div>
 
           <div className="hero-actions">
-            <button className="primary-button" type="button" onClick={() => { setRegisterStep("details"); setRegisterOpen(true); }}>
+            <button className="primary-button" type="button" onClick={() => { setPendingRegistration(null); resetRegistrationForm(); setRegisterOpen(true); }}>
               Noriu dalyvauti
             </button>
             <button className="secondary-button" type="button" onClick={() => setMyTicketOpen(true)}>
@@ -3364,10 +3385,8 @@ export default function Page() {
         description="Įvesk bendrus kontaktus ir visus registruojamus asmenis."
           onClose={() => {
             setRegisterOpen(false);
-            setRegisterStep("details");
-            setPrivacyTouched(false);
-            setInvitationCodeTouched(false);
-            setRideSeatsTouched(false);
+            setPendingRegistration(null);
+            resetRegistrationForm();
           }}
       >
         <form className="stack" onSubmit={submitReservation}>
@@ -3540,8 +3559,8 @@ export default function Page() {
                     type="button"
                     onClick={() => {
                       setRegisterOpen(false);
-                      setInvitationCodeTouched(false);
-                      setRideSeatsTouched(false);
+                      setPendingRegistration(null);
+                      resetRegistrationForm();
                     }}
                   >
                     Uždaryti
@@ -3570,6 +3589,10 @@ export default function Page() {
                         Kol apmokėjimas nebus pažymėtas kaip gautas, žmogus neatsiras svečių lentoje.
                       </p>
                     </div>
+                  </div>
+
+                  <div className="payment-alert">
+                    Prašome nepamiršti spustelti žemiau mygtuko „Tęsti po apmokėjimo“.
                   </div>
 
                   <div className="payment-card">

@@ -1944,6 +1944,16 @@ textarea {
   gap: 16px;
 }
 
+.payment-alert {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #ffffff;
+  font-weight: 900;
+  line-height: 1.45;
+  box-shadow: 0 14px 28px rgba(220, 38, 38, 0.22);
+}
+
 .payment-hero {
   display: grid;
   gap: 16px;
