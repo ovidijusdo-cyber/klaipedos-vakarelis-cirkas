@@ -320,6 +320,34 @@ function normalizeEventIdeas(items: EventIdea[]) {
   return items.filter((idea) => !DEMO_EVENT_IDEAS.has(idea.text));
 }
 
+function parseSyncedArray(value: string | undefined) {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function changedRecordIds(previousJson: string | undefined, nextValue: unknown) {
+  if (!Array.isArray(nextValue)) return [];
+
+  const previousById = new Map<number, string>();
+  parseSyncedArray(previousJson).forEach((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return;
+    const id = Number((item as { id?: unknown }).id);
+    if (Number.isFinite(id)) previousById.set(id, JSON.stringify(item));
+  });
+
+  return nextValue
+    .filter((item) => item && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({ id: Number((item as { id?: unknown }).id), value: JSON.stringify(item) }))
+    .filter((item) => Number.isFinite(item.id) && previousById.get(item.id) !== item.value)
+    .map((item) => item.id);
+}
+
 const initialReservations: Reservation[] = [];
 
 function createEmptyPerson(): PersonForm {
@@ -1700,6 +1728,11 @@ export default function Page() {
 
     const saveTimer = window.setTimeout(() => {
       const sectionUpdatedAt = Object.fromEntries(Object.keys(changedPayload).map((key) => [key, Date.now()]));
+      const changedIds = Object.fromEntries(
+        Object.entries(changedPayload)
+          .map(([key, value]) => [key, changedRecordIds(syncedStateRef.current[key], value)])
+          .filter(([, ids]) => Array.isArray(ids) && ids.length > 0),
+      );
 
       void fetch("/api/state", {
         method: "POST",
@@ -1709,6 +1742,7 @@ export default function Page() {
         body: JSON.stringify({
           payload: changedPayload,
           sectionUpdatedAt,
+          changedIds,
         }),
         signal: controller.signal,
       })
