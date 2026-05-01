@@ -2323,6 +2323,25 @@ export default function Page() {
     ]);
   }
 
+  function unmarkPayment(reservationId: number) {
+    setReservations((previous) =>
+      previous.map((item) =>
+        item.id === reservationId
+          ? {
+              ...item,
+              paid: false,
+              paymentMethod: null,
+              paidAt: null,
+            }
+          : item,
+      ),
+    );
+    setNotifications((previous) => [
+      { id: createNumericId(), message: `Atžymėtas apmokėjimas rezervacijai #${reservationId}.`, createdAt: formatDateTime() },
+      ...previous,
+    ]);
+  }
+
   function markNeedsRide(reservationId: number) {
     const reservation = reservations.find((item) => item.id === reservationId);
     const firstPerson = reservation ? activePeople(reservation)[0] : null;
@@ -3029,7 +3048,11 @@ export default function Page() {
                             Apmokėta grynais
                           </button>
                         </>
-                      ) : null}
+                      ) : (
+                        <button className="ghost-button" type="button" onClick={() => unmarkPayment(foundReservation.id)}>
+                          Atžymėti apmokėjimą
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="stack">
@@ -3235,6 +3258,9 @@ export default function Page() {
                             </button>
                             <button className="ghost-button" type="button" onClick={() => setPaymentMethod(reservation.id, "cash")}>
                               Pažymėti G
+                            </button>
+                            <button className="ghost-button" type="button" onClick={() => unmarkPayment(reservation.id)}>
+                              Atžymėti
                             </button>
                           </div>
                         </div>
