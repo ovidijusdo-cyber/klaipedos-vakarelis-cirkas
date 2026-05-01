@@ -14,7 +14,17 @@ const bodyFont = Manrope({
 
 export const metadata: Metadata = {
   title: "Klaipėdos vakarėlis CIRKAS",
-  description: "Vakarėlio registracija, bilietai ir administravimas viename puslapyje.",
+  description: "Privati vakarėlio registracijos svetainė.",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      nosnippet: true,
+    },
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
