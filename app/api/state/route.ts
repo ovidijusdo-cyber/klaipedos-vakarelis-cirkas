@@ -66,26 +66,40 @@ function mergeDeletedIds(existingValue: unknown, incomingValue: unknown) {
 
 function sanitizePublicReservation(existingItem: Record<string, unknown> | undefined, incomingItem: Record<string, unknown>) {
   const existingPeople = Array.isArray(existingItem?.people) ? existingItem.people.filter(isRecord) : [];
-  const existingPeopleById = new Map(existingPeople.map((person) => [String(person.id ?? ""), person]));
   const incomingPeople = Array.isArray(incomingItem.people) ? incomingItem.people.filter(isRecord) : [];
+
+  if (!existingItem) {
+    return {
+      ...incomingItem,
+      paid: false,
+      paymentMethod: null,
+      adminNote: "",
+      people: incomingPeople.map((person) => ({
+        ...person,
+        active: person.active !== false,
+        arrived: false,
+        arrivedAt: null,
+      })),
+    };
+  }
+
+  const incomingPeopleById = new Map(incomingPeople.map((person) => [String(person.id ?? ""), person]));
+  const rideOfferSeats = Number(incomingItem.rideOfferSeats);
 
   return {
     ...existingItem,
-    ...incomingItem,
-    paid: Boolean(existingItem?.paid ?? false),
-    paymentMethod: existingItem?.paymentMethod ?? null,
-    preferredPaymentMethod: existingItem?.preferredPaymentMethod ?? incomingItem.preferredPaymentMethod ?? "bank",
-    discountPercent: existingItem?.discountPercent ?? incomingItem.discountPercent ?? 0,
-    adminNote: String(existingItem?.adminNote ?? ""),
-    createdAt: existingItem?.createdAt ?? incomingItem.createdAt,
-    people: incomingPeople.map((person) => {
-      const existingPerson = existingPeopleById.get(String(person.id ?? ""));
+    needsRide: Boolean(incomingItem.needsRide ?? existingItem.needsRide ?? false),
+    rideOfferSeats: incomingItem.rideOfferSeats === null ? null : Number.isFinite(rideOfferSeats) ? rideOfferSeats : existingItem.rideOfferSeats ?? null,
+    people: existingPeople.map((existingPerson) => {
+      const incomingPerson = incomingPeopleById.get(String(existingPerson.id ?? ""));
 
       return {
         ...existingPerson,
-        ...person,
-        arrived: Boolean(existingPerson?.arrived ?? false),
-        arrivedAt: existingPerson?.arrivedAt ?? null,
+        firstName: typeof incomingPerson?.firstName === "string" ? incomingPerson.firstName : existingPerson.firstName,
+        lastName: typeof incomingPerson?.lastName === "string" ? incomingPerson.lastName : existingPerson.lastName,
+        active: existingPerson.active === false ? false : incomingPerson?.active !== false,
+        arrived: Boolean(existingPerson.arrived ?? false),
+        arrivedAt: existingPerson.arrivedAt ?? null,
       };
     }),
   };
@@ -268,7 +282,7 @@ export async function POST(request: Request) {
           } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
             mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
               overwriteExisting: false,
-              overwriteIds: getChangedIdSet(incomingChangedIds[key]),
+              overwriteIds: isAdminRequest ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
             });
           }
           return;
@@ -281,7 +295,8 @@ export async function POST(request: Request) {
           });
         } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
           mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
-            overwriteIds: getChangedIdSet(incomingChangedIds[key]),
+            overwriteExisting: isAdminRequest,
+            overwriteIds: isAdminRequest ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
           });
         } else if (isAdminRequest) {
           mergedPayload[key] = value;
