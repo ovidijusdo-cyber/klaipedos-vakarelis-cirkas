@@ -1988,6 +1988,43 @@ textarea {
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
 }
 
+.payment-info-block {
+  display: grid;
+  gap: 14px;
+}
+
+.payment-amount-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  border: 1px solid #fed7aa;
+}
+
+.payment-amount-line span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.payment-amount-line strong {
+  font-family: var(--font-heading), serif;
+  font-size: 1.35rem;
+  color: #9a3412;
+}
+
+.payment-purpose-text {
+  font-weight: 800;
+  color: #9a3412;
+}
+
+.post-registration-payment {
+  margin-top: 18px;
+}
+
 .payment-card-head {
   display: flex;
   justify-content: space-between;

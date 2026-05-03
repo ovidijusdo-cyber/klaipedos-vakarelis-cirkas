@@ -388,6 +388,11 @@ function cashAmount(reservation: Reservation) {
   return amount(reservation) + counts(reservation).total;
 }
 
+function paymentPurpose(reservation?: Reservation | null) {
+  const names = reservation ? activePeople(reservation).map((person) => `${person.firstName} ${person.lastName}`.trim()).filter(Boolean) : [];
+  return names.length ? names.join(", ") : "įrašyk vardus asmenų, už kuriuos daromas pavedimas vakarėliui";
+}
+
 function registrationStatus(reservation: Reservation) {
   const reservationCounts = counts(reservation);
 
@@ -577,6 +582,86 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function PaymentInformation({ reservation }: { reservation?: Reservation | null }) {
+  const total = reservation ? amount(reservation) : null;
+
+  return (
+    <div className="payment-info-block">
+      <div className="payment-card">
+        <div className="payment-card-head">
+          <div>
+            <span className="muted-label dark">Apmokėjimo informacija</span>
+            <h4>Bankinis apmokėjimas per Revolut</h4>
+          </div>
+          <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
+        </div>
+        {total !== null ? (
+          <div className="payment-amount-line">
+            <span>Mokėtina suma</span>
+            <strong>{total} €</strong>
+          </div>
+        ) : null}
+        <p>
+          Atidaryk mokėjimo nuorodą ir atlik pavedimą į asmeninę Revolut sąskaitą. Kai organizatorius admin zonoje
+          pažymės mokėjimą kaip gautą, dalyvis atsiras svečių lentoje.
+        </p>
+        <div className="stack-inline">
+          <a className="payment-button" href={REVOLUT_PAYMENT_URL} target="_blank" rel="noreferrer">
+            Atidaryti Revolut.me
+          </a>
+          <a className="map-link" href={REVOLUT_APP_URL} target="_blank" rel="noreferrer">
+            Atidaryti Revolut programėlę
+          </a>
+        </div>
+      </div>
+
+      <div className="payment-card">
+        <div className="payment-card-head">
+          <div>
+            <span className="muted-label dark">Bankiniai duomenys</span>
+            <h4>Bankinio pavedimo duomenys iš kito banko</h4>
+          </div>
+          <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
+        </div>
+        <div className="bank-grid">
+          <div className="bank-row">
+            <span>Gavėjas</span>
+            <strong>{BANK_ACCOUNT.recipient}</strong>
+          </div>
+          <div className="bank-row">
+            <span>IBAN</span>
+            <strong>{BANK_ACCOUNT.iban}</strong>
+          </div>
+          <div className="bank-row">
+            <span>BIC / SWIFT</span>
+            <strong>{BANK_ACCOUNT.bic}</strong>
+          </div>
+          <div className="bank-row">
+            <span>Bankas</span>
+            <strong>{BANK_ACCOUNT.bankName}</strong>
+          </div>
+          <div className="bank-row">
+            <span>Adresas</span>
+            <strong>{BANK_ACCOUNT.bankAddress}</strong>
+          </div>
+          <div className="bank-row">
+            <span>Korespondentinis BIC</span>
+            <strong>{BANK_ACCOUNT.correspondentBic}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="payment-note">
+        <strong>Mokėjimo paskirtis</strong>
+        <p>
+          Mokėjimo paskirtyje įrašyk: <span className="payment-purpose-text">{paymentPurpose(reservation)}</span>.
+          Taip organizatorius lengviau sutikrins, už ką atliktas pavedimas.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -1569,6 +1654,7 @@ export default function Page() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [voteOpen, setVoteOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [paymentInfoOpen, setPaymentInfoOpen] = useState(false);
 
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
@@ -2704,6 +2790,9 @@ export default function Page() {
             <button className="secondary-button" type="button" onClick={() => setMyTicketOpen(true)}>
               Mano registracijos būsena
             </button>
+            <button className="secondary-button" type="button" onClick={() => setPaymentInfoOpen(true)}>
+              Apmokėjimo informacija
+            </button>
             <button className="ghost-button light" type="button" onClick={() => setTransferOpen(true)}>
               Susikeisti
             </button>
@@ -2791,6 +2880,11 @@ export default function Page() {
               <li>Jei reikės pavežimo arba gali pavežti kitus, pažymėk tai transporto skiltyje.</li>
             </ol>
           </div>
+          {!submitted.paid ? (
+            <div className="post-registration-payment">
+              <PaymentInformation reservation={submitted} />
+            </div>
+          ) : null}
         </SectionCard>
       ) : null}
 
@@ -3688,73 +3782,7 @@ export default function Page() {
                     Prašome nepamiršti spustelti žemiau mygtuko „Tęsti po apmokėjimo“.
                   </div>
 
-                  <div className="payment-card">
-                    <div className="payment-card-head">
-                      <div>
-                        <span className="muted-label dark">Greitas apmokėjimas</span>
-                        <h4>Bankinis apmokėjimas per Revolut</h4>
-                      </div>
-                      <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
-                    </div>
-                    <p>
-                      Atidaryk mokėjimo nuorodą ir atlik pavedimą į asmeninę Revolut sąskaitą. Grynieji svečiams čia neberodomi, tačiau organizatorius prireikus vis tiek galės juos pažymėti admin zonoje.
-                    </p>
-                    <div className="stack-inline">
-                      <a className="payment-button" href={REVOLUT_PAYMENT_URL} target="_blank" rel="noreferrer">
-                        Atidaryti Revolut.me
-                      </a>
-                      <a className="map-link" href={REVOLUT_APP_URL} target="_blank" rel="noreferrer">
-                        Atidaryti Revolut programėlę
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="payment-card">
-                    <div className="payment-card-head">
-                      <div>
-                        <span className="muted-label dark">Bankiniai duomenys</span>
-                        <h4>Bankinio pavedimo duomenys iš kito banko</h4>
-                      </div>
-                      <span className="payment-badge">{BANK_ACCOUNT.currency}</span>
-                    </div>
-                    <div className="bank-grid">
-                      <div className="bank-row">
-                        <span>Gavėjas</span>
-                        <strong>{BANK_ACCOUNT.recipient}</strong>
-                      </div>
-                      <div className="bank-row">
-                        <span>IBAN</span>
-                        <strong>{BANK_ACCOUNT.iban}</strong>
-                      </div>
-                      <div className="bank-row">
-                        <span>BIC / SWIFT</span>
-                        <strong>{BANK_ACCOUNT.bic}</strong>
-                      </div>
-                      <div className="bank-row">
-                        <span>Bankas</span>
-                        <strong>{BANK_ACCOUNT.bankName}</strong>
-                      </div>
-                      <div className="bank-row">
-                        <span>Adresas</span>
-                        <strong>{BANK_ACCOUNT.bankAddress}</strong>
-                      </div>
-                      <div className="bank-row">
-                        <span>Korespondentinis BIC</span>
-                        <strong>{BANK_ACCOUNT.correspondentBic}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                    <div className="payment-note">
-                      <strong>Mokėjimo paskirtis</strong>
-                      <p>
-                        Mokėjimo paskirtyje įrašyk vardus asmenų, už kuriuos daromas pavedimas į vakarėlį, kad organizatorius galėtų lengvai sutikrinti apmokėjimą.
-                      </p>
-                    <p>
-                      Kai organizatorius admin zonoje pažymės mokėjimą kaip gautą, tik tada
-                      dalyvis atsiras svečių lentoje.
-                    </p>
-                  </div>
+                  <PaymentInformation reservation={pendingRegistration} />
                 </div>
 
                 <div className="modal-actions">
@@ -3813,6 +3841,15 @@ export default function Page() {
       </Modal>
 
       <Modal
+        open={paymentInfoOpen}
+        title="Apmokėjimo informacija"
+        description="Jeigu registracija jau sukurta, tikslią mokėtiną sumą gali pasitikrinti per „Mano registracijos būsena“."
+        onClose={() => setPaymentInfoOpen(false)}
+      >
+        <PaymentInformation />
+      </Modal>
+
+      <Modal
         open={myTicketOpen}
         title="Mano registracijos būsena"
         description="Įvesk savo telefoną, el. paštą, vardą arba QR kodą. Čia matysi patvirtinimą ir savo QR bilietą."
@@ -3864,6 +3901,7 @@ export default function Page() {
                 <QRCodeSVG value={qrPayload(myReservation)} size={190} includeMargin />
               </div>
               <p>Parodyk šį QR prie įėjimo.</p>
+              {!myReservation.paid ? <PaymentInformation reservation={myReservation} /> : null}
             </div>
           ) : null}
         </div>
