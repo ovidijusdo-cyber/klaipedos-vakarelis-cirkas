@@ -393,6 +393,20 @@ function paymentPurpose(reservation?: Reservation | null) {
   return names.length ? names.join(", ") : "įrašyk vardus asmenų, už kuriuos daromas pavedimas vakarėliui";
 }
 
+function responsibleIcon(role: string) {
+  const normalizedRole = role.toLowerCase();
+  if (normalizedRole.includes("organizator")) return "★";
+  if (normalizedRole.includes("budėtoj") || normalizedRole.includes("kontrolier")) return "🛡";
+  if (normalizedRole.includes("vedėj")) return "🎤";
+  if (normalizedRole.includes("muzik")) return "♪";
+  if (normalizedRole.includes("kamera") || normalizedRole.includes("žurnalist")) return "▣";
+  if (normalizedRole.includes("šoki")) return "◆";
+  if (normalizedRole.includes("žaid")) return "✦";
+  if (normalizedRole.includes("savanor")) return "✚";
+  if (normalizedRole.includes("mim")) return "◐";
+  return "●";
+}
+
 function registrationStatus(reservation: Reservation) {
   const reservationCounts = counts(reservation);
 
@@ -3052,9 +3066,14 @@ export default function Page() {
             {responsiblePeople
               .filter((item) => item.role.trim() || item.names.trim())
               .map((item) => (
-                <div className="panel" key={item.id}>
-                  <strong>{item.role || "Papildoma pareigybė"}</strong>
-                  <p>{item.names || "Bus papildyta"}</p>
+                <div className="responsible-card" key={item.id}>
+                  <div className="responsible-icon" aria-hidden="true">
+                    {responsibleIcon(item.role)}
+                  </div>
+                  <div>
+                    <span className="responsible-role">{item.role || "Papildoma pareigybė"}</span>
+                    <strong className="responsible-name">{item.names || "Bus papildyta"}</strong>
+                  </div>
                 </div>
               ))}
           </div>
