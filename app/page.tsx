@@ -26,6 +26,13 @@ type Person = {
   arrivedAt: string | null;
 };
 
+type RideReservation = {
+  passengerReservationId: number;
+  passengerPersonId: string;
+  passengerName: string;
+  createdAt: string;
+};
+
 type Reservation = {
   id: number;
   city: string;
@@ -39,6 +46,7 @@ type Reservation = {
   createdAt: string;
   discountPercent: number;
   rideOfferSeats: number | null;
+  rideReservations: RideReservation[];
   needsRide: boolean;
   adminNote: string;
   people: Person[];
@@ -296,6 +304,7 @@ function normalizeReservations(items: Reservation[]) {
       preferredPaymentMethod: reservation.preferredPaymentMethod ?? reservation.paymentMethod ?? null,
       paidAt: reservation.paidAt ?? null,
       rideOfferSeats: reservation.rideOfferSeats ?? null,
+      rideReservations: Array.isArray(reservation.rideReservations) ? reservation.rideReservations : [],
       needsRide: reservation.needsRide ?? false,
       adminNote: reservation.adminNote ?? "",
     }));
@@ -524,6 +533,10 @@ function downloadFile(filename: string, content: string, mimeType: string) {
 function maskName(firstName: string, lastName: string) {
   const initial = lastName.trim()[0]?.toUpperCase() ?? "";
   return initial ? `${firstName} ${initial}.` : firstName;
+}
+
+function fullName(person: Person) {
+  return `${person.firstName} ${person.lastName}`.trim();
 }
 
 function Modal({
@@ -1682,6 +1695,9 @@ export default function Page() {
   const [myLookup, setMyLookup] = useState("");
   const [rideRequestOpen, setRideRequestOpen] = useState(false);
   const [rideRequestLookup, setRideRequestLookup] = useState("");
+  const [rideBookingDriverId, setRideBookingDriverId] = useState<number | null>(null);
+  const [rideBookingLookup, setRideBookingLookup] = useState("");
+  const [selectedRidePassengerId, setSelectedRidePassengerId] = useState("");
   const [scannerValue, setScannerValue] = useState("");
   const [doorNotice, setDoorNotice] = useState<Notice | null>(null);
   const [songForm, setSongForm] = useState({ title: "", url: "" });
@@ -1981,19 +1997,54 @@ export default function Page() {
           const label = firstPerson
             ? maskName(firstPerson.firstName, firstPerson.lastName)
             : reservation.contactEmail;
+          const booked = Array.isArray(reservation.rideReservations) ? reservation.rideReservations : [];
+          const seats = reservation.rideOfferSeats ?? 0;
+          const availableSeats = Math.max(0, seats - booked.length);
 
           return {
             id: reservation.id,
             label,
             city: reservation.city,
-            seats: reservation.rideOfferSeats ?? 0,
+            seats,
+            availableSeats,
+            booked,
             phone: reservation.contactPhone,
             createdAt: reservation.createdAt,
           };
         })
-        .sort((a, b) => b.seats - a.seats || Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+        .sort((a, b) => b.availableSeats - a.availableSeats || Date.parse(b.createdAt) - Date.parse(a.createdAt)),
     [activeReservations],
   );
+  const rideBookingDriver = useMemo(
+    () => rideOffers.find((offer) => offer.id === rideBookingDriverId) ?? null,
+    [rideBookingDriverId, rideOffers],
+  );
+  const bookedPassengerIds = useMemo(
+    () => new Set(activeReservations.flatMap((reservation) => reservation.rideReservations?.map((booking) => booking.passengerPersonId) ?? [])),
+    [activeReservations],
+  );
+  const rideBookingMatches = useMemo(() => {
+    const query = rideBookingLookup.trim().toLowerCase();
+    if (!query || !rideBookingDriver) return [];
+
+    return activeReservations.flatMap((reservation) =>
+      activePeople(reservation)
+        .filter((person) => {
+          if (reservation.id === rideBookingDriver.id) return false;
+          const personName = fullName(person).toLowerCase();
+          const contact = `${reservation.contactPhone} ${reservation.contactEmail}`.toLowerCase();
+          return personName.includes(query) || person.firstName.toLowerCase().includes(query) || person.lastName.toLowerCase().includes(query) || contact.includes(query);
+        })
+        .map((person) => ({
+          reservationId: reservation.id,
+          personId: person.id,
+          name: fullName(person),
+          maskedName: maskName(person.firstName, person.lastName),
+          city: reservation.city,
+          alreadyBooked: bookedPassengerIds.has(person.id),
+        })),
+    );
+  }, [activeReservations, bookedPassengerIds, rideBookingDriver, rideBookingLookup]);
   const rideRequests = useMemo(
     () =>
       activeReservations
@@ -2127,7 +2178,7 @@ export default function Page() {
     setRideSeatsTouched(false);
   }
 
-  function buildReservationFromForm(id = createNumericId(), createdAt = formatDateTime()): Reservation | null {
+  function buildReservationFromForm(id = createNumericId(), createdAt = formatDateTime(), existingReservation?: Reservation | null): Reservation | null {
     const people = form.people
       .filter((person) => person.firstName.trim())
       .map((person, index) => ({
@@ -2155,6 +2206,7 @@ export default function Page() {
       createdAt,
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
       rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
+      rideReservations: existingReservation?.rideReservations ?? [],
       needsRide: form.needsRide,
       adminNote: "",
       people,
@@ -2163,7 +2215,7 @@ export default function Page() {
 
   function savePendingRegistration() {
     const existingReservation = pendingRegistration ? reservations.find((reservation) => reservation.id === pendingRegistration.id) : null;
-    const reservation = buildReservationFromForm(existingReservation?.id, existingReservation?.createdAt);
+    const reservation = buildReservationFromForm(existingReservation?.id, existingReservation?.createdAt, existingReservation);
     if (!reservation) return null;
 
     const existingCount = existingReservation ? counts(existingReservation).total : 0;
@@ -2471,6 +2523,64 @@ export default function Page() {
     setRideRequestLookup("");
     setRideRequestOpen(false);
     setDoorNotice({ type: "success", text: "Pavežimo poreikis pažymėtas." });
+  }
+
+  function openRideBooking(driverId: number) {
+    setRideBookingDriverId(driverId);
+    setRideBookingLookup("");
+    setSelectedRidePassengerId("");
+  }
+
+  function closeRideBooking() {
+    setRideBookingDriverId(null);
+    setRideBookingLookup("");
+    setSelectedRidePassengerId("");
+  }
+
+  function reserveRideSeat() {
+    if (!rideBookingDriver) return;
+    const selected = rideBookingMatches.find((match) => `${match.reservationId}:${match.personId}` === selectedRidePassengerId);
+    if (!selected) {
+      setDoorNotice({ type: "warning", text: "Pirma pasirink žmogų, kuriam rezervuojama vieta." });
+      return;
+    }
+    if (selected.alreadyBooked) {
+      setDoorNotice({ type: "warning", text: "Šis dalyvis jau turi rezervuotą transporto vietą." });
+      return;
+    }
+    if (rideBookingDriver.availableSeats <= 0) {
+      setDoorNotice({ type: "warning", text: "Pas šį vairuotoją laisvų vietų nebėra." });
+      return;
+    }
+
+    const now = formatDateTime();
+    const booking: RideReservation = {
+      passengerReservationId: selected.reservationId,
+      passengerPersonId: selected.personId,
+      passengerName: selected.maskedName,
+      createdAt: now,
+    };
+
+    setReservations((previous) =>
+      previous.map((reservation) =>
+        reservation.id === rideBookingDriver.id
+          ? {
+              ...reservation,
+              rideReservations: [...(reservation.rideReservations ?? []), booking],
+            }
+          : reservation,
+      ),
+    );
+    setNotifications((previous) => [
+      {
+        id: createNumericId(),
+        message: `${selected.maskedName} rezervavo transporto vietą pas ${rideBookingDriver.label}.`,
+        createdAt: now,
+      },
+      ...previous,
+    ]);
+    setDoorNotice({ type: "success", text: `Vieta rezervuota pas ${rideBookingDriver.label}.` });
+    closeRideBooking();
   }
 
   function updateAdminNote(reservationId: number, adminNote: string) {
@@ -3096,17 +3206,35 @@ export default function Page() {
             {rideOffers.length ? (
               rideOffers.map((offer) => (
                 <div className="driver-card" key={offer.id}>
-                  <div className="driver-card-icon">
-                    <CarIcon className="driver-icon" />
+                  <div className="driver-main-row">
+                    <div className="driver-card-icon">
+                      <CarIcon className="driver-icon" />
+                    </div>
+                    <div>
+                      <strong>{offer.label}</strong>
+                      <p>{offer.city || "Miestas nenurodytas"}</p>
+                    </div>
+                    <div className={offer.availableSeats > 0 ? "driver-seats" : "driver-seats is-full"}>
+                      <span>{offer.availableSeats}</span>
+                      <small>{offer.availableSeats === 1 ? "laisva vieta" : "laisvos vietos"}</small>
+                    </div>
                   </div>
-                  <div>
-                    <strong>{offer.label}</strong>
-                    <p>{offer.city || "Miestas nenurodytas"}</p>
+                  <div className="driver-reservation-strip">
+                    <span>{offer.booked.length} rezervuota</span>
+                    <span>Iš viso: {offer.seats}</span>
                   </div>
-                  <div className="driver-seats">
-                    <span>{offer.seats}</span>
-                    <small>{offer.seats === 1 ? "laisva vieta" : "laisvos vietos"}</small>
-                  </div>
+                  {offer.booked.length ? (
+                    <div className="driver-booked-list">
+                      {offer.booked.map((booking) => (
+                        <span key={`${offer.id}-${booking.passengerPersonId}`}>{booking.passengerName}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="driver-empty-note">Rezervuotų vietų dar nėra.</p>
+                  )}
+                  <button className="driver-book-button" type="button" onClick={() => openRideBooking(offer.id)} disabled={offer.availableSeats <= 0}>
+                    {offer.availableSeats > 0 ? "Rezervuoti vietą" : "Vietų nebėra"}
+                  </button>
                 </div>
               ))
             ) : (
@@ -3955,6 +4083,78 @@ export default function Page() {
               )}
             </div>
           ) : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(rideBookingDriver)}
+        title="Rezervuoti vietą automobilyje"
+        description={rideBookingDriver ? `Vairuotojas: ${rideBookingDriver.label}. Laisvų vietų: ${rideBookingDriver.availableSeats}.` : undefined}
+        onClose={closeRideBooking}
+      >
+        <div className="stack">
+          {rideBookingDriver ? (
+            <div className="ride-booking-summary">
+              <div className="driver-card-icon">
+                <CarIcon className="driver-icon" />
+              </div>
+              <div>
+                <strong>{rideBookingDriver.label}</strong>
+                <p>{rideBookingDriver.city || "Miestas nenurodytas"}</p>
+              </div>
+              <div className="driver-seats compact">
+                <span>{rideBookingDriver.availableSeats}</span>
+                <small>laisva</small>
+              </div>
+            </div>
+          ) : null}
+
+          <Field label="Surask save pagal vardą, telefoną arba el. paštą">
+            <input
+              value={rideBookingLookup}
+              onChange={(event) => {
+                setRideBookingLookup(event.target.value);
+                setSelectedRidePassengerId("");
+              }}
+              placeholder="Pvz. Jonas, +370..., el. paštas"
+            />
+          </Field>
+
+          {!rideBookingLookup.trim() ? <div className="empty-state">Įvesk savo duomenis, tada pasirink savo vardą iš sąrašo.</div> : null}
+          {rideBookingLookup.trim() && rideBookingMatches.length === 0 ? <div className="empty-state warning">Pagal šią paiešką registruoto dalyvio nerasta.</div> : null}
+
+          {rideBookingMatches.length ? (
+            <div className="ride-match-list">
+              {rideBookingMatches.map((match) => {
+                const value = `${match.reservationId}:${match.personId}`;
+                return (
+                  <label className={match.alreadyBooked ? "ride-match-card disabled" : "ride-match-card"} key={value}>
+                    <input
+                      checked={selectedRidePassengerId === value}
+                      disabled={match.alreadyBooked}
+                      name="ride-passenger"
+                      type="radio"
+                      onChange={() => setSelectedRidePassengerId(value)}
+                    />
+                    <span>
+                      <strong>{match.name}</strong>
+                      <small>{match.city || "Miestas nenurodytas"}</small>
+                      {match.alreadyBooked ? <em>Jau turi rezervuotą vietą</em> : null}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <div className="modal-actions">
+            <button className="ghost-button" type="button" onClick={closeRideBooking}>
+              Uždaryti
+            </button>
+            <button className="primary-button" type="button" onClick={reserveRideSeat} disabled={!selectedRidePassengerId || !rideBookingDriver || rideBookingDriver.availableSeats <= 0}>
+              Rezervuoti vietą
+            </button>
+          </div>
         </div>
       </Modal>
 

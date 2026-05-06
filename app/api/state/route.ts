@@ -67,13 +67,39 @@ function mergeDeletedIds(existingValue: unknown, incomingValue: unknown) {
 function sanitizePublicReservation(existingItem: Record<string, unknown> | undefined, incomingItem: Record<string, unknown>) {
   const existingPeople = Array.isArray(existingItem?.people) ? existingItem.people.filter(isRecord) : [];
   const incomingPeople = Array.isArray(incomingItem.people) ? incomingItem.people.filter(isRecord) : [];
+  const sanitizeRideReservations = (existingValue: unknown, incomingValue: unknown, seatLimit: number | null) => {
+    const byPassengerId = new Map<string, Record<string, unknown>>();
+
+    [existingValue, incomingValue].forEach((value) => {
+      if (!Array.isArray(value)) return;
+      value.filter(isRecord).forEach((booking) => {
+        const passengerPersonId = String(booking.passengerPersonId ?? "").trim();
+        const passengerName = String(booking.passengerName ?? "").trim();
+        const passengerReservationId = Number(booking.passengerReservationId);
+        if (!passengerPersonId || !passengerName || !Number.isFinite(passengerReservationId)) return;
+        byPassengerId.set(passengerPersonId, {
+          passengerReservationId,
+          passengerPersonId,
+          passengerName,
+          createdAt: typeof booking.createdAt === "string" ? booking.createdAt : new Date().toISOString(),
+        });
+      });
+    });
+
+    const bookings = Array.from(byPassengerId.values());
+    return seatLimit === null ? bookings : bookings.slice(0, Math.max(0, seatLimit));
+  };
 
   if (!existingItem) {
+    const rideOfferSeats = Number(incomingItem.rideOfferSeats);
+    const safeRideOfferSeats = incomingItem.rideOfferSeats === null ? null : Number.isFinite(rideOfferSeats) ? rideOfferSeats : null;
+
     return {
       ...incomingItem,
       paid: false,
       paymentMethod: null,
       adminNote: "",
+      rideReservations: sanitizeRideReservations([], incomingItem.rideReservations, safeRideOfferSeats),
       people: incomingPeople.map((person) => ({
         ...person,
         active: person.active !== false,
@@ -85,11 +111,21 @@ function sanitizePublicReservation(existingItem: Record<string, unknown> | undef
 
   const incomingPeopleById = new Map(incomingPeople.map((person) => [String(person.id ?? ""), person]));
   const rideOfferSeats = Number(incomingItem.rideOfferSeats);
+  const existingRideOfferSeats = Number(existingItem.rideOfferSeats);
+  const safeRideOfferSeats =
+    incomingItem.rideOfferSeats === null
+      ? null
+      : Number.isFinite(rideOfferSeats)
+        ? rideOfferSeats
+        : Number.isFinite(existingRideOfferSeats)
+          ? existingRideOfferSeats
+          : null;
 
   return {
     ...existingItem,
     needsRide: Boolean(incomingItem.needsRide ?? existingItem.needsRide ?? false),
-    rideOfferSeats: incomingItem.rideOfferSeats === null ? null : Number.isFinite(rideOfferSeats) ? rideOfferSeats : existingItem.rideOfferSeats ?? null,
+    rideOfferSeats: safeRideOfferSeats,
+    rideReservations: sanitizeRideReservations(existingItem.rideReservations, incomingItem.rideReservations, safeRideOfferSeats as number | null),
     people: existingPeople.map((existingPerson) => {
       const incomingPerson = incomingPeopleById.get(String(existingPerson.id ?? ""));
 
