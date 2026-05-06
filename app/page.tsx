@@ -96,6 +96,8 @@ type SongSuggestion = {
   title: string;
   url: string;
   source: string;
+  likes: number;
+  dislikes: number;
 };
 
 type EventIdea = {
@@ -330,7 +332,13 @@ function normalizeGameScores(items: GameScore[]) {
 }
 
 function normalizeSongSuggestions(items: SongSuggestion[]) {
-  return items.filter((suggestion) => !DEMO_SONG_TITLES.has(suggestion.title));
+  return items
+    .filter((suggestion) => !DEMO_SONG_TITLES.has(suggestion.title))
+    .map((suggestion) => ({
+      ...suggestion,
+      likes: Number.isFinite(Number(suggestion.likes)) ? Number(suggestion.likes) : 0,
+      dislikes: Number.isFinite(Number(suggestion.dislikes)) ? Number(suggestion.dislikes) : 0,
+    }));
 }
 
 function normalizeEventIdeas(items: EventIdea[]) {
@@ -407,6 +415,12 @@ function cashAmount(reservation: Reservation) {
 function paymentPurpose(reservation?: Reservation | null) {
   const names = reservation ? activePeople(reservation).map((person) => `${person.firstName} ${person.lastName}`.trim()).filter(Boolean) : [];
   return names.length ? names.join(", ") : "įrašyk vardus asmenų, už kuriuos daromas pavedimas vakarėliui";
+}
+
+function songSourceMeta(source: string) {
+  if (source === "YouTube") return { label: "YouTube", icon: "YT", className: "youtube" };
+  if (source === "Spotify") return { label: "Spotify", icon: "SP", className: "spotify" };
+  return { label: "Nuoroda", icon: "♪", className: "other" };
 }
 
 function responsibleIcon(role: string) {
@@ -2152,8 +2166,22 @@ export default function Page() {
     if (lowerUrl.includes("spotify")) source = "Spotify";
     if (lowerUrl.includes("youtube") || lowerUrl.includes("youtu.be")) source = "YouTube";
 
-    setSongSuggestions((previous) => [{ id: createNumericId(), title, url, source }, ...previous]);
+    setSongSuggestions((previous) => [{ id: createNumericId(), title, url, source, likes: 0, dislikes: 0 }, ...previous]);
     setSongForm({ title: "", url: "" });
+  }
+
+  function voteSongSuggestion(id: number, vote: "like" | "dislike") {
+    setSongSuggestions((previous) =>
+      previous.map((suggestion) =>
+        suggestion.id === id
+          ? {
+              ...suggestion,
+              likes: vote === "like" ? (suggestion.likes ?? 0) + 1 : suggestion.likes ?? 0,
+              dislikes: vote === "dislike" ? (suggestion.dislikes ?? 0) + 1 : suggestion.dislikes ?? 0,
+            }
+          : suggestion,
+      ),
+    );
   }
 
   function addEventIdea() {
@@ -3142,49 +3170,80 @@ export default function Page() {
 
       {activePanel === "songs" ? (
         <SectionCard title="Dainų pasiūlymai ir idėjos" description="Svečių pasiūlymai muzikai ir renginio veikloms.">
-          <div className="stack">
-            <div className="form-grid">
-              <Field label="Dainos pavadinimas arba komentaras">
-                <input
-                  value={songForm.title}
-                  onChange={(event) => setSongForm((previous) => ({ ...previous, title: event.target.value }))}
-                  placeholder="Pvz. Vakaro hitas"
-                />
-              </Field>
-              <Field label="Nuoroda">
-                <input
-                  value={songForm.url}
-                  onChange={(event) => setSongForm((previous) => ({ ...previous, url: event.target.value }))}
-                  placeholder="https://youtube.com/..."
-                />
-              </Field>
-            </div>
-            <button className="secondary-button" type="button" onClick={addSongSuggestion}>
-              Pasiūlyti dainą
-            </button>
-
-            <div className="stack">
-              {songSuggestions.map((item) => (
-                <div className="list-item" key={item.id}>
-                  <div>
-                    <strong>{item.title || "Be pavadinimo"}</strong>
-                    <p>Šaltinis: {item.source}</p>
-                  </div>
-                  <a href={item.url} target="_blank" rel="noreferrer">
-                    Atidaryti
-                  </a>
-                </div>
-              ))}
-            </div>
-
-              <div className="highlight-box">
-                <Field label="Idėja renginiui">
-                  <textarea
-                    value={ideaForm}
-                    onChange={(event) => setIdeaForm(event.target.value)}
-                    placeholder="Pvz. konkursas, žaidimas, staigmena ar kita veikla"
+          <div className="music-board">
+            <div className="music-submit-card">
+              <div>
+                <span className="eyebrow">Vakaro grojaraštis</span>
+                <h3>Pasiūlyk dainą šokiams</h3>
+                <p>Įkelk YouTube arba Spotify nuorodą. Visi svečiai galės atidaryti dainą ir balsuoti, ar ji tinka vakarėlio nuotaikai.</p>
+              </div>
+              <div className="music-platform-row">
+                <span className="source-pill youtube">YT YouTube</span>
+                <span className="source-pill spotify">SP Spotify</span>
+              </div>
+              <div className="form-grid">
+                <Field label="Dainos pavadinimas arba komentaras">
+                  <input
+                    value={songForm.title}
+                    onChange={(event) => setSongForm((previous) => ({ ...previous, title: event.target.value }))}
+                    placeholder="Pvz. energingas šokių hitas"
                   />
                 </Field>
+                <Field label="YouTube arba Spotify nuoroda">
+                  <input
+                    value={songForm.url}
+                    onChange={(event) => setSongForm((previous) => ({ ...previous, url: event.target.value }))}
+                    placeholder="https://youtube.com/... arba https://open.spotify.com/..."
+                  />
+                </Field>
+              </div>
+              <button className="music-submit-button" type="button" onClick={addSongSuggestion}>
+                Pasiūlyti dainą
+              </button>
+            </div>
+
+            <div className="music-list">
+              {songSuggestions.length ? (
+                songSuggestions.map((item) => {
+                  const source = songSourceMeta(item.source);
+                  return (
+                    <div className="music-card" key={item.id}>
+                      <div className={`music-source-badge ${source.className}`}>{source.icon}</div>
+                      <div className="music-card-content">
+                        <div className="music-card-head">
+                          <div>
+                            <strong>{item.title || "Be pavadinimo"}</strong>
+                            <p>{source.label} nuoroda</p>
+                          </div>
+                          <a className="music-open-link" href={item.url} target="_blank" rel="noreferrer">
+                            Atidaryti
+                          </a>
+                        </div>
+                        <div className="music-vote-row">
+                          <button type="button" onClick={() => voteSongSuggestion(item.id, "like")}>
+                            Patinka <span>{item.likes ?? 0}</span>
+                          </button>
+                          <button type="button" onClick={() => voteSongSuggestion(item.id, "dislike")}>
+                            Netinka <span>{item.dislikes ?? 0}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="empty-state">Kol kas nėra pasiūlytų dainų. Būk pirmas, kuris įmeta vakaro hitą.</div>
+              )}
+            </div>
+
+            <div className="highlight-box">
+              <Field label="Idėja renginiui">
+                <textarea
+                  value={ideaForm}
+                  onChange={(event) => setIdeaForm(event.target.value)}
+                  placeholder="Pvz. konkursas, žaidimas, staigmena ar kita veikla"
+                />
+              </Field>
               <button className="secondary-button" type="button" onClick={addEventIdea}>
                 Pasiūlyti idėją
               </button>

@@ -64,6 +64,54 @@ function mergeDeletedIds(existingValue: unknown, incomingValue: unknown) {
   return Array.from(ids);
 }
 
+function normalizeSongSuggestion(item: Record<string, unknown>) {
+  const id = Number(item.id);
+  if (!Number.isFinite(id)) return null;
+
+  return {
+    ...item,
+    id,
+    title: typeof item.title === "string" ? item.title : "",
+    url: typeof item.url === "string" ? item.url : "",
+    source: typeof item.source === "string" ? item.source : "Kita",
+    likes: Math.max(0, Number.isFinite(Number(item.likes)) ? Number(item.likes) : 0),
+    dislikes: Math.max(0, Number.isFinite(Number(item.dislikes)) ? Number(item.dislikes) : 0),
+  };
+}
+
+function mergeSongSuggestions(existingValue: unknown, incomingValue: unknown, isAdminRequest: boolean) {
+  const byId = new Map<number, Record<string, unknown>>();
+
+  if (Array.isArray(existingValue)) {
+    existingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const normalized = normalizeSongSuggestion(item);
+      if (normalized) byId.set(normalized.id, normalized);
+    });
+  }
+
+  if (Array.isArray(incomingValue)) {
+    incomingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const incoming = normalizeSongSuggestion(item);
+      if (!incoming) return;
+      const existing = byId.get(incoming.id);
+      if (!existing || isAdminRequest) {
+        byId.set(incoming.id, incoming);
+        return;
+      }
+
+      byId.set(incoming.id, {
+        ...existing,
+        likes: incoming.likes,
+        dislikes: incoming.dislikes,
+      });
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
 function sanitizePublicReservation(existingItem: Record<string, unknown> | undefined, incomingItem: Record<string, unknown>) {
   const existingPeople = Array.isArray(existingItem?.people) ? existingItem.people.filter(isRecord) : [];
   const incomingPeople = Array.isArray(incomingItem.people) ? incomingItem.people.filter(isRecord) : [];
@@ -210,9 +258,11 @@ function sanitizeStoredPayload(payload: Record<string, unknown>) {
   }
 
   if (Array.isArray(payload.songSuggestions)) {
-    payload.songSuggestions = payload.songSuggestions.filter((item) => {
-      if (!isRecord(item)) return false;
-      return !DEMO_SONG_TITLES.has(String(item.title ?? ""));
+    payload.songSuggestions = payload.songSuggestions.flatMap((item) => {
+      if (!isRecord(item)) return [];
+      if (DEMO_SONG_TITLES.has(String(item.title ?? ""))) return [];
+      const normalized = normalizeSongSuggestion(item);
+      return normalized ? [normalized] : [];
     });
   }
 
@@ -317,7 +367,9 @@ export async function POST(request: Request) {
               overwriteIds: getChangedIdSet(incomingChangedIds[key]),
               isAdmin: isAdminRequest,
             });
-          } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
+          } else if (key === "songSuggestions") {
+            mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest);
+          } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications"].includes(key)) {
             mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
               overwriteExisting: false,
               overwriteIds: isAdminRequest ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
@@ -331,7 +383,9 @@ export async function POST(request: Request) {
             overwriteIds: getChangedIdSet(incomingChangedIds[key]),
             isAdmin: isAdminRequest,
           });
-        } else if (["waitingList", "transfers", "votes", "songSuggestions", "eventIdeas", "gameScores", "notifications"].includes(key)) {
+        } else if (key === "songSuggestions") {
+          mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest);
+        } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications"].includes(key)) {
           mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
             overwriteExisting: isAdminRequest,
             overwriteIds: isAdminRequest ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
