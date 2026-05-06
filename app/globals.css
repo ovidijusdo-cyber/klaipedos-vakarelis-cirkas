@@ -2248,6 +2248,17 @@ textarea {
   cursor: pointer;
 }
 
+.music-vote-row button.selected {
+  border-color: rgba(251, 146, 60, 0.5);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(254, 243, 199, 0.92));
+  box-shadow: 0 10px 20px rgba(251, 146, 60, 0.12);
+}
+
+.music-vote-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .music-vote-row span {
   display: inline-grid;
   place-items: center;
@@ -2256,6 +2267,12 @@ textarea {
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.08);
   font-size: 0.82rem;
+}
+
+.music-vote-lock {
+  align-self: center;
+  color: var(--muted);
+  font-weight: 750;
 }
 
 .panel {

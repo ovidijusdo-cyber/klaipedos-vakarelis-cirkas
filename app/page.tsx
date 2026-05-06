@@ -179,6 +179,7 @@ const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 120;
 const INVITATION_CODE = "530";
+const SONG_VOTES_STORAGE_KEY = "klaipedos-vakaras-song-votes";
 
 const PROGRAM_ITEMS = [
   { day: "Penktadienis, 29 d.", time: "19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
@@ -1725,6 +1726,7 @@ export default function Page() {
   const [doorNotice, setDoorNotice] = useState<Notice | null>(null);
   const [songForm, setSongForm] = useState({ title: "", url: "" });
   const [songPreviewLoading, setSongPreviewLoading] = useState(false);
+  const [deviceSongVotes, setDeviceSongVotes] = useState<Record<string, "like" | "dislike">>({});
   const [ideaForm, setIdeaForm] = useState("");
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
@@ -1854,6 +1856,19 @@ export default function Page() {
     return () => {
       ignore = true;
     };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedVotes = window.localStorage.getItem(SONG_VOTES_STORAGE_KEY);
+      if (!savedVotes) return;
+      const parsedVotes = JSON.parse(savedVotes);
+      if (parsedVotes && typeof parsedVotes === "object" && !Array.isArray(parsedVotes)) {
+        setDeviceSongVotes(parsedVotes as Record<string, "like" | "dislike">);
+      }
+    } catch (error) {
+      console.error("Failed to load device song votes", error);
+    }
   }, []);
 
   useEffect(() => {
@@ -2191,6 +2206,11 @@ export default function Page() {
   }
 
   function voteSongSuggestion(id: number, vote: "like" | "dislike") {
+    if (deviceSongVotes[String(id)]) {
+      setDoorNotice({ type: "warning", text: "Iš šio įrenginio už šią dainą jau balsuota." });
+      return;
+    }
+
     setSongSuggestions((previous) =>
       previous.map((suggestion) =>
         suggestion.id === id
@@ -2202,6 +2222,15 @@ export default function Page() {
           : suggestion,
       ),
     );
+    setDeviceSongVotes((previous) => {
+      const nextVotes = { ...previous, [String(id)]: vote };
+      try {
+        window.localStorage.setItem(SONG_VOTES_STORAGE_KEY, JSON.stringify(nextVotes));
+      } catch (error) {
+        console.error("Failed to save device song vote", error);
+      }
+      return nextVotes;
+    });
   }
 
   function addEventIdea() {
@@ -3226,6 +3255,7 @@ export default function Page() {
               {songSuggestions.length ? (
                 songSuggestions.map((item) => {
                   const source = songSourceMeta(item.source);
+                  const deviceVote = deviceSongVotes[String(item.id)];
                   return (
                     <div className="music-card" key={item.id}>
                       <div className={`music-source-badge ${source.className}`}>{source.icon}</div>
@@ -3241,12 +3271,13 @@ export default function Page() {
                           </a>
                         </div>
                         <div className="music-vote-row">
-                          <button type="button" onClick={() => voteSongSuggestion(item.id, "like")}>
-                            Patinka <span>{item.likes ?? 0}</span>
+                          <button className={deviceVote === "like" ? "selected" : ""} type="button" onClick={() => voteSongSuggestion(item.id, "like")} disabled={Boolean(deviceVote)}>
+                            🥳 Patinka <span>{item.likes ?? 0}</span>
                           </button>
-                          <button type="button" onClick={() => voteSongSuggestion(item.id, "dislike")}>
-                            Netinka <span>{item.dislikes ?? 0}</span>
+                          <button className={deviceVote === "dislike" ? "selected" : ""} type="button" onClick={() => voteSongSuggestion(item.id, "dislike")} disabled={Boolean(deviceVote)}>
+                            🙁 Netinka <span>{item.dislikes ?? 0}</span>
                           </button>
+                          {deviceVote ? <small className="music-vote-lock">Šis įrenginys jau balsavo</small> : null}
                         </div>
                       </div>
                     </div>
