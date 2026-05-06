@@ -141,6 +141,13 @@ type PendingDelete = {
   label: string;
 } | null;
 
+type PendingRideCancel = {
+  driverId: number;
+  driverLabel: string;
+  passengerPersonId: string;
+  passengerName: string;
+} | null;
+
 type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
 };
@@ -1705,6 +1712,7 @@ export default function Page() {
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+  const [pendingRideCancel, setPendingRideCancel] = useState<PendingRideCancel>(null);
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [pendingRegistration, setPendingRegistration] = useState<Reservation | null>(null);
   const [privacyTouched, setPrivacyTouched] = useState(false);
@@ -2583,6 +2591,32 @@ export default function Page() {
     closeRideBooking();
   }
 
+  function confirmRideSeatCancellation() {
+    if (!pendingRideCancel) return;
+    const now = formatDateTime();
+
+    setReservations((previous) =>
+      previous.map((reservation) =>
+        reservation.id === pendingRideCancel.driverId
+          ? {
+              ...reservation,
+              rideReservations: (reservation.rideReservations ?? []).filter((booking) => booking.passengerPersonId !== pendingRideCancel.passengerPersonId),
+            }
+          : reservation,
+      ),
+    );
+    setNotifications((previous) => [
+      {
+        id: createNumericId(),
+        message: `${pendingRideCancel.passengerName} atšaukė transporto vietą pas ${pendingRideCancel.driverLabel}.`,
+        createdAt: now,
+      },
+      ...previous,
+    ]);
+    setDoorNotice({ type: "success", text: "Vieta ekipaže atšaukta." });
+    setPendingRideCancel(null);
+  }
+
   function updateAdminNote(reservationId: number, adminNote: string) {
     setReservations((previous) => previous.map((item) => (item.id === reservationId ? { ...item, adminNote } : item)));
   }
@@ -3226,7 +3260,23 @@ export default function Page() {
                   {offer.booked.length ? (
                     <div className="driver-booked-list">
                       {offer.booked.map((booking) => (
-                        <span key={`${offer.id}-${booking.passengerPersonId}`}>{booking.passengerName}</span>
+                        <span key={`${offer.id}-${booking.passengerPersonId}`}>
+                          {booking.passengerName}
+                          <button
+                            aria-label={`Atšaukti ${booking.passengerName} vietą ekipaže`}
+                            type="button"
+                            onClick={() =>
+                              setPendingRideCancel({
+                                driverId: offer.id,
+                                driverLabel: offer.label,
+                                passengerPersonId: booking.passengerPersonId,
+                                passengerName: booking.passengerName,
+                              })
+                            }
+                          >
+                            -
+                          </button>
+                        </span>
                       ))}
                     </div>
                   ) : (
@@ -4153,6 +4203,29 @@ export default function Page() {
             </button>
             <button className="primary-button" type="button" onClick={reserveRideSeat} disabled={!selectedRidePassengerId || !rideBookingDriver || rideBookingDriver.availableSeats <= 0}>
               Rezervuoti vietą
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(pendingRideCancel)}
+        title="Atšaukti vietą ekipaže?"
+        description={
+          pendingRideCancel
+            ? `${pendingRideCancel.passengerName} rezervacija pas ${pendingRideCancel.driverLabel} bus pašalinta, o laisvų vietų skaičius padidės.`
+            : undefined
+        }
+        onClose={() => setPendingRideCancel(null)}
+      >
+        <div className="stack">
+          <div className="notice warning">Ar tikrai norite atšaukti vietą ekipaže?</div>
+          <div className="modal-actions">
+            <button className="ghost-button" type="button" onClick={() => setPendingRideCancel(null)}>
+              Ne, palikti
+            </button>
+            <button className="danger-button" type="button" onClick={confirmRideSeatCancellation}>
+              Taip, atšaukti
             </button>
           </div>
         </div>

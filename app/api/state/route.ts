@@ -70,7 +70,9 @@ function sanitizePublicReservation(existingItem: Record<string, unknown> | undef
   const sanitizeRideReservations = (existingValue: unknown, incomingValue: unknown, seatLimit: number | null) => {
     const byPassengerId = new Map<string, Record<string, unknown>>();
 
-    [existingValue, incomingValue].forEach((value) => {
+    const valuesToSanitize = Array.isArray(incomingValue) ? [incomingValue] : [existingValue];
+
+    valuesToSanitize.forEach((value) => {
       if (!Array.isArray(value)) return;
       value.filter(isRecord).forEach((booking) => {
         const passengerPersonId = String(booking.passengerPersonId ?? "").trim();
