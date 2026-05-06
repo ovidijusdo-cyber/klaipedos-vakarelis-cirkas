@@ -3015,6 +3015,7 @@ export default function Page() {
           <div className="stats-grid">
             <StatCard label="Atvyko" value={`${totalArrived}/${occupied || 0}`} tone="success" />
             <StatCard label="Apmokėta vietų" value={`${totalPaidSeats}/${occupied || 0}`} tone="accent" />
+            <StatCard label={`Iki ${CHILD_AGE_LIMIT} m.`} value={String(totalChildren)} />
             <StatCard label="Laisvų vietų" value={String(remaining)} tone="warning" />
           </div>
 
