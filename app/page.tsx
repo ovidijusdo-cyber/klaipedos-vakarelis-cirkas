@@ -94,6 +94,7 @@ type VoteRecord = {
 type SongSuggestion = {
   id: number;
   title: string;
+  previewTitle?: string;
   url: string;
   source: string;
   likes: number;
@@ -336,6 +337,7 @@ function normalizeSongSuggestions(items: SongSuggestion[]) {
     .filter((suggestion) => !DEMO_SONG_TITLES.has(suggestion.title))
     .map((suggestion) => ({
       ...suggestion,
+      previewTitle: typeof suggestion.previewTitle === "string" ? suggestion.previewTitle : "",
       likes: Number.isFinite(Number(suggestion.likes)) ? Number(suggestion.likes) : 0,
       dislikes: Number.isFinite(Number(suggestion.dislikes)) ? Number(suggestion.dislikes) : 0,
     }));
@@ -1722,6 +1724,7 @@ export default function Page() {
   const [scannerValue, setScannerValue] = useState("");
   const [doorNotice, setDoorNotice] = useState<Notice | null>(null);
   const [songForm, setSongForm] = useState({ title: "", url: "" });
+  const [songPreviewLoading, setSongPreviewLoading] = useState(false);
   const [ideaForm, setIdeaForm] = useState("");
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
@@ -2156,7 +2159,7 @@ export default function Page() {
     setForm((previous) => ({ ...previous, people: previous.people.filter((_, personIndex) => personIndex !== index) }));
   }
 
-  function addSongSuggestion() {
+  async function addSongSuggestion() {
     const title = songForm.title.trim();
     const url = songForm.url.trim();
     if (!url) return;
@@ -2166,7 +2169,24 @@ export default function Page() {
     if (lowerUrl.includes("spotify")) source = "Spotify";
     if (lowerUrl.includes("youtube") || lowerUrl.includes("youtu.be")) source = "YouTube";
 
-    setSongSuggestions((previous) => [{ id: createNumericId(), title, url, source, likes: 0, dislikes: 0 }, ...previous]);
+    let previewTitle = "";
+    setSongPreviewLoading(true);
+    try {
+      const response = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`, { cache: "no-store" });
+      if (response.ok) {
+        const data = (await response.json()) as { title?: string; source?: string };
+        previewTitle = data.title?.trim() ?? "";
+        if (data.source === "Spotify" || data.source === "YouTube") {
+          source = data.source;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load song preview", error);
+    } finally {
+      setSongPreviewLoading(false);
+    }
+
+    setSongSuggestions((previous) => [{ id: createNumericId(), title, previewTitle, url, source, likes: 0, dislikes: 0 }, ...previous]);
     setSongForm({ title: "", url: "" });
   }
 
@@ -3197,8 +3217,8 @@ export default function Page() {
                   />
                 </Field>
               </div>
-              <button className="music-submit-button" type="button" onClick={addSongSuggestion}>
-                Pasiūlyti dainą
+              <button className="music-submit-button" type="button" onClick={addSongSuggestion} disabled={songPreviewLoading}>
+                {songPreviewLoading ? "Tikrinama nuoroda..." : "Pasiūlyti dainą"}
               </button>
             </div>
 
@@ -3213,6 +3233,7 @@ export default function Page() {
                         <div className="music-card-head">
                           <div>
                             <strong>{item.title || "Be pavadinimo"}</strong>
+                            {item.previewTitle ? <span className="music-preview-title">{item.previewTitle}</span> : null}
                             <p>{source.label} nuoroda</p>
                           </div>
                           <a className="music-open-link" href={item.url} target="_blank" rel="noreferrer">

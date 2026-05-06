@@ -2151,6 +2151,11 @@ textarea {
   box-shadow: 0 16px 28px rgba(251, 146, 60, 0.22);
 }
 
+.music-submit-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .music-list {
   display: grid;
   gap: 12px;
@@ -2195,6 +2200,15 @@ textarea {
   font-family: var(--font-heading), serif;
   color: var(--text);
   font-size: 1.12rem;
+}
+
+.music-preview-title {
+  display: block;
+  margin-top: 6px;
+  color: #9a3412;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.35;
 }
 
 .music-card-head p {

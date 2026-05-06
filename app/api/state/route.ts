@@ -72,6 +72,7 @@ function normalizeSongSuggestion(item: Record<string, unknown>) {
     ...item,
     id,
     title: typeof item.title === "string" ? item.title : "",
+    previewTitle: typeof item.previewTitle === "string" ? item.previewTitle.slice(0, 160) : "",
     url: typeof item.url === "string" ? item.url : "",
     source: typeof item.source === "string" ? item.source : "Kita",
     likes: Math.max(0, Number.isFinite(Number(item.likes)) ? Number(item.likes) : 0),
