@@ -811,7 +811,7 @@ function ClownJumpGame({
   onSaveScore,
 }: {
   scores: GameScore[];
-  onSaveScore: (name: string, score: number) => void;
+  onSaveScore: (name: string, score: number) => Promise<boolean>;
 }) {
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -858,6 +858,8 @@ function ClownJumpGame({
   const [doubleJumpFlash, setDoubleJumpFlash] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scoreSaveOpen, setScoreSaveOpen] = useState(false);
+  const [scoreSaving, setScoreSaving] = useState(false);
+  const [scoreSaveError, setScoreSaveError] = useState("");
   const [bonuses, setBonuses] = useState<
     Array<{
       id: number;
@@ -1011,10 +1013,19 @@ function ClownJumpGame({
     }
   }
 
-  function saveScore() {
+  async function saveScore() {
     const trimmed = playerName.trim();
     if (!trimmed || totalScore <= 0 || savedForScore === totalScore || !qualifiesForTopFive) return;
-    onSaveScore(trimmed, totalScore);
+    setScoreSaving(true);
+    setScoreSaveError("");
+    const saved = await onSaveScore(trimmed, totalScore);
+    setScoreSaving(false);
+
+    if (!saved) {
+      setScoreSaveError("Nepavyko išsaugoti rezultato. Patikrink internetą ir pabandyk dar kartą.");
+      return;
+    }
+
     setSavedForScore(totalScore);
     setScoreSaveOpen(false);
   }
@@ -1618,9 +1629,11 @@ function ClownJumpGame({
             <strong>Išsaugoti rezultatą</strong>
             <div className="stack">
               <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="Tavo vardas rezultatui" />
-              <button className="secondary-button" disabled={!playerName.trim() || totalScore <= 0 || savedForScore === totalScore} type="button" onClick={saveScore}>
-                {savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti taškus"}
+              <button className="secondary-button" disabled={!playerName.trim() || totalScore <= 0 || savedForScore === totalScore || !qualifiesForTopFive || scoreSaving} type="button" onClick={saveScore}>
+                {scoreSaving ? "Saugoma..." : savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti taškus"}
               </button>
+              {scoreSaveError ? <small className="game-over-note warning">{scoreSaveError}</small> : null}
+              {!qualifiesForTopFive ? <small className="game-over-note muted">Išsaugomi tik rezultatai, kurie patenka į Top 5.</small> : null}
             </div>
           </div>
 
@@ -1669,13 +1682,14 @@ function ClownJumpGame({
             </button>
             <button
               className="secondary-button"
-              disabled={!playerName.trim() || savedForScore === totalScore || !qualifiesForTopFive}
+              disabled={!playerName.trim() || savedForScore === totalScore || !qualifiesForTopFive || scoreSaving}
               type="button"
               onClick={saveScore}
             >
-              {savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti savo taškus"}
+              {scoreSaving ? "Saugoma..." : savedForScore === totalScore ? "Rezultatas išsaugotas" : "Išsaugoti savo taškus"}
             </button>
           </div>
+          {scoreSaveError ? <small className="game-over-note warning">{scoreSaveError}</small> : null}
           {!qualifiesForTopFive ? <small className="game-over-note muted">Rezultatas šiuo metu nepatenka į Top 5.</small> : null}
         </div>
       </Modal>
@@ -2837,17 +2851,48 @@ export default function Page() {
     setVoteStep(2);
   }
 
-  function saveGameScore(name: string, score: number) {
+  async function saveGameScore(name: string, score: number) {
     const now = formatDateTime();
-    setGameScores((previous) =>
-      [...previous, { id: createNumericId(), name, score, createdAt: now }]
-        .sort((a, b) => b.score - a.score || Date.parse(b.createdAt) - Date.parse(a.createdAt))
-        .slice(0, MAX_STORED_GAME_SCORES),
-    );
-    setNotifications((previous) => [
-      { id: createNumericId(), message: `${name} išsaugojo žaidimo rezultatą: ${score} tšk.`, createdAt: now },
-      ...previous,
-    ]);
+    const scoreEntry = { id: createNumericId(), name, score, createdAt: now };
+    const notificationEntry = { id: createNumericId(), message: `${name} išsaugojo žaidimo rezultatą: ${score} tšk.`, createdAt: now };
+    const nextGameScores = [...gameScores, scoreEntry]
+      .sort((a, b) => b.score - a.score || Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, MAX_STORED_GAME_SCORES);
+    const timestamp = Date.now();
+
+    try {
+      const response = await fetch("/api/state", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          payload: {
+            gameScores: nextGameScores,
+          },
+          sectionUpdatedAt: {
+            gameScores: timestamp,
+          },
+          changedIds: {
+            gameScores: [scoreEntry.id],
+          },
+          adminPin: adminUnlocked ? adminPin : undefined,
+        }),
+        keepalive: true,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save score");
+      }
+
+      setGameScores(nextGameScores);
+      setNotifications((previous) => [notificationEntry, ...previous]);
+      syncedStateRef.current.gameScores = JSON.stringify(nextGameScores);
+      return true;
+    } catch (error) {
+      console.error("Failed to save game score", error);
+      return false;
+    }
   }
 
   function stopScanner() {
