@@ -99,6 +99,8 @@ type SongSuggestion = {
   source: string;
   likes: number;
   dislikes: number;
+  playlistAdded?: boolean;
+  playlistUpdatedAt?: string;
 };
 
 type EventIdea = {
@@ -179,6 +181,7 @@ const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 120;
 const INVITATION_CODE = "530";
+const SONG_PLAYLIST_PIN = "v";
 const SONG_VOTES_STORAGE_KEY = "klaipedos-vakaras-song-votes";
 
 const PROGRAM_ITEMS = [
@@ -343,6 +346,8 @@ function normalizeSongSuggestions(items: SongSuggestion[]) {
       previewTitle: typeof suggestion.previewTitle === "string" ? suggestion.previewTitle : "",
       likes: Number.isFinite(Number(suggestion.likes)) ? Number(suggestion.likes) : 0,
       dislikes: Number.isFinite(Number(suggestion.dislikes)) ? Number(suggestion.dislikes) : 0,
+      playlistAdded: Boolean(suggestion.playlistAdded),
+      playlistUpdatedAt: typeof suggestion.playlistUpdatedAt === "string" ? suggestion.playlistUpdatedAt : "",
     }));
 }
 
@@ -1743,6 +1748,10 @@ export default function Page() {
   const [songForm, setSongForm] = useState({ title: "", url: "" });
   const [songPreviewLoading, setSongPreviewLoading] = useState(false);
   const [deviceSongVotes, setDeviceSongVotes] = useState<Record<string, "like" | "dislike">>({});
+  const [playlistSongId, setPlaylistSongId] = useState<number | null>(null);
+  const [playlistPin, setPlaylistPin] = useState("");
+  const [playlistMessage, setPlaylistMessage] = useState("");
+  const [playlistSaving, setPlaylistSaving] = useState(false);
   const [ideaForm, setIdeaForm] = useState("");
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
@@ -2217,8 +2226,83 @@ export default function Page() {
       setSongPreviewLoading(false);
     }
 
-    setSongSuggestions((previous) => [{ id: createNumericId(), title, previewTitle, url, source, likes: 0, dislikes: 0 }, ...previous]);
+    setSongSuggestions((previous) => [{ id: createNumericId(), title, previewTitle, url, source, likes: 0, dislikes: 0, playlistAdded: false, playlistUpdatedAt: "" }, ...previous]);
     setSongForm({ title: "", url: "" });
+  }
+
+  function openPlaylistConfirm(songId: number) {
+    setPlaylistSongId(songId);
+    setPlaylistPin("");
+    setPlaylistMessage("");
+  }
+
+  function closePlaylistConfirm() {
+    if (playlistSaving) return;
+    setPlaylistSongId(null);
+    setPlaylistPin("");
+    setPlaylistMessage("");
+  }
+
+  async function confirmPlaylistMark() {
+    const selectedSong = songSuggestions.find((item) => item.id === playlistSongId);
+    if (!selectedSong) return;
+
+    if (playlistPin.trim().toLowerCase() !== SONG_PLAYLIST_PIN) {
+      setPlaylistMessage("Neteisingas kodas. Šią žymą gali keisti tik atsakingas už muziką.");
+      return;
+    }
+
+    const nextSongSuggestions = songSuggestions.map((item) =>
+      item.id === selectedSong.id
+        ? {
+            ...item,
+            playlistAdded: !item.playlistAdded,
+            playlistUpdatedAt: !item.playlistAdded ? formatDateTime() : "",
+          }
+        : item,
+    );
+
+    setPlaylistSaving(true);
+    setPlaylistMessage("");
+
+    try {
+      const timestamp = Date.now();
+      const response = await fetch("/api/state", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          payload: {
+            songSuggestions: nextSongSuggestions,
+          },
+          sectionUpdatedAt: {
+            songSuggestions: timestamp,
+          },
+          changedIds: {
+            songSuggestions: [selectedSong.id],
+          },
+          playlistPin: playlistPin.trim().toLowerCase(),
+          adminPin: adminUnlocked ? adminPin : undefined,
+        }),
+        keepalive: true,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update playlist mark");
+      }
+
+      setSongSuggestions(nextSongSuggestions);
+      syncedStateRef.current.songSuggestions = JSON.stringify(nextSongSuggestions);
+      setPlaylistSongId(null);
+      setPlaylistPin("");
+      setPlaylistMessage("");
+    } catch (error) {
+      console.error("Failed to update playlist mark", error);
+      setPlaylistMessage("Nepavyko išsaugoti žymos. Pabandyk dar kartą.");
+    } finally {
+      setPlaylistSaving(false);
+    }
   }
 
   function voteSongSuggestion(id: number, vote: "like" | "dislike") {
@@ -3326,6 +3410,14 @@ export default function Page() {
                             🙁 Netinka <span>{item.dislikes ?? 0}</span>
                           </button>
                           {deviceVote ? <small className="music-vote-lock">Šis įrenginys jau balsavo</small> : null}
+                        </div>
+                        <div className="music-playlist-row">
+                          <button className={item.playlistAdded ? "playlist-toggle added" : "playlist-toggle"} type="button" onClick={() => openPlaylistConfirm(item.id)}>
+                            {item.playlistAdded ? "✓ Playlistas" : "Pažymėti playlistui"}
+                          </button>
+                          <small className={item.playlistAdded ? "added" : ""}>
+                            {item.playlistAdded ? `Įdėta į playlistą${item.playlistUpdatedAt ? ` · ${item.playlistUpdatedAt}` : ""}` : "Tik atsakingam už muziką"}
+                          </small>
                         </div>
                       </div>
                     </div>
@@ -4685,6 +4777,41 @@ export default function Page() {
             </button>
             <button className="danger-button" type="button" onClick={confirmDeleteReservation}>
               Taip, ištrinti
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={playlistSongId !== null}
+        title="Playlisto žyma"
+        description="Šią žymą keičia tik atsakingas už muziką. Įvesk trumpą kodą."
+        onClose={closePlaylistConfirm}
+      >
+        <div className="stack">
+          <Field label="Kodas">
+            <input
+              autoComplete="off"
+              autoFocus
+              type="password"
+              value={playlistPin}
+              onChange={(event) => setPlaylistPin(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void confirmPlaylistMark();
+                }
+              }}
+              placeholder="Įvesk kodą"
+            />
+          </Field>
+          {playlistMessage ? <div className="validation-error">{playlistMessage}</div> : null}
+          <div className="modal-actions">
+            <button className="ghost-button" type="button" onClick={closePlaylistConfirm} disabled={playlistSaving}>
+              Uždaryti
+            </button>
+            <button className="primary-button" type="button" onClick={confirmPlaylistMark} disabled={playlistSaving}>
+              {playlistSaving ? "Saugoma..." : "Patvirtinti"}
             </button>
           </div>
         </div>

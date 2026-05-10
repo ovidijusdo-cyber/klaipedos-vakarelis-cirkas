@@ -6,6 +6,7 @@ const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
 const DELETED_RESERVATION_IDS_KEY = "deletedReservationIds";
 const MAX_SAVE_RETRIES = 5;
 const ADMIN_PIN = process.env.ADMIN_PIN;
+const SONG_PLAYLIST_PIN = process.env.SONG_PLAYLIST_PIN ?? "v";
 const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
 const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
 const DEMO_GAME_SCORES = new Set(["Jonas:18", "AustÄ—ja:14", "Austėja:14", "Lukas:9"]);
@@ -77,10 +78,12 @@ function normalizeSongSuggestion(item: Record<string, unknown>) {
     source: typeof item.source === "string" ? item.source : "Kita",
     likes: Math.max(0, Number.isFinite(Number(item.likes)) ? Number(item.likes) : 0),
     dislikes: Math.max(0, Number.isFinite(Number(item.dislikes)) ? Number(item.dislikes) : 0),
+    playlistAdded: Boolean(item.playlistAdded),
+    playlistUpdatedAt: typeof item.playlistUpdatedAt === "string" ? item.playlistUpdatedAt.slice(0, 80) : "",
   };
 }
 
-function mergeSongSuggestions(existingValue: unknown, incomingValue: unknown, isAdminRequest: boolean) {
+function mergeSongSuggestions(existingValue: unknown, incomingValue: unknown, isAdminRequest: boolean, canUpdatePlaylist: boolean) {
   const byId = new Map<number, Record<string, unknown>>();
 
   if (Array.isArray(existingValue)) {
@@ -98,7 +101,16 @@ function mergeSongSuggestions(existingValue: unknown, incomingValue: unknown, is
       if (!incoming) return;
       const existing = byId.get(incoming.id);
       if (!existing || isAdminRequest) {
-        byId.set(incoming.id, incoming);
+        byId.set(
+          incoming.id,
+          canUpdatePlaylist || isAdminRequest
+            ? incoming
+            : {
+                ...incoming,
+                playlistAdded: existing?.playlistAdded ?? false,
+                playlistUpdatedAt: existing?.playlistUpdatedAt ?? "",
+              },
+        );
         return;
       }
 
@@ -106,6 +118,12 @@ function mergeSongSuggestions(existingValue: unknown, incomingValue: unknown, is
         ...existing,
         likes: incoming.likes,
         dislikes: incoming.dislikes,
+        ...(canUpdatePlaylist
+          ? {
+              playlistAdded: incoming.playlistAdded,
+              playlistUpdatedAt: incoming.playlistUpdatedAt,
+            }
+          : {}),
       });
     });
   }
@@ -307,6 +325,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const payload = body?.payload;
     const isAdminRequest = Boolean(ADMIN_PIN) && body?.adminPin === ADMIN_PIN;
+    const canUpdatePlaylist = isAdminRequest || String(body?.playlistPin ?? "").trim().toLowerCase() === SONG_PLAYLIST_PIN;
     const incomingSectionUpdatedAt = isRecord(body?.sectionUpdatedAt) ? body.sectionUpdatedAt : {};
     const incomingChangedIds = isRecord(body?.changedIds) ? body.changedIds : {};
 
@@ -369,7 +388,7 @@ export async function POST(request: Request) {
               isAdmin: isAdminRequest,
             });
           } else if (key === "songSuggestions") {
-            mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest);
+            mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);
           } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications"].includes(key)) {
             mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
               overwriteExisting: false,
@@ -385,7 +404,7 @@ export async function POST(request: Request) {
             isAdmin: isAdminRequest,
           });
         } else if (key === "songSuggestions") {
-          mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest);
+          mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);
         } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications"].includes(key)) {
           mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
             overwriteExisting: isAdminRequest,
