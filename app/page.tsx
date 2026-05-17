@@ -183,6 +183,72 @@ const MAX_PLACES = 140;
 const INVITATION_CODE = "530";
 const SONG_PLAYLIST_PIN = "v";
 const SONG_VOTES_STORAGE_KEY = "klaipedos-vakaras-song-votes";
+const COMMON_SONG_TITLE = "Laimingos akys, reginčios tave";
+const COMMON_SONG_LYRICS = [
+  {
+    title: "1.",
+    lines: [
+      "Ten pašlaitėje, tolumoj,",
+      "Saulės spindulių nušviestoj,",
+      "Jėzaus klausosi nuščiuvusi minia.",
+      "Kiek jo žodžiuose išminties!",
+      "Sminga jie giliai lig širdies.",
+      "„Ak, laimingos akys, reginčios tave!“",
+    ],
+  },
+  {
+    title: "PRIEGIESMIS:",
+    chorus: true,
+    lines: [
+      "Ar matai? Ar girdi?",
+      "Atsiliepk širdimi.",
+      "Lyg šviesa, žiburys nakty",
+      "Šviečia mums tiesa – tiesa ryški.",
+    ],
+  },
+  {
+    title: "2.",
+    lines: [
+      "Gal širdis sunki, prislėgta?",
+      "Kas įvyks rytoj, nežinia.",
+      "Dar neprašius, ko mums reikia, žino jis.",
+      "Jeigu taip gražiai aprengta",
+      "Paprasta laukų lelija,",
+      "Mūsų Tėvas pasirūpins ir mumis.",
+    ],
+  },
+  {
+    title: "PRIEGIESMIS:",
+    chorus: true,
+    lines: [
+      "Ar matai? Ar girdi?",
+      "Atsiliepk širdimi.",
+      "Lyg šviesa, žiburys nakty",
+      "Šviečia mums tiesa – tiesa ryški.",
+    ],
+  },
+  {
+    title: "3.",
+    lines: [
+      "Nebijok liūties nei audros,",
+      "Tik stovėk tvirtai ant uolos.",
+      "Dievo Žodį vykdyk, kliaukis jo galia.",
+      "Tik siauru keliu eidami,",
+      "Pro ankštus vartus žengdami",
+      "Pamatysim: žemėj Dievo bus valia.",
+    ],
+  },
+  {
+    title: "PRIEGIESMIS:",
+    chorus: true,
+    lines: [
+      "Ar matai? Ar girdi?",
+      "Atsiliepk širdimi.",
+      "Lyg šviesa, žiburys nakty",
+      "Šviečia mums tiesa – tiesa ryški.",
+    ],
+  },
+];
 
 const PROGRAM_ITEMS = [
   { day: "Penktadienis, 29 d.", time: "19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
@@ -593,8 +659,9 @@ function Modal({
             <h2>{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>
-          <button className="ghost-button" type="button" onClick={onClose}>
-            Uždaryti
+          <button className="modal-close-button" type="button" onClick={onClose} aria-label="Uždaryti langą">
+            <span aria-hidden="true">×</span>
+            <span>Uždaryti</span>
           </button>
         </div>
         {children}
@@ -1727,6 +1794,8 @@ export default function Page() {
   const [voteOpen, setVoteOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [paymentInfoOpen, setPaymentInfoOpen] = useState(false);
+  const [commonSongOpen, setCommonSongOpen] = useState(false);
+  const [commonSongFontSize, setCommonSongFontSize] = useState(20);
 
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
@@ -3264,6 +3333,9 @@ export default function Page() {
         </button>
         <button className={activePanel === "important" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("important")}>
           Svarbu
+        </button>
+        <button className="panel-tab" type="button" onClick={() => setCommonSongOpen(true)}>
+          Bendra daina
         </button>
         <button className={activePanel === "songs" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("songs")}>
           Dainų pasiūlymai ir idėjos
@@ -4813,6 +4885,45 @@ export default function Page() {
             <button className="primary-button" type="button" onClick={confirmPlaylistMark} disabled={playlistSaving}>
               {playlistSaving ? "Saugoma..." : "Patvirtinti"}
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={commonSongOpen}
+        title={COMMON_SONG_TITLE}
+        description="Bendros dainos tekstas. Gali pasididinti arba sumažinti šriftą pagal savo ekraną."
+        onClose={() => setCommonSongOpen(false)}
+      >
+        <div className="common-song-modal">
+          <div className="common-song-toolbar">
+            <span>Šrifto dydis: {commonSongFontSize}px</span>
+            <div>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setCommonSongFontSize((size) => Math.max(16, size - 2))}
+              >
+                A-
+              </button>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setCommonSongFontSize((size) => Math.min(30, size + 2))}
+              >
+                A+
+              </button>
+            </div>
+          </div>
+          <div className="common-song-lyrics" style={{ fontSize: `${commonSongFontSize}px` }}>
+            {COMMON_SONG_LYRICS.map((section, index) => (
+              <section className={section.chorus ? "song-section chorus" : "song-section"} key={`${section.title}-${index}`}>
+                <h3>{section.title}</h3>
+                {section.lines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </section>
+            ))}
           </div>
         </div>
       </Modal>
