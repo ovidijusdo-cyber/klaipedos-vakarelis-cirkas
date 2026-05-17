@@ -375,6 +375,38 @@ textarea {
   box-shadow: 0 18px 32px rgba(14, 165, 233, 0.36);
 }
 
+.common-song-hero-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 22px;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 48%, #f97316 100%);
+  color: white;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 18px 34px rgba(220, 38, 38, 0.34);
+  animation: commonSongPulse 1.9s ease-in-out infinite;
+}
+
+.common-song-hero-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 38px rgba(220, 38, 38, 0.42);
+}
+
+@keyframes commonSongPulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1px) scale(1.025);
+  }
+}
+
 .link-row {
   margin-top: 18px;
   color: rgba(255, 255, 255, 0.9);
@@ -2968,6 +3000,47 @@ textarea {
   gap: 16px;
 }
 
+.common-song-languages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.common-song-languages button {
+  min-height: 58px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  padding: 9px 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #475569;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+}
+
+.common-song-languages button.active {
+  border-color: rgba(220, 38, 38, 0.32);
+  background: linear-gradient(135deg, #fee2e2, #ffedd5);
+  color: #991b1b;
+  box-shadow: 0 14px 26px rgba(220, 38, 38, 0.12);
+}
+
+.common-song-languages strong,
+.common-song-languages span {
+  display: block;
+}
+
+.common-song-languages strong {
+  font-size: 1.02rem;
+  font-weight: 950;
+}
+
+.common-song-languages span {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  opacity: 0.82;
+}
+
 .common-song-toolbar {
   position: sticky;
   top: -24px;
@@ -3449,6 +3522,7 @@ th {
   }
 
   .telegram-button,
+  .common-song-hero-button,
   .map-link,
   .primary-button,
   .secondary-button,
@@ -3481,6 +3555,10 @@ th {
     top: -20px;
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .common-song-languages {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .common-song-toolbar div {
@@ -3766,6 +3844,14 @@ th {
 
   .panel-switcher {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .common-song-languages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .common-song-languages button {
+    min-height: 52px;
   }
 
   .modal-backdrop {

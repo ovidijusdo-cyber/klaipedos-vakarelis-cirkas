@@ -249,6 +249,300 @@ const COMMON_SONG_LYRICS = [
     ],
   },
 ];
+const COMMON_SONGS = {
+  lt: {
+    label: "LT",
+    name: "Lietuvių",
+    title: COMMON_SONG_TITLE,
+    sections: COMMON_SONG_LYRICS,
+  },
+  ru: {
+    label: "RU",
+    name: "Русский",
+    title: COMMON_SONG_TITLE,
+    sections: [
+      {
+        title: "1.",
+        lines: [
+          "Божий Сын принёс миру свет.",
+          "Его жизнь — пример, ярче нет:",
+          "Был смиренным и врагов своих прощал.",
+          "Обучал людей на горе.",
+          "Щедро лился свет по земле,",
+          "Чтобы каждый, кто хотел, счастливым стал.",
+        ],
+      },
+      {
+        title: "ПРИПЕВ",
+        chorus: true,
+        lines: [
+          "Бог глаза мне открыл,",
+          "Светом жизнь озарил,",
+          "Указал путь к свободе мне.",
+          "Как же счастлив я, что вижу свет!",
+        ],
+      },
+      {
+        title: "2.",
+        lines: [
+          "Новый день начну без тревог.",
+          "В чём нуждаюсь я, знает Бог.",
+          "Верю, мой Отец всегда помочь готов.",
+          "Нежность лилии полевой",
+          "Мне напомнит мысль: Бог со мной.",
+          "Я в его глазах ценнее всех цветов!",
+        ],
+      },
+      {
+        title: "ПРИПЕВ",
+        chorus: true,
+        lines: [
+          "Бог глаза мне открыл,",
+          "Светом жизнь озарил,",
+          "Указал путь к свободе мне.",
+          "Как же счастлив я, что вижу свет!",
+        ],
+      },
+      {
+        title: "3.",
+        lines: [
+          "На скале свой дом возведём,",
+          "И не дрогнет он даже в шторм.",
+          "Мы исполним всё, что Бог нам говорит.",
+          "Хоть непрост порой узкий путь,",
+          "Жизнь и мир на нём всех нас ждут.",
+          "Вечной жизнью Бог всех верных наградит.",
+        ],
+      },
+      {
+        title: "ПРИПЕВ",
+        chorus: true,
+        lines: [
+          "Бог глаза мне открыл,",
+          "Светом жизнь озарил,",
+          "Указал путь к свободе мне.",
+          "Как же счастлив я, что вижу свет!",
+        ],
+      },
+    ],
+  },
+  uk: {
+    label: "UK",
+    name: "Українська",
+    title: COMMON_SONG_TITLE,
+    sections: [
+      {
+        title: "1.",
+        lines: [
+          "Свого Сина в світ Бог послав,",
+          "щоби кожен з нас правду знав,",
+          "щоб наосліп більше щастя не шукав.",
+          "І тому Ісус на землі",
+          "ні часу, ні сил не жалів,",
+          "а людей і словом, й ділом він навчав.",
+        ],
+      },
+      {
+        title: "(ПРИСПІВ)",
+        chorus: true,
+        lines: [
+          "Від твоїх, Боже, слів",
+          "мов ожив, мов прозрів.",
+          "Ти мені показав свій шлях,",
+          "щастя засвітив в моїх очах!",
+        ],
+      },
+      {
+        title: "2.",
+        lines: [
+          "Я про завтрашнє не журюсь —",
+          "з чого житиму, в що вдягнусь,",
+          "бо про це Єгова дбати обіцяв.",
+          "Пишний лілій цвіт у полях,",
+          "безтурботний спів пташенят",
+          "нагадає про любов мого Творця.",
+        ],
+      },
+      {
+        title: "(ПРИСПІВ)",
+        chorus: true,
+        lines: [
+          "Від твоїх, Боже, слів",
+          "мов ожив, мов прозрів.",
+          "Ти мені показав свій шлях,",
+          "щастя засвітив в моїх очах!",
+        ],
+      },
+      {
+        title: "3.",
+        lines: [
+          "Якщо піде дощ, гряне грім,",
+          "налетять вітри на мій дім,",
+          "уціліє, бо на скелі він стоїть.",
+          "Лише два шляхи є в житті,",
+          "але я вузьким буду йти,",
+          "бо веде він у прекрасний райський світ.",
+        ],
+      },
+      {
+        title: "(ПРИСПІВ)",
+        chorus: true,
+        lines: [
+          "Від твоїх, Боже, слів",
+          "мов ожив, мов прозрів.",
+          "Ти мені показав свій шлях,",
+          "щастя засвітив в моїх очах!",
+        ],
+      },
+    ],
+  },
+  pl: {
+    label: "PL",
+    name: "Polski",
+    title: COMMON_SONG_TITLE,
+    sections: [
+      {
+        title: "1.",
+        lines: [
+          "Jezus światłem był, uczył nas",
+          "wąską drogą iść cały czas,",
+          "mimo życia trosk prawdziwie wolnym być.",
+          "Do potulnych szedł, kochał ich",
+          "i pokazał, jak prawdą żyć.",
+          "Jego słowa są bezcenne aż do dziś.",
+        ],
+      },
+      {
+        title: "(REFREN)",
+        chorus: true,
+        lines: [
+          "Prawdy blask daje nam",
+          "życia sens, szczęścia smak!",
+          "Prawdy blask poprowadzi nas",
+          "tam, gdzie szczęście ma bez końca trwać!",
+        ],
+      },
+      {
+        title: "2.",
+        lines: [
+          "Nie zamartwiam się nowym dniem.",
+          "Kiedy czuję lęk, dobrze wiem —",
+          "uspokoi mnie Jehowy czuła dłoń.",
+          "Bóg o lilie dba, o mnie też,",
+          "o każdego z nas troszczy się.",
+          "Ta przepiękna myśl już dziś uskrzydla mnie.",
+        ],
+      },
+      {
+        title: "(REFREN)",
+        chorus: true,
+        lines: [
+          "Prawdy blask daje nam",
+          "życia sens, szczęścia smak!",
+          "Prawdy blask poprowadzi nas",
+          "tam, gdzie szczęście ma bez końca trwać!",
+        ],
+      },
+      {
+        title: "3.",
+        lines: [
+          "Mimo wielu prób będę trwać.",
+          "Nie zachwieje mną żaden wiatr.",
+          "Nie na „piasku”, lecz na „skale” stawiam dom.",
+          "Przed oczami mam lepszy świat,",
+          "„wszystko nowe” już będzie tam.",
+          "Jak szczęśliwi są ci, którzy widzą to!",
+        ],
+      },
+      {
+        title: "(REFREN)",
+        chorus: true,
+        lines: [
+          "Prawdy blask daje nam",
+          "życia sens, szczęścia smak!",
+          "Prawdy blask poprowadzi nas",
+          "tam, gdzie szczęście ma bez końca trwać!",
+        ],
+      },
+    ],
+  },
+  en: {
+    label: "EN",
+    name: "English",
+    title: COMMON_SONG_TITLE,
+    sections: [
+      {
+        title: "1.",
+        lines: [
+          "Jesus loved to share truth and light,",
+          "Bringing happiness to our life.",
+          "On a mountainside, he taught us how to live.",
+          "Seeking God’s will first ev’ry day,",
+          "With a humble heart, he would pray.",
+          "He was kind to all and ready to forgive.",
+        ],
+      },
+      {
+        title: "(CHORUS)",
+        chorus: true,
+        lines: [
+          "By God’s light, I can see",
+          "How to live happily.",
+          "By God’s light, I am truly free.",
+          "Happy are these eyes because they see!",
+        ],
+      },
+      {
+        title: "2.",
+        lines: [
+          "When anxieties come our way,",
+          "We will live our lives day by day,",
+          "For Jehovah’s hand provides our daily needs.",
+          "As the lilies grow in the field,",
+          "How the love God shows is revealed!",
+          "If he cares for them, I know he’ll care for me.",
+        ],
+      },
+      {
+        title: "(CHORUS)",
+        chorus: true,
+        lines: [
+          "By God’s light, I can see",
+          "How to live happily.",
+          "By God’s light, I am truly free.",
+          "Happy are these eyes because they see!",
+        ],
+      },
+      {
+        title: "3.",
+        lines: [
+          "We will build on rock, not on sand.",
+          "If a storm should come, we will stand.",
+          "Yes, Jehovah’s Word will live in all we do.",
+          "Through the narrow gate, we will go.",
+          "As he guides our way, blessings flow,",
+          "And it leads to life, where all will be made new.",
+        ],
+      },
+      {
+        title: "(CHORUS)",
+        chorus: true,
+        lines: [
+          "By God’s light, I can see",
+          "How to live happily.",
+          "By God’s light, I am truly free.",
+          "Happy are these eyes because they see!",
+        ],
+      },
+    ],
+  },
+};
+type CommonSongLanguage = keyof typeof COMMON_SONGS;
+const COMMON_SONG_LANGUAGE_OPTIONS = Object.entries(COMMON_SONGS).map(([id, song]) => ({
+  id: id as CommonSongLanguage,
+  label: song.label,
+  name: song.name,
+}));
 
 const PROGRAM_ITEMS = [
   { day: "Penktadienis, 29 d.", time: "19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
@@ -856,6 +1150,16 @@ function TelegramIcon() {
     <svg aria-hidden="true" className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M21 4 3.8 10.6c-.8.3-.8 1.5 0 1.8l4.1 1.4 1.5 4.7c.2.8 1.2 1 1.8.4L13.8 16l4.3 3.2c.7.5 1.7.1 1.9-.8L23 5.8C23.2 4.7 22 3.9 21 4Z" />
       <path d="m7.9 13.8 10-7.3" />
+    </svg>
+  );
+}
+
+function MusicNoteIcon() {
+  return (
+    <svg aria-hidden="true" className="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M9 18.2a2.8 2.8 0 1 1-1-2.1V6.5l10-2v9.7" />
+      <path d="M18 16.2a2.8 2.8 0 1 1-1-2.1" />
+      <path d="M8 9.2l10-2" />
     </svg>
   );
 }
@@ -1796,6 +2100,7 @@ export default function Page() {
   const [paymentInfoOpen, setPaymentInfoOpen] = useState(false);
   const [commonSongOpen, setCommonSongOpen] = useState(false);
   const [commonSongFontSize, setCommonSongFontSize] = useState(20);
+  const [commonSongLanguage, setCommonSongLanguage] = useState<CommonSongLanguage>("lt");
 
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
@@ -2107,6 +2412,7 @@ export default function Page() {
   const cancelReservation = useMemo(() => lookupReservation(activeReservations, cancelLookup), [activeReservations, cancelLookup]);
   const transferReservation = useMemo(() => lookupReservation(activeReservations, transferLookup), [activeReservations, transferLookup]);
   const foundReservation = useMemo(() => lookupReservation(activeReservations, lookup || scannerValue), [activeReservations, lookup, scannerValue]);
+  const activeCommonSong = COMMON_SONGS[commonSongLanguage];
   const pendingReservations = useMemo(
     () =>
       activeReservations
@@ -3229,6 +3535,10 @@ export default function Page() {
             <button className="secondary-button" type="button" onClick={() => setPaymentInfoOpen(true)}>
               Apmokėjimo informacija
             </button>
+            <button className="common-song-hero-button" type="button" onClick={() => { setCommonSongLanguage("lt"); setCommonSongOpen(true); }}>
+              <MusicNoteIcon />
+              Bendra daina
+            </button>
             <button className="ghost-button light" type="button" onClick={() => setTransferOpen(true)}>
               Susikeisti
             </button>
@@ -3333,9 +3643,6 @@ export default function Page() {
         </button>
         <button className={activePanel === "important" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("important")}>
           Svarbu
-        </button>
-        <button className="panel-tab" type="button" onClick={() => setCommonSongOpen(true)}>
-          Bendra daina
         </button>
         <button className={activePanel === "songs" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("songs")}>
           Dainų pasiūlymai ir idėjos
@@ -4891,11 +5198,24 @@ export default function Page() {
 
       <Modal
         open={commonSongOpen}
-        title={COMMON_SONG_TITLE}
+        title={activeCommonSong.title}
         description="Bendros dainos tekstas. Gali pasididinti arba sumažinti šriftą pagal savo ekraną."
         onClose={() => setCommonSongOpen(false)}
       >
         <div className="common-song-modal">
+          <div className="common-song-languages" aria-label="Pasirinkti dainos kalbą">
+            {COMMON_SONG_LANGUAGE_OPTIONS.map((language) => (
+              <button
+                className={commonSongLanguage === language.id ? "active" : ""}
+                key={language.id}
+                type="button"
+                onClick={() => setCommonSongLanguage(language.id)}
+              >
+                <strong>{language.label}</strong>
+                <span>{language.name}</span>
+              </button>
+            ))}
+          </div>
           <div className="common-song-toolbar">
             <span>Šrifto dydis: {commonSongFontSize}px</span>
             <div>
@@ -4916,7 +5236,7 @@ export default function Page() {
             </div>
           </div>
           <div className="common-song-lyrics" style={{ fontSize: `${commonSongFontSize}px` }}>
-            {COMMON_SONG_LYRICS.map((section, index) => (
+            {activeCommonSong.sections.map((section, index) => (
               <section className={section.chorus ? "song-section chorus" : "song-section"} key={`${section.title}-${index}`}>
                 <h3>{section.title}</h3>
                 {section.lines.map((line) => (
