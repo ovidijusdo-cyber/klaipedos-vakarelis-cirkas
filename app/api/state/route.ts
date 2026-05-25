@@ -7,6 +7,7 @@ const DELETED_RESERVATION_IDS_KEY = "deletedReservationIds";
 const MAX_SAVE_RETRIES = 5;
 const ADMIN_PIN = process.env.ADMIN_PIN;
 const CHAMPION_PIN = process.env.CHAMPION_PIN ?? "modestas";
+const QR_PIN = process.env.QR_PIN ?? "paulina";
 const SONG_PLAYLIST_PIN = process.env.SONG_PLAYLIST_PIN ?? "v";
 const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
 const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
@@ -211,11 +212,36 @@ function sanitizePublicReservation(existingItem: Record<string, unknown> | undef
   };
 }
 
+function sanitizeQrReservation(existingItem: Record<string, unknown>, incomingItem: Record<string, unknown>) {
+  const incomingPeople = Array.isArray(incomingItem.people) ? incomingItem.people.filter(isRecord) : [];
+  const incomingPeopleById = new Map(incomingPeople.map((person) => [String(person.id ?? ""), person]));
+  const paid = Boolean(incomingItem.paid);
+  const paymentMethod = paid && (incomingItem.paymentMethod === "bank" || incomingItem.paymentMethod === "cash") ? incomingItem.paymentMethod : null;
+
+  return {
+    ...existingItem,
+    paid,
+    paymentMethod,
+    paidAt: paid && typeof incomingItem.paidAt === "string" ? incomingItem.paidAt : paid ? existingItem.paidAt ?? null : null,
+    people: Array.isArray(existingItem.people)
+      ? existingItem.people.filter(isRecord).map((existingPerson) => {
+          const incomingPerson = incomingPeopleById.get(String(existingPerson.id ?? ""));
+          const arrived = Boolean(incomingPerson?.arrived ?? existingPerson.arrived ?? false);
+          return {
+            ...existingPerson,
+            arrived,
+            arrivedAt: arrived && typeof incomingPerson?.arrivedAt === "string" ? incomingPerson.arrivedAt : arrived ? existingPerson.arrivedAt ?? null : null,
+          };
+        })
+      : [],
+  };
+}
+
 function mergeReservations(
   existingValue: unknown,
   incomingValue: unknown,
   deletedIds: Set<number>,
-  options: { overwriteExisting?: boolean; overwriteIds?: Set<number>; isAdmin: boolean },
+  options: { overwriteExisting?: boolean; overwriteIds?: Set<number>; isAdmin: boolean; isQr: boolean },
 ) {
   if (options.isAdmin) {
     return mergeById(existingValue, incomingValue, deletedIds, options);
@@ -241,6 +267,11 @@ function mergeReservations(
       if (!Number.isFinite(id) || deletedIds.has(id)) return;
       const canOverwrite = overwriteIds ? overwriteIds.has(id) : overwriteExisting;
       if (!canOverwrite && byId.has(id)) return;
+      if (options.isQr) {
+        const existingItem = byId.get(id);
+        if (existingItem) byId.set(id, sanitizeQrReservation(existingItem, item));
+        return;
+      }
       byId.set(id, sanitizePublicReservation(byId.get(id), item));
     });
   }
@@ -327,6 +358,7 @@ export async function POST(request: Request) {
     const payload = body?.payload;
     const isAdminRequest = Boolean(ADMIN_PIN) && body?.adminPin === ADMIN_PIN;
     const isChampionRequest = body?.championPin === CHAMPION_PIN;
+    const isQrRequest = body?.qrPin === QR_PIN;
     const canUpdatePlaylist = isAdminRequest || String(body?.playlistPin ?? "").trim().toLowerCase() === SONG_PLAYLIST_PIN;
     const incomingSectionUpdatedAt = isRecord(body?.sectionUpdatedAt) ? body.sectionUpdatedAt : {};
     const incomingChangedIds = isRecord(body?.changedIds) ? body.changedIds : {};
@@ -389,6 +421,7 @@ export async function POST(request: Request) {
               overwriteExisting: false,
               overwriteIds: getChangedIdSet(incomingChangedIds[key]),
               isAdmin: isAdminRequest,
+              isQr: isQrRequest,
             });
           } else if (key === "songSuggestions") {
             mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);
@@ -405,6 +438,7 @@ export async function POST(request: Request) {
           mergedPayload[key] = mergeReservations(existingPayload[key], value, deletedReservationIds, {
             overwriteIds: getChangedIdSet(incomingChangedIds[key]),
             isAdmin: isAdminRequest,
+            isQr: isQrRequest,
           });
         } else if (key === "songSuggestions") {
           mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);

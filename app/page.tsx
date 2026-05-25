@@ -2118,6 +2118,9 @@ export default function Page() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
   const [adminUnlocking, setAdminUnlocking] = useState(false);
+  const [qrUnlocked, setQrUnlocked] = useState(false);
+  const [qrPin, setQrPin] = useState("");
+  const [qrUnlocking, setQrUnlocking] = useState(false);
   const [championUnlocked, setChampionUnlocked] = useState(false);
   const [championPin, setChampionPin] = useState("");
   const [championUnlocking, setChampionUnlocking] = useState(false);
@@ -2339,6 +2342,7 @@ export default function Page() {
           sectionUpdatedAt,
           changedIds,
           adminPin: adminUnlocked ? adminPin : undefined,
+          qrPin: qrUnlocked ? qrPin : undefined,
           championPin: championUnlocked ? championPin : undefined,
         }),
         signal: controller.signal,
@@ -2363,7 +2367,7 @@ export default function Page() {
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [adminPin, adminUnlocked, championMatches, championPin, championUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [adminPin, adminUnlocked, championMatches, championPin, championUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, qrPin, qrUnlocked, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -3311,6 +3315,37 @@ export default function Page() {
     }
   }
 
+  async function unlockQr() {
+    if (!qrPin.trim()) {
+      setDoorNotice({ type: "warning", text: "Įvesk durininko PIN kodą." });
+      return;
+    }
+
+    setQrUnlocking(true);
+    try {
+      const response = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pin: qrPin, scope: "qr" }),
+      });
+
+      if (response.ok) {
+        setQrUnlocked(true);
+        setDoorNotice({ type: "success", text: "QR tikrinimas atrakintas." });
+        return;
+      }
+
+      setDoorNotice({ type: "warning", text: "Neteisingas durininko PIN kodas." });
+    } catch (error) {
+      console.error("Failed to unlock QR checking", error);
+      setDoorNotice({ type: "warning", text: "Nepavyko patikrinti PIN. Pabandyk dar kartą." });
+    } finally {
+      setQrUnlocking(false);
+    }
+  }
+
   async function createManualBackup() {
     if (!adminUnlocked || !adminPin.trim()) {
       setBackupMessage("Pirma atrakink admin zoną.");
@@ -4049,14 +4084,14 @@ export default function Page() {
 
       {activePanel === "qr" ? (
         <SectionCard title="QR tikrinimas" description="Durininko zona rezervacijų paieškai, apmokėjimui ir atvykimo žymėjimui.">
-          {!adminUnlocked ? (
+          {!adminUnlocked && !qrUnlocked ? (
             <div className="stack">
-              <Field label="Durininko / admin PIN">
-                <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
+              <Field label="Durininko PIN">
+                <input value={qrPin} onChange={(event) => setQrPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
               </Field>
                 <div className="stack-inline">
-                  <button className="primary-button" type="button" onClick={unlockAdmin} disabled={adminUnlocking}>
-                    {adminUnlocking ? "Tikrinama..." : "Atrakinti QR tikrinimą"}
+                  <button className="primary-button" type="button" onClick={unlockQr} disabled={qrUnlocking}>
+                    {qrUnlocking ? "Tikrinama..." : "Atrakinti QR tikrinimą"}
                   </button>
                 </div>
                 {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
