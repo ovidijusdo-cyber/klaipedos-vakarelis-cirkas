@@ -799,6 +799,155 @@ textarea {
   line-height: 1.6;
 }
 
+.champion-arena {
+  display: grid;
+  gap: 30px;
+}
+
+.champion-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.86fr) minmax(320px, 1.14fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.champion-control-card,
+.champion-board {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(251, 146, 60, 0.2);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.champion-control-card p,
+.champion-board-head p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.champion-suggestions {
+  display: grid;
+  gap: 8px;
+  max-height: 244px;
+  overflow-y: auto;
+}
+
+.champion-suggestions button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(251, 146, 60, 0.2);
+  border-radius: 14px;
+  background: #fff7ed;
+  color: #431407;
+  cursor: pointer;
+  text-align: left;
+}
+
+.champion-suggestions button.selected {
+  border-color: #f97316;
+  background: #ffedd5;
+}
+
+.champion-suggestions span {
+  color: #64748b;
+}
+
+.champion-selected {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff7ed, #ffedd5);
+}
+
+.champion-board-head {
+  display: grid;
+  gap: 14px;
+}
+
+.champion-board-head h3 {
+  margin: 4px 0 6px;
+  font-family: var(--font-heading), serif;
+}
+
+.champion-board-head input {
+  width: 100%;
+}
+
+.champion-match-list {
+  display: grid;
+  gap: 10px;
+}
+
+.champion-match {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.42fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.champion-match.guest_won {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+}
+
+.champion-match-person {
+  display: grid;
+  gap: 4px;
+}
+
+.champion-match-person span {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.champion-task {
+  display: grid;
+  gap: 4px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: #fff7ed;
+}
+
+.champion-task span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.champion-trophy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #a16207;
+}
+
+.champion-trophy span {
+  font-size: 1.7rem;
+}
+
+.champion-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.champion-pagination span {
+  color: #64748b;
+  font-weight: 700;
+}
+
 .game-shell {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
@@ -3419,6 +3568,7 @@ th {
   .payment-hero,
   .wheel-section,
   .wheel-section.compact,
+  .champion-layout,
   .game-shell {
     grid-template-columns: 1fr;
   }
@@ -3774,6 +3924,10 @@ th {
 
   .wheel-result {
     text-align: center;
+  }
+
+  .champion-match {
+    grid-template-columns: 1fr;
   }
 
   .vote-result-head,

@@ -121,6 +121,16 @@ type ResponsiblePerson = {
   names: string;
 };
 
+type ChampionMatch = {
+  id: number;
+  guestPersonId: string;
+  guestLabel: string;
+  city: string;
+  result: "champion_won" | "guest_won";
+  task: string | null;
+  createdAt: string;
+};
+
 type PersonForm = {
   formId: string;
   firstName: string;
@@ -660,9 +670,11 @@ const initialResponsiblePeople: ResponsiblePerson[] = [
 ];
 
 const initialGameScores: GameScore[] = [];
+const initialChampionMatches: ChampionMatch[] = [];
 
 const LEADERBOARD_SIZE = 5;
 const MAX_STORED_GAME_SCORES = 100;
+const CHAMPION_MATCHES_PAGE_SIZE = 8;
 const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
 const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
 const DEMO_GAME_SCORES = new Set(["Jonas:18", "AustÄ—ja:14", "Austėja:14", "Lukas:9"]);
@@ -2089,6 +2101,7 @@ export default function Page() {
   const [eventIdeas, setEventIdeas] = useState<EventIdea[]>(initialEventIdeas);
   const [responsiblePeople, setResponsiblePeople] = useState<ResponsiblePerson[]>(initialResponsiblePeople);
   const [gameScores, setGameScores] = useState<GameScore[]>(initialGameScores);
+  const [championMatches, setChampionMatches] = useState<ChampionMatch[]>(initialChampionMatches);
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
 
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -2138,13 +2151,17 @@ export default function Page() {
   const [rideSeatsTouched, setRideSeatsTouched] = useState(false);
   const [selectedTransferPersonId, setSelectedTransferPersonId] = useState("");
   const [transferForm, setTransferForm] = useState({ replacementName: "", replacementPhone: "" });
-  const [countdown, setCountdown] = useState(() => getCountdownParts(EVENT_START_ISO));
+  const [countdown, setCountdown] = useState<ReturnType<typeof getCountdownParts> | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(true);
   const [scannerMessage, setScannerMessage] = useState("");
   const [wheelRotation, setWheelRotation] = useState(0);
   const [wheelResult, setWheelResult] = useState("");
   const [wheelSpinning, setWheelSpinning] = useState(false);
+  const [championLookup, setChampionLookup] = useState("");
+  const [selectedChampionGuestId, setSelectedChampionGuestId] = useState("");
+  const [championBoardLookup, setChampionBoardLookup] = useState("");
+  const [championBoardPage, setChampionBoardPage] = useState(1);
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
   const [highlightGuestKey, setHighlightGuestKey] = useState("");
@@ -2189,6 +2206,7 @@ export default function Page() {
             eventIdeas?: EventIdea[];
             responsiblePeople?: ResponsiblePerson[];
             gameScores?: GameScore[];
+            championMatches?: ChampionMatch[];
             deletedReservationIds?: number[];
           } | null;
         };
@@ -2205,6 +2223,7 @@ export default function Page() {
         const rawEventIdeas = Array.isArray(parsed.eventIdeas) ? parsed.eventIdeas : [];
         const rawResponsiblePeople = Array.isArray(parsed.responsiblePeople) ? parsed.responsiblePeople : initialResponsiblePeople;
         const rawGameScores = Array.isArray(parsed.gameScores) ? parsed.gameScores : [];
+        const rawChampionMatches = Array.isArray(parsed.championMatches) ? parsed.championMatches : [];
         const nextDeletedReservationIds = Array.isArray(parsed.deletedReservationIds)
           ? parsed.deletedReservationIds.map(Number).filter(Number.isFinite)
           : [];
@@ -2218,6 +2237,7 @@ export default function Page() {
         const nextEventIdeas = normalizeEventIdeas(rawEventIdeas);
         const nextResponsiblePeople = rawResponsiblePeople;
         const nextGameScores = normalizeGameScores(rawGameScores);
+        const nextChampionMatches = rawChampionMatches;
 
         setReservations(nextReservations);
         setWaitingList(nextWaitingList);
@@ -2228,6 +2248,7 @@ export default function Page() {
         setEventIdeas(nextEventIdeas);
         setResponsiblePeople(nextResponsiblePeople);
         setGameScores(nextGameScores);
+        setChampionMatches(nextChampionMatches);
         setDeletedReservationIds(nextDeletedReservationIds);
 
         syncedStateRef.current = {
@@ -2240,6 +2261,7 @@ export default function Page() {
           eventIdeas: JSON.stringify(nextEventIdeas),
           responsiblePeople: JSON.stringify(nextResponsiblePeople),
           gameScores: JSON.stringify(nextGameScores),
+          championMatches: JSON.stringify(nextChampionMatches),
           deletedReservationIds: JSON.stringify(nextDeletedReservationIds),
         };
         remoteStateLoadedRef.current = true;
@@ -2284,6 +2306,7 @@ export default function Page() {
       eventIdeas,
       responsiblePeople,
       gameScores,
+      championMatches,
       deletedReservationIds,
     };
 
@@ -2336,7 +2359,7 @@ export default function Page() {
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [adminPin, adminUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [adminPin, adminUnlocked, championMatches, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -2512,11 +2535,37 @@ export default function Page() {
         activePeople(reservation).map((person) => ({
           id: person.id,
           name: `${person.firstName} ${person.lastName}`.trim(),
+          publicName: maskName(person.firstName, person.lastName),
           city: reservation.city,
         })),
       ),
     [visibleGuestReservations],
   );
+  const championGuestSuggestions = useMemo(() => {
+    const query = championLookup.trim().toLowerCase();
+    if (!query || !adminUnlocked) return [];
+    return voteEligiblePeople.filter((person) => person.name.toLowerCase().includes(query)).slice(0, 10);
+  }, [adminUnlocked, championLookup, voteEligiblePeople]);
+  const selectedChampionGuest = useMemo(
+    () => voteEligiblePeople.find((person) => person.id === selectedChampionGuestId) ?? null,
+    [selectedChampionGuestId, voteEligiblePeople],
+  );
+  const championPublicMatches = useMemo(() => {
+    const query = championBoardLookup.trim().toLowerCase();
+    const exactPerson = query ? voteEligiblePeople.find((person) => person.name.toLowerCase() === query) : null;
+    return championMatches
+      .filter((match) => !query || match.guestLabel.toLowerCase().includes(query) || match.guestPersonId === exactPerson?.id)
+      .sort((a, b) => b.id - a.id);
+  }, [championBoardLookup, championMatches, voteEligiblePeople]);
+  const championBoardPageCount = Math.max(1, Math.ceil(championPublicMatches.length / CHAMPION_MATCHES_PAGE_SIZE));
+  const pagedChampionMatches = championPublicMatches.slice(
+    (Math.min(championBoardPage, championBoardPageCount) - 1) * CHAMPION_MATCHES_PAGE_SIZE,
+    Math.min(championBoardPage, championBoardPageCount) * CHAMPION_MATCHES_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setChampionBoardPage(1);
+  }, [championBoardLookup]);
   const voterMatches = useMemo(() => {
     const q = voteVoterLookup.trim().toLowerCase();
     if (!q) return [];
@@ -3267,22 +3316,55 @@ export default function Page() {
   }
 
   function spinWheel() {
-    if (wheelSpinning) return;
+    if (wheelSpinning || !adminUnlocked || !selectedChampionGuest) return;
 
     const segmentSize = 360 / WHEEL_PRIZES.length;
     const selectedIndex = Math.floor(Math.random() * WHEEL_PRIZES.length);
     const extraTurns = 360 * (4 + Math.floor(Math.random() * 3));
     const targetRotation = wheelRotation + extraTurns + (360 - selectedIndex * segmentSize - segmentSize / 2);
+    const matchGuest = selectedChampionGuest;
 
     setWheelSpinning(true);
     setWheelRotation(targetRotation);
 
     window.setTimeout(() => {
-      setWheelResult(WHEEL_PRIZES[selectedIndex]);
+      const task = WHEEL_PRIZES[selectedIndex];
+      setWheelResult(task);
+      setChampionMatches((previous) => [
+        {
+          id: createNumericId(),
+          guestPersonId: matchGuest.id,
+          guestLabel: matchGuest.publicName,
+          city: matchGuest.city,
+          result: "champion_won",
+          task,
+          createdAt: formatDateTime(),
+        },
+        ...previous,
+      ]);
       setWheelSpinning(false);
       setShowConfetti(true);
       window.setTimeout(() => setShowConfetti(false), 2200);
     }, 4200);
+  }
+
+  function recordChampionGuestWin() {
+    if (!adminUnlocked || !selectedChampionGuest || wheelSpinning) return;
+    setChampionMatches((previous) => [
+      {
+        id: createNumericId(),
+        guestPersonId: selectedChampionGuest.id,
+        guestLabel: selectedChampionGuest.publicName,
+        city: selectedChampionGuest.city,
+        result: "guest_won",
+        task: null,
+        createdAt: formatDateTime(),
+      },
+      ...previous,
+    ]);
+    setWheelResult(`${selectedChampionGuest.publicName} laimėjo prieš Kampo čempioną!`);
+    setShowConfetti(true);
+    window.setTimeout(() => setShowConfetti(false), 2200);
   }
 
   function submitVote(targetPersonId: string) {
@@ -3493,7 +3575,9 @@ export default function Page() {
 
           <div className="countdown-card">
             <span>Atgalinis laikas iki renginio pradžios</span>
-            {countdown.expired ? (
+            {!countdown ? (
+              <strong>Skaičiuojama...</strong>
+            ) : countdown.expired ? (
               <strong>Renginys jau prasidėjo</strong>
             ) : (
               <strong>
@@ -4347,30 +4431,146 @@ export default function Page() {
         </SectionCard>
       ) : null}
 
-      <SectionCard title="Sėkmės ratas" description="Pasuk ratą ir sužinok savo smagią vakaro misiją.">
-        <div className="wheel-section compact">
-          <div className="wheel-wrapper small">
-            <div className="wheel-pointer" />
-            <div className="wheel-disc" style={{ transform: `rotate(${wheelRotation}deg)` }}>
-              {WHEEL_PRIZES.map((item, index) => (
-                <div
-                  className={`wheel-segment segment-${index % 6}`}
-                  key={item}
-                  style={{ transform: `rotate(${index * (360 / WHEEL_PRIZES.length)}deg)` }}
-                >
-                  <span>{index + 1}</span>
-                </div>
-              ))}
+      <SectionCard title="Kampo čempiono arena" description="Sužaisk kryžiukus-nuliukus: pergalė pelno taurę, pralaimėjimas atneša smagią rato užduotį.">
+        <div className="champion-arena">
+          <div className="wheel-section compact">
+            <div className="wheel-wrapper small">
+              <div className="wheel-pointer" />
+              <div className="wheel-disc" style={{ transform: `rotate(${wheelRotation}deg)` }}>
+                {WHEEL_PRIZES.map((item, index) => (
+                  <div
+                    className={`wheel-segment segment-${index % 6}`}
+                    key={item}
+                    style={{ transform: `rotate(${index * (360 / WHEEL_PRIZES.length)}deg)` }}
+                  >
+                    <span>{index + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="wheel-side">
+              <p>Kampo čempionas meta iššūkį svečiams. Jei jis laimi, ratas skiria vakaro misiją; jei laimi svečias, šalia jo vardo sužiba taurė.</p>
+              <div className="wheel-result">
+                <strong>Paskutinis arenos įvykis</strong>
+                <p>{wheelResult || "Rezultatai ir išsuktos užduotys atsiras lentoje žemiau."}</p>
+              </div>
             </div>
           </div>
-          <div className="wheel-side">
-            <p>Lengvas žaidimukas nuotaikai prieš vakarėlį. Užduotis nebūtina, bet labai skatinama.</p>
-            <button className="primary-button" type="button" onClick={spinWheel} disabled={wheelSpinning}>
-              {wheelSpinning ? "Sukasi..." : "Sukti ratą"}
-            </button>
-            <div className="wheel-result">
-              <strong>Tavo misija</strong>
-              <p>{wheelResult || "Pasuk ratą ir pamatyk, ką šį vakarą atneš sėkmė."}</p>
+
+          <div className="champion-layout">
+            <div className="champion-control-card">
+              <span className="eyebrow">Kampo čempionui</span>
+              {!adminUnlocked ? (
+                <>
+                  <p>Valdymą atrakina organizatoriaus PIN. Svečiai rezultatų keisti negali.</p>
+                  <Field label="PIN kodas">
+                    <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
+                  </Field>
+                  <button className="primary-button" type="button" onClick={unlockAdmin} disabled={adminUnlocking}>
+                    {adminUnlocking ? "Tikrinama..." : "Atrakinti areną"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Field label="Surask žaidžiantį svečią">
+                    <input
+                      value={championLookup}
+                      onChange={(event) => {
+                        setChampionLookup(event.target.value);
+                        setSelectedChampionGuestId("");
+                      }}
+                      placeholder="Vardas arba pavardė"
+                    />
+                  </Field>
+                  {championGuestSuggestions.length ? (
+                    <div className="champion-suggestions">
+                      {championGuestSuggestions.map((person) => (
+                        <button
+                          className={selectedChampionGuestId === person.id ? "selected" : ""}
+                          key={person.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedChampionGuestId(person.id);
+                            setChampionLookup(person.name);
+                          }}
+                        >
+                          <strong>{person.name}</strong>
+                          <span>{person.city}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {selectedChampionGuest ? (
+                    <div className="champion-selected">
+                      <strong>Žaidžia: {selectedChampionGuest.name}</strong>
+                      <div className="stack-inline">
+                        <button className="primary-button" type="button" onClick={spinWheel} disabled={wheelSpinning}>
+                          {wheelSpinning ? "Ratas sukasi..." : "Čempionas laimėjo - sukti ratą"}
+                        </button>
+                        <button className="secondary-button" type="button" onClick={recordChampionGuestWin} disabled={wheelSpinning}>
+                          Svečias laimėjo
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="muted-label">Pasirink svečią iš patvirtintų dalyvių sąrašo.</p>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="champion-board">
+              <div className="champion-board-head">
+                <div>
+                  <span className="eyebrow">Vieša lenta</span>
+                  <h3>Čempiono iššūkiai</h3>
+                  <p>Įvesk savo vardą ir pavardę, kad rastum savo užduotį. Viešai vardai rodomi sutrumpinti.</p>
+                </div>
+                <input
+                  aria-label="Ieškoti savo Kampo čempiono rezultato"
+                  value={championBoardLookup}
+                  onChange={(event) => setChampionBoardLookup(event.target.value)}
+                  placeholder="Tavo vardas ir pavardė"
+                />
+              </div>
+              <div className="champion-match-list">
+                {pagedChampionMatches.length ? (
+                  pagedChampionMatches.map((match) => (
+                    <div className={`champion-match ${match.result}`} key={match.id}>
+                      <div className="champion-match-person">
+                        <strong>{match.guestLabel}</strong>
+                        <span>{match.city} · {match.createdAt}</span>
+                      </div>
+                      {match.result === "guest_won" ? (
+                        <div className="champion-trophy" title="Laimėjo prieš Kampo čempioną">
+                          <span aria-hidden="true">🏆</span>
+                          Laimėta
+                        </div>
+                      ) : (
+                        <div className="champion-task">
+                          <span>Užduotis</span>
+                          <strong>{match.task}</strong>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    {championBoardLookup.trim() ? "Pagal šią paiešką arenos rezultatų nerasta." : "Arena dar laukia pirmųjų žaidėjų."}
+                  </div>
+                )}
+              </div>
+              {championBoardPageCount > 1 ? (
+                <div className="champion-pagination">
+                  <button className="ghost-button" type="button" onClick={() => setChampionBoardPage((page) => Math.max(1, page - 1))} disabled={championBoardPage <= 1}>
+                    Ankstesnis
+                  </button>
+                  <span>{Math.min(championBoardPage, championBoardPageCount)} / {championBoardPageCount}</span>
+                  <button className="ghost-button" type="button" onClick={() => setChampionBoardPage((page) => Math.min(championBoardPageCount, page + 1))} disabled={championBoardPage >= championBoardPageCount}>
+                    Kitas
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
