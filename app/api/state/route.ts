@@ -6,6 +6,7 @@ const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
 const DELETED_RESERVATION_IDS_KEY = "deletedReservationIds";
 const MAX_SAVE_RETRIES = 5;
 const ADMIN_PIN = process.env.ADMIN_PIN;
+const CHAMPION_PIN = process.env.CHAMPION_PIN ?? "modestas";
 const SONG_PLAYLIST_PIN = process.env.SONG_PLAYLIST_PIN ?? "v";
 const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
 const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
@@ -325,6 +326,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const payload = body?.payload;
     const isAdminRequest = Boolean(ADMIN_PIN) && body?.adminPin === ADMIN_PIN;
+    const isChampionRequest = body?.championPin === CHAMPION_PIN;
     const canUpdatePlaylist = isAdminRequest || String(body?.playlistPin ?? "").trim().toLowerCase() === SONG_PLAYLIST_PIN;
     const incomingSectionUpdatedAt = isRecord(body?.sectionUpdatedAt) ? body.sectionUpdatedAt : {};
     const incomingChangedIds = isRecord(body?.changedIds) ? body.changedIds : {};
@@ -375,7 +377,8 @@ export async function POST(request: Request) {
           }
           return;
         }
-        if (!isAdminRequest && ["responsiblePeople", "championMatches"].includes(key)) return;
+        if (!isAdminRequest && key === "responsiblePeople") return;
+        if (!isAdminRequest && key === "championMatches" && !isChampionRequest) return;
 
         const incomingTimestamp = Number(incomingSectionUpdatedAt[key] ?? Date.now());
         const currentTimestamp = nextSectionUpdatedAt[key] ?? 0;
@@ -392,7 +395,7 @@ export async function POST(request: Request) {
           } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications", "championMatches"].includes(key)) {
             mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
               overwriteExisting: false,
-              overwriteIds: isAdminRequest ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
+              overwriteIds: isAdminRequest || (isChampionRequest && key === "championMatches") ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
             });
           }
           return;
@@ -407,8 +410,8 @@ export async function POST(request: Request) {
           mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);
         } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications", "championMatches"].includes(key)) {
           mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
-            overwriteExisting: isAdminRequest,
-            overwriteIds: isAdminRequest ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
+            overwriteExisting: isAdminRequest || (isChampionRequest && key === "championMatches"),
+            overwriteIds: isAdminRequest || (isChampionRequest && key === "championMatches") ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
           });
         } else if (isAdminRequest) {
           mergedPayload[key] = value;

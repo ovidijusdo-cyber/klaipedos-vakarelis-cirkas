@@ -2118,6 +2118,9 @@ export default function Page() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
   const [adminUnlocking, setAdminUnlocking] = useState(false);
+  const [championUnlocked, setChampionUnlocked] = useState(false);
+  const [championPin, setChampionPin] = useState("");
+  const [championUnlocking, setChampionUnlocking] = useState(false);
   const [backupCreating, setBackupCreating] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [submitted, setSubmitted] = useState<Reservation | null>(null);
@@ -2336,6 +2339,7 @@ export default function Page() {
           sectionUpdatedAt,
           changedIds,
           adminPin: adminUnlocked ? adminPin : undefined,
+          championPin: championUnlocked ? championPin : undefined,
         }),
         signal: controller.signal,
       })
@@ -2359,7 +2363,7 @@ export default function Page() {
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [adminPin, adminUnlocked, championMatches, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [adminPin, adminUnlocked, championMatches, championPin, championUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -2543,9 +2547,9 @@ export default function Page() {
   );
   const championGuestSuggestions = useMemo(() => {
     const query = championLookup.trim().toLowerCase();
-    if (!query || !adminUnlocked) return [];
+    if (!query || (!adminUnlocked && !championUnlocked)) return [];
     return voteEligiblePeople.filter((person) => person.name.toLowerCase().includes(query)).slice(0, 10);
-  }, [adminUnlocked, championLookup, voteEligiblePeople]);
+  }, [adminUnlocked, championLookup, championUnlocked, voteEligiblePeople]);
   const selectedChampionGuest = useMemo(
     () => voteEligiblePeople.find((person) => person.id === selectedChampionGuestId) ?? null,
     [selectedChampionGuestId, voteEligiblePeople],
@@ -3276,6 +3280,37 @@ export default function Page() {
     }
   }
 
+  async function unlockChampion() {
+    if (!championPin.trim()) {
+      setDoorNotice({ type: "warning", text: "Įvesk Kampo čempiono PIN kodą." });
+      return;
+    }
+
+    setChampionUnlocking(true);
+    try {
+      const response = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pin: championPin, scope: "champion" }),
+      });
+
+      if (response.ok) {
+        setChampionUnlocked(true);
+        setDoorNotice({ type: "success", text: "Kampo čempiono arena atrakinta." });
+        return;
+      }
+
+      setDoorNotice({ type: "warning", text: "Neteisingas Kampo čempiono PIN kodas." });
+    } catch (error) {
+      console.error("Failed to unlock champion arena", error);
+      setDoorNotice({ type: "warning", text: "Nepavyko patikrinti PIN. Pabandyk dar kartą." });
+    } finally {
+      setChampionUnlocking(false);
+    }
+  }
+
   async function createManualBackup() {
     if (!adminUnlocked || !adminPin.trim()) {
       setBackupMessage("Pirma atrakink admin zoną.");
@@ -3316,7 +3351,7 @@ export default function Page() {
   }
 
   function spinWheel() {
-    if (wheelSpinning || !adminUnlocked || !selectedChampionGuest) return;
+    if (wheelSpinning || (!adminUnlocked && !championUnlocked) || !selectedChampionGuest) return;
 
     const segmentSize = 360 / WHEEL_PRIZES.length;
     const selectedIndex = Math.floor(Math.random() * WHEEL_PRIZES.length);
@@ -3349,7 +3384,7 @@ export default function Page() {
   }
 
   function recordChampionGuestWin() {
-    if (!adminUnlocked || !selectedChampionGuest || wheelSpinning) return;
+    if ((!adminUnlocked && !championUnlocked) || !selectedChampionGuest || wheelSpinning) return;
     setChampionMatches((previous) => [
       {
         id: createNumericId(),
@@ -4460,14 +4495,14 @@ export default function Page() {
           <div className="champion-layout">
             <div className="champion-control-card">
               <span className="eyebrow">Kampo čempionui</span>
-              {!adminUnlocked ? (
+              {!adminUnlocked && !championUnlocked ? (
                 <>
-                  <p>Valdymą atrakina organizatoriaus PIN. Svečiai rezultatų keisti negali.</p>
-                  <Field label="PIN kodas">
-                    <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
+                  <p>Valdymą atrakina Kampo čempiono PIN. Svečiai rezultatų keisti negali.</p>
+                  <Field label="Kampo čempiono PIN kodas">
+                    <input value={championPin} onChange={(event) => setChampionPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
                   </Field>
-                  <button className="primary-button" type="button" onClick={unlockAdmin} disabled={adminUnlocking}>
-                    {adminUnlocking ? "Tikrinama..." : "Atrakinti areną"}
+                  <button className="primary-button" type="button" onClick={unlockChampion} disabled={championUnlocking}>
+                    {championUnlocking ? "Tikrinama..." : "Atrakinti areną"}
                   </button>
                 </>
               ) : (
