@@ -1813,10 +1813,52 @@ textarea {
   align-items: center;
 }
 
+.vote-result-head {
+  margin-bottom: 12px;
+}
+
+.vote-result-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.vote-result-head small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.vote-result-list {
+  display: grid;
+  gap: 8px;
+}
+
 .vote-result-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   padding: 10px 12px;
   border-radius: 14px;
   background: #f8fafc;
+}
+
+.vote-result-place {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  font-weight: 900;
+}
+
+.vote-result-count {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.12);
+  color: #166534;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .guest-cell,

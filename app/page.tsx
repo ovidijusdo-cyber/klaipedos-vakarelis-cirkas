@@ -701,11 +701,11 @@ const WHEEL_PRIZES = [
 ];
 
 const VOTING_CATEGORIES: VotingCategory[] = [
-  { id: "best_circus_style", label: "Geriausiai apsirengęs cirko stiliumi" },
-  { id: "tastiest_dish", label: "Skaniausias patiekalas" },
+  { id: "most_creative_costume", label: "Kūrybiškiausias kostiumas" },
+  { id: "funniest_costume", label: "Juokingiausias kostiumas" },
   { id: "best_energy", label: "Geriausia vakaro energija" },
-  { id: "best_dance", label: "Geriausias šokėjas" },
   { id: "best_surprise", label: "Netikėčiausias vakaro akcentas" },
+  { id: "biggest_smile", label: "Plačiausia šypsena" },
 ];
 
 const initialSongSuggestions: SongSuggestion[] = [];
@@ -2660,7 +2660,7 @@ export default function Page() {
           count,
           name: voteEligiblePeople.find((person) => person.id === personId)?.name ?? "Nežinomas svečias",
         }))
-        .sort((a, b) => b.count - a.count);
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "lt"));
       return {
         category,
         totalVotes: categoryVotes.length,
@@ -4607,23 +4607,26 @@ export default function Page() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Balsavimo rezultatai" description="Daugiausiai balsų surinkę žmonės penkiose kategorijose.">
+              <SectionCard title="Balsavimo rezultatai" description="Kiekvienoje kategorijoje aiškiai matai TOP 3 daugiausiai balsų surinkusius svečius.">
                 <div className="stack">
                   {votingResults.map((result) => (
                     <div className="vote-result-card" key={result.category.id}>
                       <div className="vote-result-head">
-                        <strong>{result.category.label}</strong>
+                        <div>
+                          <strong>{result.category.label}</strong>
+                          <small>TOP 3 nominantai</small>
+                        </div>
                         <span>{result.totalVotes} bals.</span>
                       </div>
                       {result.leaders.length === 0 ? (
                         <div className="empty-state">Šioje kategorijoje dar nebalsuota.</div>
                       ) : (
-                        <div className="stack">
+                        <div className="vote-result-list">
                           {result.leaders.map((leader, index) => (
                             <div className="vote-result-row" key={`${result.category.id}-${leader.personId}`}>
-                              <span>#{index + 1}</span>
+                              <span className="vote-result-place">#{index + 1}</span>
                               <strong>{leader.name}</strong>
-                              <span>{leader.count} bals.</span>
+                              <span className="vote-result-count">{leader.count} bals.</span>
                             </div>
                           ))}
                         </div>
