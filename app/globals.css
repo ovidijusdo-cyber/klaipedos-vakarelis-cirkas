@@ -461,6 +461,13 @@ textarea {
   border: 1px solid rgba(148, 163, 184, 0.28);
 }
 
+.secondary-button.compact,
+.ghost-button.compact {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+}
+
 .ghost-button.light,
 .ghost-inline {
   background: rgba(255, 255, 255, 0.9);
@@ -2958,6 +2965,8 @@ textarea {
 }
 
 .admin-person-row {
+  display: grid;
+  gap: 10px;
   padding: 12px 14px;
   border-radius: 16px;
   background: #f8fafc;
@@ -2969,6 +2978,31 @@ textarea {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.admin-person-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-person-edit {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-person-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-person-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .admin-person-row p,
@@ -3579,6 +3613,7 @@ th {
 
   .person-row,
   .form-grid.two,
+  .admin-person-edit-fields,
   .payment-hero,
   .admin-reservation-head,
   .admin-payment-row {

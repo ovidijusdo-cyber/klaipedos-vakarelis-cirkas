@@ -163,6 +163,13 @@ type PendingRideCancel = {
   passengerName: string;
 } | null;
 
+type AdminPersonEdit = {
+  reservationId: number;
+  personId: string;
+  firstName: string;
+  lastName: string;
+} | null;
+
 type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
 };
@@ -2200,6 +2207,7 @@ export default function Page() {
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [pendingRideCancel, setPendingRideCancel] = useState<PendingRideCancel>(null);
+  const [adminPersonEdit, setAdminPersonEdit] = useState<AdminPersonEdit>(null);
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [pendingRegistration, setPendingRegistration] = useState<Reservation | null>(null);
   const [privacyTouched, setPrivacyTouched] = useState(false);
@@ -3280,6 +3288,62 @@ export default function Page() {
     setReservations((previous) => previous.map((item) => (item.id === reservationId ? { ...item, adminNote } : item)));
   }
 
+  function startAdminPersonEdit(reservationId: number, person: Person) {
+    setAdminPersonEdit({
+      reservationId,
+      personId: person.id,
+      firstName: person.firstName,
+      lastName: person.lastName,
+    });
+  }
+
+  function saveAdminPersonEdit() {
+    if (!adminPersonEdit) return;
+
+    const firstName = adminPersonEdit.firstName.trim();
+    const lastName = adminPersonEdit.lastName.trim();
+    if (!firstName) {
+      setDoorNotice({ type: "warning", text: "Vardas negali būti tuščias." });
+      return;
+    }
+
+    setReservations((previous) =>
+      previous.map((reservation) => ({
+        ...reservation,
+        people:
+          reservation.id === adminPersonEdit.reservationId
+            ? reservation.people.map((person) =>
+                person.id === adminPersonEdit.personId
+                  ? {
+                      ...person,
+                      firstName,
+                      lastName,
+                    }
+                  : person,
+              )
+            : reservation.people,
+        rideReservations: (reservation.rideReservations ?? []).map((booking) =>
+          booking.passengerPersonId === adminPersonEdit.personId
+            ? {
+                ...booking,
+                passengerName: maskName(firstName, lastName),
+              }
+            : booking,
+        ),
+      })),
+    );
+    setNotifications((previous) => [
+      {
+        id: createNumericId(),
+        message: `Admin pataisė dalyvio vardą: ${firstName} ${lastName}.`.trim(),
+        createdAt: formatDateTime(),
+      },
+      ...previous,
+    ]);
+    setAdminPersonEdit(null);
+    setDoorNotice({ type: "success", text: "Dalyvio vardas išsaugotas." });
+  }
+
   function exportReservations() {
     const rows = [
       ["ID", "QR", "Miestas", "Telefonas", "El. paštas", "Apmokėta", "Mokėjimo būdas", "Asmenų kiekis", "Atvyko", "Suma", "Sukurta", "Admin pastaba"].join(";"),
@@ -3642,6 +3706,58 @@ export default function Page() {
       name: maskName(person.firstName, person.lastName),
     })),
   );
+
+  function renderAdminPersonRow(reservation: Reservation, person: Person) {
+    const isEditing =
+      adminPersonEdit?.reservationId === reservation.id &&
+      adminPersonEdit.personId === person.id;
+
+    return (
+      <div className="admin-person-row" key={person.id}>
+        {isEditing ? (
+          <div className="admin-person-edit">
+            <div className="admin-person-edit-fields">
+              <input
+                aria-label="Vardas"
+                value={adminPersonEdit.firstName}
+                onChange={(event) => setAdminPersonEdit((previous) => (previous ? { ...previous, firstName: event.target.value } : previous))}
+                placeholder="Vardas"
+              />
+              <input
+                aria-label="Pavardė"
+                value={adminPersonEdit.lastName}
+                onChange={(event) => setAdminPersonEdit((previous) => (previous ? { ...previous, lastName: event.target.value } : previous))}
+                placeholder="Pavardė"
+              />
+            </div>
+            <div className="admin-person-actions">
+              <button className="secondary-button compact" type="button" onClick={saveAdminPersonEdit}>
+                Išsaugoti
+              </button>
+              <button className="ghost-button compact" type="button" onClick={() => setAdminPersonEdit(null)}>
+                Atšaukti
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="admin-person-name">
+              <strong>
+                {person.firstName} {person.lastName}
+              </strong>
+              <PaymentBadge method={reservation.paymentMethod ?? reservation.preferredPaymentMethod} />
+            </div>
+            <div className="admin-person-meta">
+              <p>{person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
+              <button className="ghost-button compact" type="button" onClick={() => startAdminPersonEdit(reservation.id, person)}>
+                Redaguoti vardą
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
       <main className="page-shell">
@@ -4310,17 +4426,7 @@ export default function Page() {
                           </div>
 
                         <div className="admin-person-list">
-                          {activePeople(reservation).map((person) => (
-                            <div className="admin-person-row" key={person.id}>
-                              <div className="admin-person-name">
-                                <strong>
-                                  {person.firstName} {person.lastName}
-                                </strong>
-                                <PaymentBadge method={reservation.paymentMethod ?? reservation.preferredPaymentMethod} />
-                              </div>
-                              <p>{person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
-                            </div>
-                          ))}
+                          {activePeople(reservation).map((person) => renderAdminPersonRow(reservation, person))}
                         </div>
 
                         <label className="admin-note-box">
@@ -4387,17 +4493,7 @@ export default function Page() {
                           </div>
 
                         <div className="admin-person-list">
-                          {activePeople(reservation).map((person) => (
-                            <div className="admin-person-row" key={person.id}>
-                              <div className="admin-person-name">
-                                <strong>
-                                  {person.firstName} {person.lastName}
-                                </strong>
-                                <PaymentBadge method={reservation.paymentMethod ?? reservation.preferredPaymentMethod} />
-                              </div>
-                              <p>{person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
-                            </div>
-                          ))}
+                          {activePeople(reservation).map((person) => renderAdminPersonRow(reservation, person))}
                         </div>
 
                         <label className="admin-note-box">
