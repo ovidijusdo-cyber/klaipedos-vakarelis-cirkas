@@ -2,6 +2,7 @@
 
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import jsQR from "jsqr";
 import { QRCodeSVG } from "qrcode.react";
 
 declare global {
@@ -2148,6 +2149,8 @@ export default function Page() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerStreamRef = useRef<MediaStream | null>(null);
   const scannerFrameRef = useRef<number | null>(null);
+  const scannerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastScannedQrRef = useRef<{ value: string; at: number } | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
   const [waitingList, setWaitingList] = useState<WaitingItem[]>([]);
@@ -2448,26 +2451,7 @@ export default function Page() {
   useEffect(() => {
     if (!doorNotice) return;
 
-    try {
-      const audioContext = new window.AudioContext();
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-
-      oscillator.type = doorNotice.type === "success" ? "sine" : "square";
-      oscillator.frequency.value = doorNotice.type === "success" ? 880 : 220;
-      gain.gain.value = 0.03;
-
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.12);
-
-      oscillator.onended = () => {
-        void audioContext.close();
-      };
-    } catch {
-      // Audio feedback is best-effort only.
-    }
+    playDoorTone(doorNotice.type);
   }, [doorNotice]);
 
   const activeReservations = useMemo(() => reservations.filter((reservation) => activePeople(reservation).length > 0), [reservations]);
@@ -3640,14 +3624,59 @@ export default function Page() {
     setScannerActive(false);
   }
 
+  function playDoorTone(type: NoticeType) {
+    try {
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return;
+
+      const audioContext = new AudioContextCtor();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = type === "success" ? "sine" : "square";
+      oscillator.frequency.value = type === "success" ? 880 : 220;
+      gain.gain.value = 0.04;
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.14);
+
+      oscillator.onended = () => {
+        void audioContext.close();
+      };
+    } catch {
+      // Audio feedback is best-effort only.
+    }
+  }
+
+  function decodeQrFromVideo(video: HTMLVideoElement) {
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) return null;
+
+    const canvas = scannerCanvasRef.current ?? document.createElement("canvas");
+    scannerCanvasRef.current = canvas;
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+
+    context.drawImage(video, 0, 0, width, height);
+    const imageData = context.getImageData(0, 0, width, height);
+    return jsQR(imageData.data, width, height)?.data ?? null;
+  }
+
   async function startScanner() {
-    if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       setScannerSupported(false);
       setScannerMessage("Šiame įrenginyje kameros QR skenavimas naršyklėje nepalaikomas.");
       return;
     }
 
     try {
+      setScannerSupported(true);
       setScannerMessage("Kamera paleidžiama...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -3662,28 +3691,61 @@ export default function Page() {
         await videoRef.current.play();
       }
 
-      const DetectorCtor = window.BarcodeDetector;
-      if (!DetectorCtor) {
-        setScannerSupported(false);
-        setScannerMessage("Šiame įrenginyje kameros QR skenavimas naršyklėje nepalaikomas.");
-        stopScanner();
-        return;
+      let detector: BarcodeDetectorLike | null = null;
+      if (window.BarcodeDetector) {
+        try {
+          detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        } catch {
+          detector = null;
+        }
       }
-      const detector = new DetectorCtor({ formats: ["qr_code"] });
 
       const scan = async () => {
         if (!videoRef.current || !scannerStreamRef.current) return;
 
         try {
-          const results = await detector.detect(videoRef.current);
-          const rawValue = results[0]?.rawValue;
+          let rawValue: string | null | undefined = null;
+
+          if (detector) {
+            try {
+              const results = await detector.detect(videoRef.current);
+              rawValue = results[0]?.rawValue;
+            } catch {
+              detector = null;
+            }
+          }
+
+          rawValue = rawValue || decodeQrFromVideo(videoRef.current);
 
           if (rawValue) {
+            const now = Date.now();
+            const lastScan = lastScannedQrRef.current;
+            const isRepeatedFrame = lastScan?.value === rawValue && now - lastScan.at < 4000;
+            if (isRepeatedFrame) {
+              scannerFrameRef.current = window.requestAnimationFrame(scan);
+              return;
+            }
+
+            lastScannedQrRef.current = { value: rawValue, at: now };
+            const scannedReservation = lookupReservation(activeReservations, rawValue);
+
             setScannerValue(rawValue);
             setLookup("");
-            setScannerMessage("QR kodas nuskaitytas.");
-            stopScanner();
-            return;
+            setScannerMessage(
+              scannedReservation
+                ? `QR kodas nuskaitytas: ${scannedReservation.qrCode}. Kamera paruošta kitam kodui.`
+                : "QR kodas nuskaitytas, bet rezervacija nerasta. Kamera paruošta kitam kodui.",
+            );
+            setDoorNotice(
+              scannedReservation
+                ? {
+                    type: scannedReservation.paid ? "success" : "warning",
+                    text: scannedReservation.paid
+                      ? `Rasta apmokėta rezervacija ${scannedReservation.qrCode}.`
+                      : `Rasta rezervacija ${scannedReservation.qrCode}, bet ji dar neapmokėta.`,
+                  }
+                : { type: "warning", text: "QR kodas nuskaitytas, bet rezervacija nerasta." },
+            );
           }
         } catch {
           setScannerMessage("Nepavyko nuskaityti QR kodo. Bandyk dar kartą.");
@@ -3692,9 +3754,10 @@ export default function Page() {
         scannerFrameRef.current = window.requestAnimationFrame(scan);
       };
 
-      setScannerMessage("Nukreipk kamerą į QR kodą.");
+      setScannerMessage("Nukreipk kamerą į QR kodą. Po nuskaitymo kamera liks paruošta kitam svečiui.");
       scannerFrameRef.current = window.requestAnimationFrame(scan);
     } catch {
+      setScannerSupported(false);
       setScannerMessage("Nepavyko pasiekti kameros. Patikrink naršyklės leidimus.");
       stopScanner();
     }
