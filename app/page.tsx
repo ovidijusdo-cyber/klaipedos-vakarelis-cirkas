@@ -674,7 +674,7 @@ const initialChampionMatches: ChampionMatch[] = [];
 
 const LEADERBOARD_SIZE = 5;
 const MAX_STORED_GAME_SCORES = 100;
-const CHAMPION_MATCHES_PAGE_SIZE = 8;
+const CHAMPION_MATCHES_PAGE_SIZE = 10;
 const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
 const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
 const DEMO_GAME_SCORES = new Set(["Jonas:18", "AustÄ—ja:14", "Austėja:14", "Lukas:9"]);
