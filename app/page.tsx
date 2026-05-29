@@ -3618,10 +3618,53 @@ export default function Page() {
     }
 
     if (videoRef.current) {
+      videoRef.current.pause();
       videoRef.current.srcObject = null;
+      videoRef.current.load();
     }
 
     setScannerActive(false);
+  }
+
+  function waitForScannerVideo() {
+    return new Promise<HTMLVideoElement | null>((resolve) => {
+      let attempts = 0;
+
+      const check = () => {
+        if (videoRef.current || attempts >= 20) {
+          resolve(videoRef.current);
+          return;
+        }
+
+        attempts += 1;
+        window.requestAnimationFrame(check);
+      };
+
+      check();
+    });
+  }
+
+  async function attachScannerStream(stream: MediaStream) {
+    const video = await waitForScannerVideo();
+    if (!video) {
+      throw new Error("Scanner video element is not ready");
+    }
+
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+
+    if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
+      await new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(resolve, 1600);
+        video.onloadedmetadata = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+      });
+    }
+
+    await video.play();
   }
 
   function playDoorTone(type: NoticeType) {
@@ -3677,19 +3720,19 @@ export default function Page() {
 
     try {
       setScannerSupported(true);
+      setScannerActive(true);
       setScannerMessage("Kamera paleidžiama...");
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       });
 
       scannerStreamRef.current = stream;
-      setScannerActive(true);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      await attachScannerStream(stream);
 
       let detector: BarcodeDetectorLike | null = null;
       if (window.BarcodeDetector) {
