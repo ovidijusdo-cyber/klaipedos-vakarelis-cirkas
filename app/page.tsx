@@ -3214,6 +3214,27 @@ export default function Page() {
     setDoorNotice({ type: "success", text: "Pavežimo poreikis pažymėtas." });
   }
 
+  function updateAdminRideOfferSeats(reservationId: number, value: string) {
+    const parsedSeats = Number(value);
+
+    setReservations((previous) =>
+      previous.map((reservation) => {
+        if (reservation.id !== reservationId) return reservation;
+
+        const bookedSeats = reservation.rideReservations?.length ?? 0;
+        const nextSeats = value.trim() === "" || !Number.isFinite(parsedSeats)
+          ? null
+          : Math.max(bookedSeats, Math.min(20, Math.floor(parsedSeats)));
+
+        return {
+          ...reservation,
+          rideOfferSeats: nextSeats && nextSeats > 0 ? nextSeats : null,
+          needsRide: nextSeats && nextSeats > 0 ? false : reservation.needsRide,
+        };
+      }),
+    );
+  }
+
   function openRideBooking(driverId: number) {
     setRideBookingDriverId(driverId);
     setRideBookingLookup("");
@@ -3896,6 +3917,37 @@ export default function Page() {
     );
   }
 
+  function renderAdminTransportControl(reservation: Reservation) {
+    const bookedSeats = reservation.rideReservations?.length ?? 0;
+    const offeredSeats = reservation.rideOfferSeats ?? 0;
+    const availableSeats = Math.max(0, offeredSeats - bookedSeats);
+
+    return (
+      <div className="admin-transport-control">
+        <div>
+          <strong>Transporto vietos</strong>
+          <p>
+            {offeredSeats > 0
+              ? `Siūlo ${offeredSeats} viet. automobilyje, laisva ${availableSeats}.`
+              : "Nenurodyta, kad gali pavežti kitus."}
+          </p>
+          {bookedSeats > 0 ? <small>Jau rezervuota keleivių: {bookedSeats}. Mažiau nei tiek nustatyti negalima.</small> : null}
+        </div>
+        <label>
+          <span>Vietų skaičius</span>
+          <input
+            min={bookedSeats}
+            max={20}
+            type="number"
+            value={reservation.rideOfferSeats ?? ""}
+            onChange={(event) => updateAdminRideOfferSeats(reservation.id, event.target.value)}
+            placeholder="Pvz. 3"
+          />
+        </label>
+      </div>
+    );
+  }
+
   return (
       <main className="page-shell">
         <div className="page-glow page-glow-left" />
@@ -4566,6 +4618,8 @@ export default function Page() {
                           {activePeople(reservation).map((person) => renderAdminPersonRow(reservation, person))}
                         </div>
 
+                        {renderAdminTransportControl(reservation)}
+
                         <label className="admin-note-box">
                           <span>Admin pastaba</span>
                           <textarea
@@ -4632,6 +4686,8 @@ export default function Page() {
                         <div className="admin-person-list">
                           {activePeople(reservation).map((person) => renderAdminPersonRow(reservation, person))}
                         </div>
+
+                        {renderAdminTransportControl(reservation)}
 
                         <label className="admin-note-box">
                           <span>Admin pastaba</span>

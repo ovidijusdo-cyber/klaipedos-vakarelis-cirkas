@@ -3053,6 +3053,30 @@ textarea {
   color: var(--muted);
 }
 
+.admin-transport-control {
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, 220px);
+  gap: 14px;
+  align-items: end;
+  padding: 14px;
+  margin: 14px 0;
+  border-radius: 18px;
+  background: rgba(204, 251, 241, 0.55);
+  border: 1px solid rgba(15, 118, 110, 0.16);
+}
+
+.admin-transport-control p,
+.admin-transport-control small {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.admin-transport-control label {
+  display: grid;
+  gap: 7px;
+  font-weight: 900;
+}
+
 .admin-note-box {
   display: grid;
   gap: 8px;
@@ -3658,6 +3682,7 @@ th {
   .admin-person-edit-fields,
   .payment-hero,
   .admin-reservation-head,
+  .admin-transport-control,
   .admin-payment-row {
     grid-template-columns: 1fr;
   }
