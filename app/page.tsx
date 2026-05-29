@@ -918,6 +918,40 @@ function qrPayload(reservation: Reservation) {
   });
 }
 
+function extractQrCode(value: string) {
+  const raw = value.trim();
+  if (!raw) return "";
+
+  const candidates = new Set<string>([raw]);
+  try {
+    candidates.add(decodeURIComponent(raw));
+  } catch {
+    // Keep the raw scanner value when it is not URL-encoded.
+  }
+
+  for (const candidate of candidates) {
+    const trimmed = candidate.trim();
+    const jsonStart = trimmed.indexOf("{");
+    const jsonEnd = trimmed.lastIndexOf("}");
+    const jsonCandidate = jsonStart >= 0 && jsonEnd > jsonStart ? trimmed.slice(jsonStart, jsonEnd + 1) : trimmed;
+
+    try {
+      const parsed = JSON.parse(jsonCandidate);
+      const qrCode = String(parsed?.qrCode ?? "").trim();
+      if (qrCode) return qrCode;
+    } catch {
+      // Fall through to text pattern matching below.
+    }
+
+    const directMatch = trimmed.match(/CIRKAS\s*[-–—]\s*\d{1,8}/i);
+    if (directMatch) {
+      return directMatch[0].replace(/\s+/g, "").replace(/[–—]/g, "-").toUpperCase();
+    }
+  }
+
+  return "";
+}
+
 function getCountdownParts(targetIso: string) {
   const diff = new Date(targetIso).getTime() - Date.now();
   if (diff <= 0) {
@@ -935,15 +969,11 @@ function lookupReservation(reservations: Reservation[], value: string) {
   const query = value.trim().toLowerCase();
   if (!query) return null;
 
-  if (query.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(query);
-      if (parsed?.qrCode) {
-        return reservations.find((reservation) => reservation.qrCode.toLowerCase() === String(parsed.qrCode).toLowerCase()) ?? null;
-      }
-    } catch {
-      return null;
-    }
+  const extractedQrCode = extractQrCode(value);
+  if (extractedQrCode) {
+    const normalizedQrCode = extractedQrCode.toLowerCase();
+    const reservationByQr = reservations.find((reservation) => reservation.qrCode.toLowerCase() === normalizedQrCode);
+    if (reservationByQr) return reservationByQr;
   }
 
   return (
@@ -3770,6 +3800,7 @@ export default function Page() {
             }
 
             lastScannedQrRef.current = { value: rawValue, at: now };
+            const scannedQrCode = extractQrCode(rawValue);
             const scannedReservation = lookupReservation(activeReservations, rawValue);
 
             setScannerValue(rawValue);
@@ -3777,7 +3808,7 @@ export default function Page() {
             setScannerMessage(
               scannedReservation
                 ? `QR kodas nuskaitytas: ${scannedReservation.qrCode}. Kamera paruošta kitam kodui.`
-                : "QR kodas nuskaitytas, bet rezervacija nerasta. Kamera paruošta kitam kodui.",
+                : `QR kodas nuskaitytas${scannedQrCode ? ` (${scannedQrCode})` : ""}, bet rezervacija nerasta. Kamera paruošta kitam kodui.`,
             );
             setDoorNotice(
               scannedReservation
