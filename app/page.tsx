@@ -723,8 +723,8 @@ const initialResponsiblePeople: ResponsiblePerson[] = [
   { id: 7, role: "Šokių mokytojai", names: "" },
   { id: 8, role: "Žaidimų vedėjas", names: "" },
   { id: 9, role: "Savanoriai", names: "" },
-  { id: 10, role: "Vakaro mimas", names: "Robertas Gramalas" },
-  { id: 11, role: "Kampo čempionas", names: "Modestas Masiokas" },
+  { id: 10, role: "Vakaro mimas", names: "" },
+  { id: 11, role: "Kampo čempionas", names: "" },
 ];
 
 const initialGameScores: GameScore[] = [];
