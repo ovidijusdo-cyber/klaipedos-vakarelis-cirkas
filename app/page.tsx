@@ -227,15 +227,13 @@ const MOVIE_SWEDBANK_PAYMENT_URL = "https://www.swedbank.lt/private";
 const MOVIE_FEATURES = [
   {
     title: "Viliamės to, ko nematome",
-    eyebrow: "Biblijos laikų filmas",
+    eyebrow: "Šių dienų filmas",
     imageUrl: "https://cms-imgp.jw-cdn.org/img/p/1102016359/univ/art/1102016359_univ_lsr_lg.jpg",
-    url: "https://www.jw.org/lt/biblioteka/videoteka/#lt/mediaitems/VODMoviesBibleTimes/pub-tiy_1_VIDEO",
   },
   {
     title: "Tavimi, Jehova, aš pasitikiu",
-    eyebrow: "Šių dienų filmas",
+    eyebrow: "Biblijos laikų filmas",
     imageUrl: "https://cms-imgp.jw-cdn.org/img/p/1102016443/univ/art/1102016443_univ_lss_lg.jpg",
-    url: "https://www.jw.org/lt/biblioteka/videoteka/#lt/mediaitems/VODMoviesModernDay/pub-dns_2_VIDEO",
   },
 ];
 const EVENT_NAME = "2026 m. Klaipėdos vakarėlis „CIRKAS”";
@@ -4332,15 +4330,14 @@ export default function Page() {
         <section className="movie-hero">
           <div className="movie-premiere-cover" aria-label="Rodomi filmai">
             {MOVIE_FEATURES.map((movie) => (
-              <a className="movie-premiere-panel" href={movie.url} key={movie.title} target="_blank" rel="noreferrer">
+              <div className="movie-premiere-panel" key={movie.title}>
                 <img src={movie.imageUrl} alt={movie.title} />
                 <span className="movie-premiere-shade" />
                 <span className="movie-premiere-copy">
                   <small>{movie.eyebrow}</small>
                   <strong>{movie.title}</strong>
-                  <em>Žiūrėti JW.org</em>
                 </span>
-              </a>
+              </div>
             ))}
           </div>
           <div className="movie-hero-copy">
