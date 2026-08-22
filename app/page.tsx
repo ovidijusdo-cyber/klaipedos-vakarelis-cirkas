@@ -171,6 +171,30 @@ type MovieGuestForm = {
   reminderEmail: string;
 };
 
+type MovieSeatCell =
+  | {
+      type: "seat";
+      id: string;
+      row: string;
+      seatNumber: number;
+      variant?: "standard" | "accessible" | "sofa";
+    }
+  | {
+      type: "space";
+      key: string;
+      size?: "small" | "large";
+    }
+  | {
+      type: "blocked";
+      key: string;
+      label?: string;
+    };
+
+type MovieSeatRow = {
+  row: string;
+  cells: MovieSeatCell[];
+};
+
 type PendingMovieCancel = MovieSeatReservation | null;
 
 type PendingCancel = {
@@ -220,8 +244,6 @@ const MOVIE_EVENT_START_ISO = "";
 const MOVIE_EVENT_END_ISO = "";
 const MOVIE_EVENT_PLACE = "Forum Cinemas";
 const MOVIE_TICKET_PRICE = 6;
-const MOVIE_SEAT_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H"];
-const MOVIE_SEATS_PER_ROW = 12;
 const MOVIE_REVOLUT_PAYMENT_URL = REVOLUT_PAYMENT_URL;
 const MOVIE_SWEDBANK_PAYMENT_URL = "https://www.swedbank.lt/private";
 const MOVIE_FEATURES = [
@@ -1101,6 +1123,75 @@ function normalizeText(value: string) {
 function movieSeatGuestLabel(reservation: MovieSeatReservation) {
   const lastInitial = reservation.lastName.trim().charAt(0);
   return `${reservation.firstName.trim()}${lastInitial ? ` ${lastInitial}.` : ""}`;
+}
+
+function movieSeat(row: string, seatNumber: number, variant?: "standard" | "accessible" | "sofa"): MovieSeatCell {
+  return {
+    type: "seat",
+    id: `${row}-${seatNumber}`,
+    row,
+    seatNumber,
+    variant,
+  };
+}
+
+function movieSpace(key: string, size: "small" | "large" = "large"): MovieSeatCell {
+  return { type: "space", key, size };
+}
+
+function movieBlocked(key: string, label = ""): MovieSeatCell {
+  return { type: "blocked", key, label };
+}
+
+function buildMovieSeatLayout(): MovieSeatRow[] {
+  const rows: MovieSeatRow[] = [];
+
+  rows.push({
+    row: "1",
+    cells: [
+      ...Array.from({ length: 10 }, (_, index) => movieSeat("1", index + 1)),
+      movieSpace("1-center-gap", "small"),
+      ...Array.from({ length: 5 }, (_, index) => movieSeat("1", index + 11, "accessible")),
+      movieSpace("1-side-gap"),
+      ...Array.from({ length: 5 }, (_, index) => movieBlocked(`1-blocked-${index + 1}`)),
+    ],
+  });
+
+  for (let rowNumber = 2; rowNumber <= 7; rowNumber += 1) {
+    const row = String(rowNumber);
+    rows.push({
+      row,
+      cells: [
+        ...Array.from({ length: 17 }, (_, index) => movieSeat(row, index + 1)),
+        movieSpace(`${row}-side-gap`),
+        ...Array.from({ length: 5 }, (_, index) => movieBlocked(`${row}-blocked-${index + 1}`)),
+      ],
+    });
+  }
+
+  for (let rowNumber = 8; rowNumber <= 9; rowNumber += 1) {
+    const row = String(rowNumber);
+    rows.push({
+      row,
+      cells: [
+        ...Array.from({ length: 17 }, (_, index) => movieSeat(row, index + 1)),
+        movieSpace(`${row}-side-gap`),
+        ...Array.from({ length: 3 }, (_, index) => movieBlocked(`${row}-blocked-${index + 1}`)),
+        ...Array.from({ length: 2 }, (_, index) => movieSeat(row, index + 18)),
+      ],
+    });
+  }
+
+  rows.push({
+    row: "10",
+    cells: [
+      ...Array.from({ length: 17 }, (_, index) => movieSeat("10", index + 1, "sofa")),
+      movieSpace("10-side-gap", "small"),
+      ...Array.from({ length: 5 }, (_, index) => movieBlocked(`10-blocked-${index + 1}`)),
+    ],
+  });
+
+  return rows;
 }
 
 function googleCalendarUrl() {
@@ -2678,19 +2769,19 @@ export default function Page() {
     [activeMovieSeatReservations],
   );
   const movieReservedSeatIds = useMemo(() => new Set(activeMovieSeatReservations.map((reservation) => reservation.seatId)), [activeMovieSeatReservations]);
-  const movieSeatRows = useMemo(
+  const movieSeatRows = useMemo(() => buildMovieSeatLayout(), []);
+  const movieSeatCount = useMemo(
+    () => movieSeatRows.reduce((sum, row) => sum + row.cells.filter((cell) => cell.type === "seat").length, 0),
+    [movieSeatRows],
+  );
+  const movieSeatById = useMemo(
     () =>
-      MOVIE_SEAT_ROWS.map((row) =>
-        Array.from({ length: MOVIE_SEATS_PER_ROW }, (_, index) => {
-          const seatNumber = index + 1;
-          return {
-            id: `${row}${seatNumber}`,
-            row,
-            seatNumber,
-          };
-        }),
+      new Map(
+        movieSeatRows.flatMap((row) =>
+          row.cells.flatMap((cell) => (cell.type === "seat" ? [[cell.id, cell] as const] : [])),
+        ),
       ),
-    [],
+    [movieSeatRows],
   );
   const movieSelectedTotal = movieSelectedSeats.length * MOVIE_TICKET_PRICE;
   const moviePaymentReservations = useMemo(
@@ -4122,14 +4213,14 @@ export default function Page() {
 
     const now = formatDateTime();
     const nextReservations = movieSelectedSeats.map((seatId, index) => {
-      const seat = movieSeatRows.flat().find((item) => item.id === seatId);
+      const seat = movieSeatById.get(seatId);
       const formValue = movieGuestForms[seatId];
 
       return {
         id: createNumericId() + index,
         seatId,
-        row: seat?.row ?? seatId.match(/^[A-Z]+/)?.[0] ?? "",
-        seatNumber: seat?.seatNumber ?? Number(seatId.match(/\d+$/)?.[0] ?? 0),
+        row: seat?.row ?? seatId.split("-")[0] ?? "",
+        seatNumber: seat?.seatNumber ?? Number(seatId.split("-")[1] ?? 0),
         firstName: formValue.firstName.trim(),
         lastName: formValue.lastName.trim(),
         reminderEmail: formValue.reminderEmail.trim().toLowerCase(),
@@ -4385,13 +4476,13 @@ export default function Page() {
 
         <SectionCard
           title="Vietų pasirinkimas"
-          description="Pilka - laisva, mėlyna - tavo pasirinkta, raudona - rezervuota, žalia - žmogus pažymėjo, kad apmokėjo."
+          description="Salės planas atkartoja kino teatro išdėstymą. Pilka - laisva, mėlyna - tavo pasirinkta, raudona - rezervuota, žalia - žmogus pažymėjo, kad apmokėjo."
         >
           <div className="movie-layout">
             <div className="movie-seat-map" aria-label="Kino salės vietų planas">
               <div className="movie-screen">
                 <span>EKRANAS</span>
-                <small>Geriausias vaizdas iš vidurinių eilių</small>
+                <small>{movieSeatCount} vietos pagal salės planą</small>
               </div>
               <div className="movie-seat-legend">
                 <span><i className="seat-sample free" /> Laisva</span>
@@ -4403,17 +4494,25 @@ export default function Page() {
                 Ant užimtų vietų rodoma, kas rezervavo: vardas ir pavardės pirma raidė.
               </p>
               <div className="movie-seat-rows">
-                {movieSeatRows.map((rowSeats) => (
-                  <div className="movie-seat-row" key={rowSeats[0]?.row}>
-                    <span className="movie-row-label">{rowSeats[0]?.row}</span>
+                {movieSeatRows.map((seatRow) => (
+                  <div className="movie-seat-row" key={seatRow.row}>
+                    <span className="movie-row-label">{seatRow.row}</span>
                     <div className="movie-row-seats">
-                      {rowSeats.map((seat) => {
+                      {seatRow.cells.map((seat) => {
+                        if (seat.type === "space") {
+                          return <span aria-hidden="true" className={`movie-seat-space ${seat.size ?? "large"}`} key={seat.key} />;
+                        }
+
+                        if (seat.type === "blocked") {
+                          return <span aria-hidden="true" className="movie-seat-blocked" key={seat.key}>{seat.label}</span>;
+                        }
+
                         const reservation = movieReservationBySeatId.get(seat.id);
                         const reserved = Boolean(reservation);
                         const paid = reservation?.paymentStatus === "paid_pending_review";
                         const selected = movieSelectedSeats.includes(seat.id);
                         return (
-                          <div className={reservation ? "movie-seat-cell occupied" : "movie-seat-cell"} key={seat.id}>
+                          <div className={`movie-seat-cell ${reservation ? "occupied" : ""} ${seat.variant ?? "standard"}`} key={seat.id}>
                             <span className="movie-seat-name" title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : ""}>
                               {reservation ? movieSeatGuestLabel(reservation) : ""}
                             </span>
@@ -4431,6 +4530,7 @@ export default function Page() {
                         );
                       })}
                     </div>
+                    <span className="movie-row-label right">{seatRow.row}</span>
                   </div>
                 ))}
               </div>
