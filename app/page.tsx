@@ -167,11 +167,7 @@ type MovieGuestForm = {
   lastName: string;
 };
 
-type MovieCancelForm = {
-  seatId: string;
-  firstName: string;
-  lastName: string;
-};
+type PendingMovieCancel = MovieSeatReservation | null;
 
 type PendingCancel = {
   reservationId: number;
@@ -2383,7 +2379,8 @@ export default function Page() {
   const [movieGuestForms, setMovieGuestForms] = useState<Record<string, MovieGuestForm>>({});
   const [movieNotice, setMovieNotice] = useState<Notice | null>(null);
   const [moviePaymentReservationIds, setMoviePaymentReservationIds] = useState<number[]>([]);
-  const [movieCancelForm, setMovieCancelForm] = useState<MovieCancelForm>({ seatId: "", firstName: "", lastName: "" });
+  const [movieCancelLookup, setMovieCancelLookup] = useState("");
+  const [pendingMovieCancel, setPendingMovieCancel] = useState<PendingMovieCancel>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
   const [highlightGuestKey, setHighlightGuestKey] = useState("");
@@ -2677,6 +2674,18 @@ export default function Page() {
   const moviePaymentSeats = moviePaymentReservations.map((reservation) => reservation.seatId);
   const moviePaymentTotal = moviePaymentReservations.length * MOVIE_TICKET_PRICE;
   const movieCalendarLink = googleCalendarUrl();
+  const movieCancellationMatches = useMemo(() => {
+    const query = normalizeText(movieCancelLookup);
+    if (query.length < 2) return [];
+
+    return activeMovieSeatReservations
+      .filter((reservation) => {
+        const label = normalizeText(`${reservation.firstName} ${reservation.lastName} ${movieSeatGuestLabel(reservation)} ${reservation.seatId}`);
+        return label.includes(query);
+      })
+      .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
+      .slice(0, 8);
+  }, [activeMovieSeatReservations, movieCancelLookup]);
   const activeCommonSong = COMMON_SONGS[commonSongLanguage];
   const pendingReservations = useMemo(
     () =>
@@ -4126,27 +4135,13 @@ export default function Page() {
     });
   }
 
-  function cancelMovieReservation() {
-    const seatId = movieCancelForm.seatId.trim().toUpperCase();
-    const firstName = normalizeText(movieCancelForm.firstName);
-    const lastName = normalizeText(movieCancelForm.lastName);
+  function requestMovieCancellation(reservation: MovieSeatReservation) {
+    setPendingMovieCancel(reservation);
+  }
 
-    if (!seatId || !firstName || !lastName) {
-      setMovieNotice({ type: "warning", text: "Įrašyk vietą, vardą ir pavardę, kad galėtume saugiai atšaukti rezervaciją." });
-      return;
-    }
-
-    const reservation = activeMovieSeatReservations.find(
-      (item) =>
-        item.seatId === seatId &&
-        normalizeText(item.firstName) === firstName &&
-        normalizeText(item.lastName) === lastName,
-    );
-
-    if (!reservation) {
-      setMovieNotice({ type: "warning", text: "Tokios rezervacijos neradau. Patikrink vietos numerį, vardą ir pavardę." });
-      return;
-    }
+  function confirmMovieReservationCancellation() {
+    const reservation = pendingMovieCancel;
+    if (!reservation) return;
 
     const cancelledAt = formatDateTime();
     setMovieSeatReservations((previous) =>
@@ -4157,7 +4152,8 @@ export default function Page() {
       ),
     );
     setMoviePaymentReservationIds((previous) => previous.filter((id) => id !== reservation.id));
-    setMovieCancelForm({ seatId: "", firstName: "", lastName: "" });
+    setMovieCancelLookup("");
+    setPendingMovieCancel(null);
     setMovieNotice({ type: "success", text: `Vieta ${reservation.seatId} atšaukta ir atlaisvinta.` });
   }
 
@@ -4462,27 +4458,27 @@ export default function Page() {
 
               <div className="movie-cancel-card">
                 <span className="muted-label">Atšaukti rezervaciją</span>
-                <p>Jeigu planai pasikeitė, įrašyk savo vietą ir vardą/pavardę. Vieta iškart taps laisva kitiems.</p>
-                <div className="form-grid three">
-                  <input
-                    value={movieCancelForm.seatId}
-                    onChange={(event) => setMovieCancelForm((previous) => ({ ...previous, seatId: event.target.value }))}
-                    placeholder="Vieta, pvz. C7"
-                  />
-                  <input
-                    value={movieCancelForm.firstName}
-                    onChange={(event) => setMovieCancelForm((previous) => ({ ...previous, firstName: event.target.value }))}
-                    placeholder="Vardas"
-                  />
-                  <input
-                    value={movieCancelForm.lastName}
-                    onChange={(event) => setMovieCancelForm((previous) => ({ ...previous, lastName: event.target.value }))}
-                    placeholder="Pavardė"
-                  />
-                </div>
-                <button className="danger-button" type="button" onClick={cancelMovieReservation}>
-                  Atšaukti ir atlaisvinti vietą
-                </button>
+                <p>Jeigu planai pasikeitė, pradėk rašyti vardą arba pavardę, pasirink savo rezervaciją ir patvirtink atšaukimą.</p>
+                <input
+                  value={movieCancelLookup}
+                  onChange={(event) => setMovieCancelLookup(event.target.value)}
+                  placeholder="Ieškoti pagal vardą arba pavardę"
+                />
+                {movieCancelLookup.trim().length < 2 ? (
+                  <small>Įrašyk bent 2 raides, kad parodytų rezervacijas.</small>
+                ) : movieCancellationMatches.length === 0 ? (
+                  <div className="empty-state compact">Pagal šią paiešką rezervacijų nerasta.</div>
+                ) : (
+                  <div className="movie-cancel-results">
+                    {movieCancellationMatches.map((reservation) => (
+                      <button className="movie-cancel-result" key={reservation.id} type="button" onClick={() => requestMovieCancellation(reservation)}>
+                        <strong>{reservation.firstName} {reservation.lastName}</strong>
+                        <span>Vieta {reservation.seatId}</span>
+                        <small>{reservation.paymentStatus === "paid_pending_review" ? "Pažymėta kaip apmokėta" : "Rezervuota"}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -4514,6 +4510,40 @@ export default function Page() {
         <footer className="site-footer">
           Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
         </footer>
+
+        <Modal
+          open={Boolean(pendingMovieCancel)}
+          title="Ar tikrai atšaukti kino vietą?"
+          description={pendingMovieCancel ? `Bus atlaisvinta vieta ${pendingMovieCancel.seatId}.` : undefined}
+          onClose={() => setPendingMovieCancel(null)}
+        >
+          {pendingMovieCancel ? (
+            <>
+              <div className="confirmation-grid">
+                <div>
+                  <span>Vardas</span>
+                  <strong>{pendingMovieCancel.firstName} {pendingMovieCancel.lastName}</strong>
+                </div>
+                <div>
+                  <span>Vieta</span>
+                  <strong>{pendingMovieCancel.seatId}</strong>
+                </div>
+                <div>
+                  <span>Būsena</span>
+                  <strong>{pendingMovieCancel.paymentStatus === "paid_pending_review" ? "Apmokėjau pažymėta" : "Rezervuota"}</strong>
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button className="ghost-button" type="button" onClick={() => setPendingMovieCancel(null)}>
+                  Ne, palikti
+                </button>
+                <button className="danger-button" type="button" onClick={confirmMovieReservationCancellation}>
+                  Taip, atšaukti vietą
+                </button>
+              </div>
+            </>
+          ) : null}
+        </Modal>
       </main>
     );
   }
