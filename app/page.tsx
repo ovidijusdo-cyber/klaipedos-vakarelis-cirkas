@@ -214,7 +214,7 @@ const BANK_ACCOUNT = {
   currency: "EUR",
 };
 const TELEGRAM_GROUP_URL = "https://t.me/+2Lo4XbXkjcM3NTBk";
-const MOVIE_EVENT_NAME = "JW filmų peržiūra";
+const MOVIE_EVENT_NAME = "Kviečiame jus į dviejų filmų peržiūrą";
 const MOVIE_EVENT_DATE = "Data ir laikas bus patikslinti";
 const MOVIE_EVENT_START_ISO = "";
 const MOVIE_EVENT_END_ISO = "";
@@ -235,6 +235,12 @@ const MOVIE_FEATURES = [
     eyebrow: "Biblijos laikų filmas",
     imageUrl: "https://cms-imgp.jw-cdn.org/img/p/1102016443/univ/art/1102016443_univ_lss_lg.jpg",
   },
+];
+const MOVIE_GALLERY_IMAGES = [
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-gOcgVp_HxieA8hWaeFqxMtQE1ZAx3tihDQYoG-k0wQ&s=10",
+  "https://cms-imgp.jw-cdn.org/img/p/1102016359/univ/art/1102016359_univ_lsr_lg.jpg",
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdHtcWzVyrt1G35UB-L8KNgEKDJ1kKgsRmBSJKse5IZBhE3FIPVTx4iGpa&s=10",
+  "https://cms-imgp.jw-cdn.org/img/p/1102016443/univ/art/1102016443_univ_lss_lg.jpg",
 ];
 const EVENT_NAME = "2026 m. Klaipėdos vakarėlis „CIRKAS”";
 const EVENT_DATE = "2026 m. gegužės 30 d., 17:00–23:00";
@@ -4329,16 +4335,23 @@ export default function Page() {
 
         <section className="movie-hero">
           <div className="movie-premiere-cover" aria-label="Rodomi filmai">
-            {MOVIE_FEATURES.map((movie) => (
-              <div className="movie-premiere-panel" key={movie.title}>
-                <img src={movie.imageUrl} alt={movie.title} />
-                <span className="movie-premiere-shade" />
-                <span className="movie-premiere-copy">
-                  <small>{movie.eyebrow}</small>
-                  <strong>{movie.title}</strong>
-                </span>
-              </div>
-            ))}
+            <div className="movie-premiere-main">
+              {MOVIE_FEATURES.map((movie) => (
+                <div className="movie-premiere-panel" key={movie.title}>
+                  <img src={movie.imageUrl} alt={movie.title} />
+                  <span className="movie-premiere-shade" />
+                  <span className="movie-premiere-copy">
+                    <small>{movie.eyebrow}</small>
+                    <strong>{movie.title}</strong>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="movie-premiere-strip" aria-label="Papildomi filmų kadrai">
+              {MOVIE_GALLERY_IMAGES.map((imageUrl, index) => (
+                <img src={imageUrl} alt={`Filmo kadras ${index + 1}`} key={imageUrl} />
+              ))}
+            </div>
           </div>
           <div className="movie-hero-copy">
             <div>
