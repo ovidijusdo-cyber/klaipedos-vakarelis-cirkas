@@ -1072,41 +1072,243 @@ textarea {
   text-decoration: none;
 }
 
-.movie-reservation-list {
+.movie-reservation-directory {
   display: grid;
-  gap: 8px;
+  gap: 14px;
 }
 
-.movie-reservation-row {
+.movie-reservation-summary {
   display: grid;
-  grid-template-columns: 70px 1fr auto;
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.movie-reservation-summary > div {
+  display: flex;
   align-items: center;
-  padding: 12px 14px;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 66px;
+  padding: 12px 16px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(145deg, #f8fafc, #eff6ff);
+  border: 1px solid rgba(59, 130, 246, 0.14);
 }
 
-.movie-reservation-row strong {
+.movie-reservation-summary span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.movie-reservation-summary strong {
+  color: #0f172a;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.movie-reservation-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.movie-reservation-toolbar label {
+  display: grid;
+  width: min(100%, 460px);
+  gap: 6px;
+}
+
+.movie-reservation-toolbar label span {
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.movie-reservation-toolbar input {
+  min-height: 46px;
+  background: white;
+}
+
+.movie-reservation-toolbar p {
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.movie-reservation-table-shell {
+  overflow: hidden;
+  border-radius: 20px;
+  background: white;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+}
+
+.movie-reservation-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #1e293b;
+}
+
+.movie-reservation-table th {
+  padding: 13px 16px;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.movie-reservation-table th:first-child {
+  width: 62px;
+  text-align: center;
+}
+
+.movie-reservation-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.movie-reservation-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.movie-reservation-table tbody tr {
+  transition: background 160ms ease;
+}
+
+.movie-reservation-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.movie-reservation-index {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.movie-reservation-person {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.movie-reservation-person > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.movie-reservation-person strong {
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.movie-reservation-seat {
   display: inline-flex;
+  min-width: 58px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  padding: 5px 10px;
   border-radius: 12px;
   color: white;
+  font-size: 0.88rem;
 }
 
-.movie-reservation-row.reserved strong {
-  background: #dc2626;
+.movie-reservation-seat.reserved {
+  background: linear-gradient(180deg, #f87171, #dc2626);
 }
 
-.movie-reservation-row.paid strong {
-  background: #16a34a;
+.movie-reservation-seat.paid {
+  background: linear-gradient(180deg, #4ade80, #16a34a);
 }
 
-.movie-reservation-row small {
-  color: var(--muted);
+.movie-reservation-status {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+}
+
+.movie-reservation-status > span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.movie-reservation-status.reserved > span {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.movie-reservation-status.paid > span {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.movie-reservation-status small,
+.movie-reservation-date {
+  color: #64748b;
+  font-size: 0.73rem;
+  white-space: nowrap;
+}
+
+.movie-reminder-badge {
+  display: block;
+  width: fit-content;
+  margin-top: 5px;
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.movie-reservation-no-results td {
+  padding: 28px 16px;
+  color: #64748b;
+  text-align: center;
+}
+
+.movie-directory-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.movie-directory-pagination span {
+  min-width: 74px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
 }
 
 .hero-copy {
@@ -4778,9 +4980,106 @@ th {
     position: static;
   }
 
-  .movie-reservation-row {
+  .movie-reservation-summary {
     grid-template-columns: 1fr;
-    align-items: start;
+  }
+
+  .movie-reservation-summary > div {
+    min-height: 54px;
+  }
+
+  .movie-reservation-toolbar {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .movie-reservation-toolbar label {
+    width: 100%;
+  }
+
+  .movie-reservation-toolbar p {
+    margin: 0;
+  }
+
+  .movie-reservation-table-shell {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .movie-reservation-table,
+  .movie-reservation-table tbody,
+  .movie-reservation-table tr,
+  .movie-reservation-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .movie-reservation-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .movie-reservation-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .movie-reservation-table tr {
+    padding: 8px 14px;
+    border-radius: 18px;
+    background: white;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  }
+
+  .movie-reservation-table td {
+    display: grid;
+    grid-template-columns: minmax(92px, 0.4fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .movie-reservation-table td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .movie-reservation-table tbody tr:last-child td,
+  .movie-reservation-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .movie-reservation-table .movie-reservation-no-results td {
+    display: block;
+    padding: 22px 4px;
+    text-align: center;
+  }
+
+  .movie-reservation-table .movie-reservation-no-results td::before {
+    content: none;
+  }
+
+  .movie-reservation-index {
+    margin: 0;
+  }
+
+  .movie-reservation-status small,
+  .movie-reservation-date {
+    white-space: normal;
   }
 
   .floating-contact {

@@ -244,6 +244,7 @@ const MOVIE_EVENT_START_ISO = "";
 const MOVIE_EVENT_END_ISO = "";
 const MOVIE_EVENT_PLACE = "Forum Cinemas";
 const MOVIE_TICKET_PRICE = 6;
+const MOVIE_DIRECTORY_PAGE_SIZE = 10;
 const MOVIE_REVOLUT_PAYMENT_URL = REVOLUT_PAYMENT_URL;
 const MOVIE_SWEDBANK_PAYMENT_URL = "https://www.swedbank.lt/private";
 const MOVIE_FEATURES = [
@@ -2500,6 +2501,8 @@ export default function Page() {
   const [movieNotice, setMovieNotice] = useState<Notice | null>(null);
   const [moviePaymentReservationIds, setMoviePaymentReservationIds] = useState<number[]>([]);
   const [movieCancelLookup, setMovieCancelLookup] = useState("");
+  const [movieDirectoryLookup, setMovieDirectoryLookup] = useState("");
+  const [movieDirectoryPage, setMovieDirectoryPage] = useState(1);
   const [pendingMovieCancel, setPendingMovieCancel] = useState<PendingMovieCancel>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
@@ -2778,6 +2781,9 @@ export default function Page() {
     [movieSeatRows],
   );
   const movieAvailableSeatCount = Math.max(0, movieSeatCount - activeMovieSeatReservations.length);
+  const paidMovieSeatReservationCount = activeMovieSeatReservations.filter(
+    (reservation) => reservation.paymentStatus === "paid_pending_review",
+  ).length;
   const movieSeatById = useMemo(
     () =>
       new Map(
@@ -2807,6 +2813,22 @@ export default function Page() {
       .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
       .slice(0, 8);
   }, [activeMovieSeatReservations, movieCancelLookup]);
+  const movieDirectoryReservations = useMemo(() => {
+    const query = normalizeText(movieDirectoryLookup);
+
+    return activeMovieSeatReservations
+      .filter((reservation) => {
+        if (!query) return true;
+        return normalizeText(`${reservation.firstName} ${reservation.lastName} ${reservation.seatId}`).includes(query);
+      })
+      .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }));
+  }, [activeMovieSeatReservations, movieDirectoryLookup]);
+  const movieDirectoryPageCount = Math.max(1, Math.ceil(movieDirectoryReservations.length / MOVIE_DIRECTORY_PAGE_SIZE));
+  const activeMovieDirectoryPage = Math.min(movieDirectoryPage, movieDirectoryPageCount);
+  const pagedMovieDirectoryReservations = movieDirectoryReservations.slice(
+    (activeMovieDirectoryPage - 1) * MOVIE_DIRECTORY_PAGE_SIZE,
+    activeMovieDirectoryPage * MOVIE_DIRECTORY_PAGE_SIZE,
+  );
   const activeCommonSong = COMMON_SONGS[commonSongLanguage];
   const pendingReservations = useMemo(
     () =>
@@ -4706,26 +4728,111 @@ export default function Page() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Rezervuotos vietos" description="Čia matosi užimtos vietos ir jų mokėjimo būsena. Žalia reiškia, kad žmogus pažymėjo „Apmokėjau“, o organizatorius dar gali pasitikrinti.">
+        <SectionCard title="Registruoti žiūrovai ir jų vietos" description="Patogus visų užregistruotų žmonių sąrašas. Čia galima greitai rasti vardą, vietą ir matyti, ar žmogus jau pažymėjo „Apmokėjau“.">
           {activeMovieSeatReservations.length === 0 ? (
             <div className="empty-state">Kol kas nėra rezervuotų kino vietų.</div>
           ) : (
-            <div className="movie-reservation-list">
-              {activeMovieSeatReservations
-                .slice()
-                .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
-                .map((reservation) => (
-                  <div className={`movie-reservation-row ${reservation.paymentStatus === "paid_pending_review" ? "paid" : "reserved"}`} key={reservation.id}>
-                    <strong>{reservation.seatId}</strong>
-                    <span>{reservation.firstName} {reservation.lastName}</span>
-                    <small>
-                      {reservation.paymentStatus === "paid_pending_review"
-                        ? `Apmokėjau pažymėta${reservation.paidAt ? `: ${reservation.paidAt}` : ""}`
-                        : `Rezervuota: ${reservation.createdAt}`}
-                      {reservation.reminderRequested ? " · priminimas įjungtas" : ""}
-                    </small>
-                  </div>
-                ))}
+            <div className="movie-reservation-directory">
+              <div className="movie-reservation-summary" aria-label="Registracijų suvestinė">
+                <div>
+                  <span>Užregistruota žmonių</span>
+                  <strong>{activeMovieSeatReservations.length}</strong>
+                </div>
+                <div>
+                  <span>Laukia apmokėjimo</span>
+                  <strong>{activeMovieSeatReservations.length - paidMovieSeatReservationCount}</strong>
+                </div>
+                <div>
+                  <span>Pažymėjo „Apmokėjau“</span>
+                  <strong>{paidMovieSeatReservationCount}</strong>
+                </div>
+              </div>
+
+              <div className="movie-reservation-toolbar">
+                <label>
+                  <span>Ieškoti sąraše</span>
+                  <input
+                    type="search"
+                    value={movieDirectoryLookup}
+                    onChange={(event) => {
+                      setMovieDirectoryLookup(event.target.value);
+                      setMovieDirectoryPage(1);
+                    }}
+                    placeholder="Vardas, pavardė arba vieta"
+                  />
+                </label>
+                <p>Rodoma {movieDirectoryReservations.length} iš {activeMovieSeatReservations.length}</p>
+              </div>
+
+              <div className="movie-reservation-table-shell">
+                <table className="movie-reservation-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Nr.</th>
+                      <th scope="col">Žiūrovas</th>
+                      <th scope="col">Vieta</th>
+                      <th scope="col">Mokėjimo būsena</th>
+                      <th scope="col">Registruota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedMovieDirectoryReservations.length === 0 ? (
+                      <tr className="movie-reservation-no-results">
+                        <td colSpan={5}>Pagal šią paiešką registruotų žiūrovų nerasta.</td>
+                      </tr>
+                    ) : pagedMovieDirectoryReservations
+                      .map((reservation, index) => {
+                        const paid = reservation.paymentStatus === "paid_pending_review";
+                        const initials = `${reservation.firstName.trim().charAt(0)}${reservation.lastName.trim().charAt(0)}`;
+
+                        return (
+                          <tr key={reservation.id}>
+                            <td data-label="Nr."><span className="movie-reservation-index">{(activeMovieDirectoryPage - 1) * MOVIE_DIRECTORY_PAGE_SIZE + index + 1}</span></td>
+                            <td data-label="Žiūrovas">
+                              <div className="movie-reservation-person">
+                                <span aria-hidden="true">{initials || "-"}</span>
+                                <strong>{reservation.firstName} {reservation.lastName}</strong>
+                              </div>
+                            </td>
+                            <td data-label="Vieta"><strong className={`movie-reservation-seat ${paid ? "paid" : "reserved"}`}>{reservation.seatId}</strong></td>
+                            <td data-label="Mokėjimo būsena">
+                              <div className={`movie-reservation-status ${paid ? "paid" : "reserved"}`}>
+                                <span>{paid ? "Apmokėjau" : "Rezervuota"}</span>
+                                {paid && reservation.paidAt ? <small>{reservation.paidAt}</small> : null}
+                              </div>
+                            </td>
+                            <td data-label="Registruota">
+                              <span className="movie-reservation-date">{reservation.createdAt}</span>
+                              {reservation.reminderRequested ? <small className="movie-reminder-badge">Priminimas įjungtas</small> : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+
+              {movieDirectoryPageCount > 1 ? (
+                <div className="movie-directory-pagination" aria-label="Registruotų žiūrovų puslapiai">
+                  <button
+                    className="ghost-button compact"
+                    type="button"
+                    disabled={activeMovieDirectoryPage === 1}
+                    onClick={() => setMovieDirectoryPage((page) => Math.max(1, page - 1))}
+                  >
+                    Ankstesnis
+                  </button>
+                  <span>{activeMovieDirectoryPage} iš {movieDirectoryPageCount}</span>
+                  <button
+                    className="ghost-button compact"
+                    type="button"
+                    disabled={activeMovieDirectoryPage === movieDirectoryPageCount}
+                    onClick={() => setMovieDirectoryPage((page) => Math.min(movieDirectoryPageCount, page + 1))}
+                  >
+                    Kitas
+                  </button>
+                </div>
+              ) : null}
             </div>
           )}
         </SectionCard>
