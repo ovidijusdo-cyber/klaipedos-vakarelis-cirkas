@@ -1143,17 +1143,22 @@ function movieBlocked(key: string, label = ""): MovieSeatCell {
   return { type: "blocked", key, label };
 }
 
+function movieSeats(row: string, from: number, to: number, variant?: "standard" | "accessible" | "sofa") {
+  const length = Math.abs(from - to) + 1;
+  const direction = from >= to ? -1 : 1;
+
+  return Array.from({ length }, (_, index) => movieSeat(row, from + index * direction, variant));
+}
+
 function buildMovieSeatLayout(): MovieSeatRow[] {
   const rows: MovieSeatRow[] = [];
 
   rows.push({
     row: "1",
     cells: [
-      ...Array.from({ length: 10 }, (_, index) => movieSeat("1", index + 1)),
-      movieSpace("1-center-gap", "small"),
-      ...Array.from({ length: 5 }, (_, index) => movieSeat("1", index + 11, "accessible")),
+      ...movieSeats("1", 15, 6),
       movieSpace("1-side-gap"),
-      ...Array.from({ length: 5 }, (_, index) => movieBlocked(`1-blocked-${index + 1}`)),
+      movieBlocked("1-accessible-zone", "5 pritaikytos"),
     ],
   });
 
@@ -1162,9 +1167,9 @@ function buildMovieSeatLayout(): MovieSeatRow[] {
     rows.push({
       row,
       cells: [
-        ...Array.from({ length: 17 }, (_, index) => movieSeat(row, index + 1)),
+        ...movieSeats(row, 17, 1),
         movieSpace(`${row}-side-gap`),
-        ...Array.from({ length: 5 }, (_, index) => movieBlocked(`${row}-blocked-${index + 1}`)),
+        movieBlocked(`${row}-aisle`, rowNumber <= 5 ? "laiptai" : ""),
       ],
     });
   }
@@ -1174,10 +1179,10 @@ function buildMovieSeatLayout(): MovieSeatRow[] {
     rows.push({
       row,
       cells: [
-        ...Array.from({ length: 17 }, (_, index) => movieSeat(row, index + 1)),
+        ...movieSeats(row, 19, 3),
         movieSpace(`${row}-side-gap`),
-        ...Array.from({ length: 3 }, (_, index) => movieBlocked(`${row}-blocked-${index + 1}`)),
-        ...Array.from({ length: 2 }, (_, index) => movieSeat(row, index + 18)),
+        movieBlocked(`${row}-aisle`),
+        ...movieSeats(row, 2, 1),
       ],
     });
   }
@@ -1185,9 +1190,7 @@ function buildMovieSeatLayout(): MovieSeatRow[] {
   rows.push({
     row: "10",
     cells: [
-      ...Array.from({ length: 17 }, (_, index) => movieSeat("10", index + 1, "sofa")),
-      movieSpace("10-side-gap", "small"),
-      ...Array.from({ length: 5 }, (_, index) => movieBlocked(`10-blocked-${index + 1}`)),
+      ...movieSeats("10", 22, 1, "sofa"),
     ],
   });
 
