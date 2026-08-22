@@ -144,7 +144,24 @@ type Notice = {
   text: string;
 };
 
+type AppMode = "home" | "movie" | "party";
+
 type PublicPanel = "guests" | "program" | "important" | "songs" | "responsible" | "drivers" | "qr" | "admin";
+
+type MovieSeatReservation = {
+  id: number;
+  seatId: string;
+  row: string;
+  seatNumber: number;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+};
+
+type MovieGuestForm = {
+  firstName: string;
+  lastName: string;
+};
 
 type PendingCancel = {
   reservationId: number;
@@ -187,6 +204,12 @@ const BANK_ACCOUNT = {
   currency: "EUR",
 };
 const TELEGRAM_GROUP_URL = "https://t.me/+2Lo4XbXkjcM3NTBk";
+const MOVIE_EVENT_NAME = "JW filmų peržiūra";
+const MOVIE_EVENT_DATE = "Data ir laikas bus patikslinti";
+const MOVIE_EVENT_PLACE = "Forum Cinemas";
+const MOVIE_TICKET_PRICE = 6;
+const MOVIE_SEAT_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const MOVIE_SEATS_PER_ROW = 12;
 const EVENT_NAME = "2026 m. Klaipėdos vakarėlis „CIRKAS”";
 const EVENT_DATE = "2026 m. gegužės 30 d., 17:00–23:00";
 const EVENT_START_ISO = "2026-05-30T17:00:00+03:00";
@@ -729,6 +752,7 @@ const initialResponsiblePeople: ResponsiblePerson[] = [
 
 const initialGameScores: GameScore[] = [];
 const initialChampionMatches: ChampionMatch[] = [];
+const initialMovieSeatReservations: MovieSeatReservation[] = [];
 
 const LEADERBOARD_SIZE = 5;
 const MAX_STORED_GAME_SCORES = 100;
@@ -783,6 +807,31 @@ function normalizeSongSuggestions(items: SongSuggestion[]) {
 
 function normalizeEventIdeas(items: EventIdea[]) {
   return items.filter((idea) => !DEMO_EVENT_IDEAS.has(idea.text));
+}
+
+function normalizeMovieSeatReservations(items: MovieSeatReservation[]) {
+  return items.flatMap((item) => {
+    const seatId = String(item.seatId ?? "").trim().toUpperCase();
+    const row = String(item.row ?? seatId.match(/^[A-Z]+/)?.[0] ?? "").trim().toUpperCase();
+    const seatNumber = Number(item.seatNumber ?? seatId.match(/\d+$/)?.[0]);
+    const firstName = String(item.firstName ?? "").trim();
+    const lastName = String(item.lastName ?? "").trim();
+    const id = Number(item.id);
+
+    if (!seatId || !row || !Number.isFinite(seatNumber) || !firstName || !Number.isFinite(id)) {
+      return [];
+    }
+
+    return [{
+      id,
+      seatId,
+      row,
+      seatNumber,
+      firstName,
+      lastName,
+      createdAt: typeof item.createdAt === "string" ? item.createdAt : formatDateTime(),
+    }];
+  });
 }
 
 function parseSyncedArray(value: string | undefined) {
@@ -2192,8 +2241,10 @@ export default function Page() {
   const [responsiblePeople, setResponsiblePeople] = useState<ResponsiblePerson[]>(initialResponsiblePeople);
   const [gameScores, setGameScores] = useState<GameScore[]>(initialGameScores);
   const [championMatches, setChampionMatches] = useState<ChampionMatch[]>(initialChampionMatches);
+  const [movieSeatReservations, setMovieSeatReservations] = useState<MovieSeatReservation[]>(initialMovieSeatReservations);
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
 
+  const [appMode, setAppMode] = useState<AppMode>("home");
   const [registerOpen, setRegisterOpen] = useState(false);
   const [myTicketOpen, setMyTicketOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -2259,6 +2310,9 @@ export default function Page() {
   const [selectedChampionGuestId, setSelectedChampionGuestId] = useState("");
   const [championBoardLookup, setChampionBoardLookup] = useState("");
   const [championBoardPage, setChampionBoardPage] = useState(1);
+  const [movieSelectedSeats, setMovieSelectedSeats] = useState<string[]>([]);
+  const [movieGuestForms, setMovieGuestForms] = useState<Record<string, MovieGuestForm>>({});
+  const [movieNotice, setMovieNotice] = useState<Notice | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
   const [highlightGuestKey, setHighlightGuestKey] = useState("");
@@ -2304,6 +2358,7 @@ export default function Page() {
             responsiblePeople?: ResponsiblePerson[];
             gameScores?: GameScore[];
             championMatches?: ChampionMatch[];
+            movieSeatReservations?: MovieSeatReservation[];
             deletedReservationIds?: number[];
           } | null;
         };
@@ -2321,6 +2376,7 @@ export default function Page() {
         const rawResponsiblePeople = Array.isArray(parsed.responsiblePeople) ? parsed.responsiblePeople : initialResponsiblePeople;
         const rawGameScores = Array.isArray(parsed.gameScores) ? parsed.gameScores : [];
         const rawChampionMatches = Array.isArray(parsed.championMatches) ? parsed.championMatches : [];
+        const rawMovieSeatReservations = Array.isArray(parsed.movieSeatReservations) ? parsed.movieSeatReservations : [];
         const nextDeletedReservationIds = Array.isArray(parsed.deletedReservationIds)
           ? parsed.deletedReservationIds.map(Number).filter(Number.isFinite)
           : [];
@@ -2335,6 +2391,7 @@ export default function Page() {
         const nextResponsiblePeople = rawResponsiblePeople;
         const nextGameScores = normalizeGameScores(rawGameScores);
         const nextChampionMatches = rawChampionMatches;
+        const nextMovieSeatReservations = normalizeMovieSeatReservations(rawMovieSeatReservations);
 
         setReservations(nextReservations);
         setWaitingList(nextWaitingList);
@@ -2346,6 +2403,7 @@ export default function Page() {
         setResponsiblePeople(nextResponsiblePeople);
         setGameScores(nextGameScores);
         setChampionMatches(nextChampionMatches);
+        setMovieSeatReservations(nextMovieSeatReservations);
         setDeletedReservationIds(nextDeletedReservationIds);
 
         syncedStateRef.current = {
@@ -2359,6 +2417,7 @@ export default function Page() {
           responsiblePeople: JSON.stringify(nextResponsiblePeople),
           gameScores: JSON.stringify(nextGameScores),
           championMatches: JSON.stringify(nextChampionMatches),
+          movieSeatReservations: JSON.stringify(nextMovieSeatReservations),
           deletedReservationIds: JSON.stringify(nextDeletedReservationIds),
         };
         remoteStateLoadedRef.current = true;
@@ -2404,6 +2463,7 @@ export default function Page() {
       responsiblePeople,
       gameScores,
       championMatches,
+      movieSeatReservations,
       deletedReservationIds,
     };
 
@@ -2458,7 +2518,7 @@ export default function Page() {
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [adminPin, adminUnlocked, championMatches, championPin, championUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, notifications, qrPin, qrUnlocked, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
+  }, [adminPin, adminUnlocked, championMatches, championPin, championUnlocked, deletedReservationIds, eventIdeas, gameScores, hydrated, movieSeatReservations, notifications, qrPin, qrUnlocked, reservations, responsiblePeople, songSuggestions, transfers, votes, waitingList]);
 
   useEffect(() => {
     if (!doorNotice) return;
@@ -2515,6 +2575,22 @@ export default function Page() {
   const cancelReservation = useMemo(() => lookupReservation(activeReservations, cancelLookup), [activeReservations, cancelLookup]);
   const transferReservation = useMemo(() => lookupReservation(activeReservations, transferLookup), [activeReservations, transferLookup]);
   const foundReservation = useMemo(() => lookupReservation(activeReservations, lookup || scannerValue), [activeReservations, lookup, scannerValue]);
+  const movieReservedSeatIds = useMemo(() => new Set(movieSeatReservations.map((reservation) => reservation.seatId)), [movieSeatReservations]);
+  const movieSeatRows = useMemo(
+    () =>
+      MOVIE_SEAT_ROWS.map((row) =>
+        Array.from({ length: MOVIE_SEATS_PER_ROW }, (_, index) => {
+          const seatNumber = index + 1;
+          return {
+            id: `${row}${seatNumber}`,
+            row,
+            seatNumber,
+          };
+        }),
+      ),
+    [],
+  );
+  const movieSelectedTotal = movieSelectedSeats.length * MOVIE_TICKET_PRICE;
   const activeCommonSong = COMMON_SONGS[commonSongLanguage];
   const pendingReservations = useMemo(
     () =>
@@ -3858,6 +3934,86 @@ export default function Page() {
     }
   }
 
+  function toggleMovieSeat(seatId: string) {
+    if (movieReservedSeatIds.has(seatId)) return;
+
+    setMovieNotice(null);
+    setMovieSelectedSeats((previous) => {
+      if (previous.includes(seatId)) {
+        setMovieGuestForms((forms) => {
+          const nextForms = { ...forms };
+          delete nextForms[seatId];
+          return nextForms;
+        });
+        return previous.filter((item) => item !== seatId);
+      }
+
+      setMovieGuestForms((forms) => ({
+        ...forms,
+        [seatId]: forms[seatId] ?? { firstName: "", lastName: "" },
+      }));
+      return [...previous, seatId].sort((a, b) => a.localeCompare(b, "lt", { numeric: true }));
+    });
+  }
+
+  function updateMovieGuest(seatId: string, field: keyof MovieGuestForm, value: string) {
+    setMovieGuestForms((previous) => ({
+      ...previous,
+      [seatId]: {
+        firstName: previous[seatId]?.firstName ?? "",
+        lastName: previous[seatId]?.lastName ?? "",
+        [field]: value,
+      },
+    }));
+  }
+
+  function submitMovieReservation() {
+    if (movieSelectedSeats.length === 0) {
+      setMovieNotice({ type: "warning", text: "Pirma pasirink bent vieną vietą salėje." });
+      return;
+    }
+
+    const incompleteSeat = movieSelectedSeats.find((seatId) => {
+      const formValue = movieGuestForms[seatId];
+      return !formValue?.firstName.trim() || !formValue.lastName.trim();
+    });
+    if (incompleteSeat) {
+      setMovieNotice({ type: "warning", text: `Įrašyk vardą ir pavardę vietai ${incompleteSeat}.` });
+      return;
+    }
+
+    const alreadyReservedSeat = movieSelectedSeats.find((seatId) => movieReservedSeatIds.has(seatId));
+    if (alreadyReservedSeat) {
+      setMovieNotice({ type: "warning", text: `Vieta ${alreadyReservedSeat} ką tik buvo užimta. Pasirink kitą vietą.` });
+      setMovieSelectedSeats((previous) => previous.filter((seatId) => !movieReservedSeatIds.has(seatId)));
+      return;
+    }
+
+    const now = formatDateTime();
+    const nextReservations = movieSelectedSeats.map((seatId, index) => {
+      const seat = movieSeatRows.flat().find((item) => item.id === seatId);
+      const formValue = movieGuestForms[seatId];
+
+      return {
+        id: createNumericId() + index,
+        seatId,
+        row: seat?.row ?? seatId.match(/^[A-Z]+/)?.[0] ?? "",
+        seatNumber: seat?.seatNumber ?? Number(seatId.match(/\d+$/)?.[0] ?? 0),
+        firstName: formValue.firstName.trim(),
+        lastName: formValue.lastName.trim(),
+        createdAt: now,
+      };
+    });
+
+    setMovieSeatReservations((previous) => [...previous, ...nextReservations]);
+    setMovieNotice({
+      type: "success",
+      text: `Rezervuota: ${movieSelectedSeats.join(", ")}. Mokėtina suma: ${movieSelectedTotal} €.`,
+    });
+    setMovieSelectedSeats([]);
+    setMovieGuestForms({});
+  }
+
   const guestEntries = visibleGuestReservations.flatMap((reservation) =>
     activePeople(reservation).map((person) => ({
       city: reservation.city,
@@ -3948,6 +4104,182 @@ export default function Page() {
     );
   }
 
+  if (appMode === "home") {
+    return (
+      <main className="page-shell">
+        <div className="page-glow page-glow-left" />
+        <div className="page-glow page-glow-right" />
+
+        <section className="hub-hero">
+          <div className="hub-copy">
+            <div className="eyebrow">klaipedosvakaras.fun</div>
+            <h1>Pasirink, kur nori keliauti</h1>
+            <p>
+              Viena nuoroda, du atskiri renginiai: kino filmo peržiūros vietų registracija ir buvęs Klaipėdos vakarėlio puslapis.
+            </p>
+          </div>
+
+          <div className="hub-choice-grid">
+            <button className="hub-choice-card movie" type="button" onClick={() => setAppMode("movie")}>
+              <span>Kino filmo peržiūra</span>
+              <strong>JW filmų peržiūra Forum Cinemas</strong>
+              <p>Pasirink vietas kaip kino salėje, įrašyk dalyvių vardus ir iškart matyk mokėtiną sumą.</p>
+            </button>
+
+            <button className="hub-choice-card party" type="button" onClick={() => setAppMode("party")}>
+              <span>Klaipėdos vakarėlis</span>
+              <strong>Vakarėlio CIRKAS archyvas ir sistema</strong>
+              <p>Visas ankstesnis vakarėlio puslapis, registracijos, programos blokai, admin zona ir žaidimai lieka čia.</p>
+            </button>
+          </div>
+        </section>
+
+        <footer className="site-footer">
+          Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
+        </footer>
+      </main>
+    );
+  }
+
+  if (appMode === "movie") {
+    return (
+      <main className="page-shell movie-page">
+        <div className="page-glow page-glow-left" />
+        <div className="page-glow page-glow-right" />
+
+        <button className="ghost-button back-home-button" type="button" onClick={() => setAppMode("home")}>
+          Grįžti į pasirinkimą
+        </button>
+
+        <section className="movie-hero">
+          <div>
+            <div className="eyebrow">Kino filmo peržiūra</div>
+            <h1>{MOVIE_EVENT_NAME}</h1>
+            <p>
+              Pasirink norimas vietas salėje, prie kiekvienos vietos įrašyk žmogaus vardą ir pavardę, o sistema suskaičiuos mokėtiną sumą.
+            </p>
+          </div>
+          <div className="movie-info-grid">
+            <div className="chip">
+              <span>Vieta</span>
+              <strong>{MOVIE_EVENT_PLACE}</strong>
+            </div>
+            <div className="chip">
+              <span>Laikas</span>
+              <strong>{MOVIE_EVENT_DATE}</strong>
+            </div>
+            <div className="chip">
+              <span>Kaina</span>
+              <strong>{MOVIE_TICKET_PRICE} € / vieta</strong>
+            </div>
+          </div>
+        </section>
+
+        <SectionCard
+          title="Vietų pasirinkimas"
+          description="Pilkos vietos jau užimtos. Pasirink kelias vietas, žemiau supildyk vardus ir patvirtink registraciją."
+        >
+          <div className="movie-layout">
+            <div className="movie-seat-map" aria-label="Kino salės vietų planas">
+              <div className="movie-screen">EKRANAS</div>
+              <div className="movie-seat-legend">
+                <span><i className="seat-sample free" /> Laisva</span>
+                <span><i className="seat-sample selected" /> Pasirinkta</span>
+                <span><i className="seat-sample reserved" /> Užimta</span>
+              </div>
+              <div className="movie-seat-rows">
+                {movieSeatRows.map((rowSeats) => (
+                  <div className="movie-seat-row" key={rowSeats[0]?.row}>
+                    <span className="movie-row-label">{rowSeats[0]?.row}</span>
+                    <div className="movie-row-seats">
+                      {rowSeats.map((seat) => {
+                        const reserved = movieReservedSeatIds.has(seat.id);
+                        const selected = movieSelectedSeats.includes(seat.id);
+                        return (
+                          <button
+                            aria-label={`Vieta ${seat.id}`}
+                            className={reserved ? "movie-seat reserved" : selected ? "movie-seat selected" : "movie-seat"}
+                            disabled={reserved}
+                            key={seat.id}
+                            type="button"
+                            onClick={() => toggleMovieSeat(seat.id)}
+                          >
+                            {seat.seatNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="movie-booking-panel">
+              <div className="movie-total-card">
+                <span>Pasirinkta vietų</span>
+                <strong>{movieSelectedSeats.length}</strong>
+                <p>Mokėtina suma: {movieSelectedTotal} €</p>
+              </div>
+
+              {movieSelectedSeats.length === 0 ? (
+                <div className="empty-state">Pasirink vietą salės plane.</div>
+              ) : (
+                <div className="stack">
+                  {movieSelectedSeats.map((seatId) => (
+                    <div className="movie-guest-card" key={seatId}>
+                      <strong>Vieta {seatId}</strong>
+                      <div className="form-grid two">
+                        <input
+                          value={movieGuestForms[seatId]?.firstName ?? ""}
+                          onChange={(event) => updateMovieGuest(seatId, "firstName", event.target.value)}
+                          placeholder="Vardas"
+                        />
+                        <input
+                          value={movieGuestForms[seatId]?.lastName ?? ""}
+                          onChange={(event) => updateMovieGuest(seatId, "lastName", event.target.value)}
+                          placeholder="Pavardė"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {movieNotice ? <div className={`notice ${movieNotice.type}`}>{movieNotice.text}</div> : null}
+
+              <button className="primary-button" type="button" onClick={submitMovieReservation}>
+                Patvirtinti kino vietas
+              </button>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Rezervuotos vietos" description="Čia matosi jau užimtos vietos, kad būtų aišku kiek žmonių užsiregistravo.">
+          {movieSeatReservations.length === 0 ? (
+            <div className="empty-state">Kol kas nėra rezervuotų kino vietų.</div>
+          ) : (
+            <div className="movie-reservation-list">
+              {movieSeatReservations
+                .slice()
+                .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
+                .map((reservation) => (
+                  <div className="movie-reservation-row" key={reservation.id}>
+                    <strong>{reservation.seatId}</strong>
+                    <span>{reservation.firstName} {reservation.lastName}</span>
+                    <small>{reservation.createdAt}</small>
+                  </div>
+                ))}
+            </div>
+          )}
+        </SectionCard>
+
+        <footer className="site-footer">
+          Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
+        </footer>
+      </main>
+    );
+  }
+
   return (
       <main className="page-shell">
         <div className="page-glow page-glow-left" />
@@ -3963,6 +4295,10 @@ export default function Page() {
             ))}
           </div>
         ) : null}
+
+        <button className="ghost-button back-home-button" type="button" onClick={() => setAppMode("home")}>
+          Grįžti į pasirinkimą
+        </button>
 
         <section className="hero">
         <div className="hero-copy">
