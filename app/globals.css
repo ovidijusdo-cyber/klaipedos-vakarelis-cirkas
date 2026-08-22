@@ -349,7 +349,7 @@ textarea {
 
 .movie-seat-rows {
   display: grid;
-  gap: 18px;
+  gap: 22px;
   min-width: 620px;
 }
 
@@ -370,10 +370,20 @@ textarea {
   display: grid;
   grid-template-columns: repeat(12, minmax(38px, 1fr));
   gap: 10px;
+  align-items: end;
+}
+
+.movie-seat-cell {
+  display: grid;
+  grid-template-rows: 22px auto;
+  gap: 4px;
+  min-width: 0;
+  align-items: end;
 }
 
 .movie-seat {
-  min-height: 58px;
+  width: 100%;
+  min-height: 52px;
   border: 1px solid rgba(100, 116, 139, 0.2);
   border-radius: 12px 12px 18px 18px;
   background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
@@ -384,20 +394,29 @@ textarea {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 2px;
   padding: 6px 4px;
 }
 
 .movie-seat-name {
   max-width: 100%;
-  padding: 2px 5px;
+  min-height: 20px;
+  padding: 3px 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  font-size: 0.62rem;
-  line-height: 1.05;
+  background: rgba(15, 23, 42, 0.88);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
+  opacity: 0;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+}
+
+.movie-seat-cell.occupied .movie-seat-name {
+  opacity: 1;
 }
 
 .movie-seat-number {

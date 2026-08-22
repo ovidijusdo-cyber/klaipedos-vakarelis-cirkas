@@ -4357,18 +4357,21 @@ export default function Page() {
                         const paid = reservation?.paymentStatus === "paid_pending_review";
                         const selected = movieSelectedSeats.includes(seat.id);
                         return (
-                          <button
-                            aria-label={`Vieta ${seat.id}${paid ? ", apmokėta" : reserved ? ", rezervuota" : selected ? ", pasirinkta" : ", laisva"}`}
-                            title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : `Vieta ${seat.id}`}
-                            className={paid ? "movie-seat paid" : reserved ? "movie-seat reserved" : selected ? "movie-seat selected" : "movie-seat"}
-                            disabled={reserved}
-                            key={seat.id}
-                            type="button"
-                            onClick={() => toggleMovieSeat(seat.id)}
-                          >
-                            {reservation ? <span className="movie-seat-name">{movieSeatGuestLabel(reservation)}</span> : null}
-                            <span className="movie-seat-number">{seat.seatNumber}</span>
-                          </button>
+                          <div className={reservation ? "movie-seat-cell occupied" : "movie-seat-cell"} key={seat.id}>
+                            <span className="movie-seat-name" title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : ""}>
+                              {reservation ? movieSeatGuestLabel(reservation) : ""}
+                            </span>
+                            <button
+                              aria-label={`Vieta ${seat.id}${paid ? ", apmokėta" : reserved ? ", rezervuota" : selected ? ", pasirinkta" : ", laisva"}`}
+                              title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : `Vieta ${seat.id}`}
+                              className={paid ? "movie-seat paid" : reserved ? "movie-seat reserved" : selected ? "movie-seat selected" : "movie-seat"}
+                              disabled={reserved}
+                              type="button"
+                              onClick={() => toggleMovieSeat(seat.id)}
+                            >
+                              <span className="movie-seat-number">{seat.seatNumber}</span>
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
