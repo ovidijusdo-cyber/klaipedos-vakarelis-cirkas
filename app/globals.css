@@ -317,6 +317,15 @@ textarea {
   gap: 7px;
 }
 
+.movie-seat-hint {
+  max-width: 620px;
+  margin: 0 auto 20px;
+  color: #475569;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .seat-sample {
   width: 18px;
   height: 18px;
@@ -340,7 +349,7 @@ textarea {
 
 .movie-seat-rows {
   display: grid;
-  gap: 10px;
+  gap: 18px;
   min-width: 620px;
 }
 
@@ -360,11 +369,11 @@ textarea {
 .movie-row-seats {
   display: grid;
   grid-template-columns: repeat(12, minmax(38px, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .movie-seat {
-  min-height: 42px;
+  min-height: 58px;
   border: 1px solid rgba(100, 116, 139, 0.2);
   border-radius: 12px 12px 18px 18px;
   background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
@@ -372,6 +381,28 @@ textarea {
   font-weight: 900;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+}
+
+.movie-seat-name {
+  max-width: 100%;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.62rem;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.movie-seat-number {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .movie-seat:hover:not(:disabled) {
@@ -403,7 +434,8 @@ textarea {
 .movie-guest-card,
 .movie-total-card,
 .movie-payment-card,
-.movie-calendar-card {
+.movie-calendar-card,
+.movie-cancel-card {
   display: grid;
   gap: 12px;
 }
@@ -416,7 +448,8 @@ textarea {
 .movie-total-card,
 .movie-guest-card,
 .movie-payment-card,
-.movie-calendar-card {
+.movie-calendar-card,
+.movie-cancel-card {
   padding: 16px;
   border-radius: 20px;
   background: #ffffff;
@@ -441,9 +474,19 @@ textarea {
 
 .movie-total-card small,
 .movie-payment-card small,
-.movie-calendar-card p {
+.movie-calendar-card p,
+.movie-cancel-card p {
   color: var(--muted);
   line-height: 1.5;
+}
+
+.movie-cancel-card {
+  background: #fff7ed;
+  border-color: rgba(251, 146, 60, 0.24);
+}
+
+.movie-cancel-card p {
+  margin: 0;
 }
 
 .movie-payment-card {

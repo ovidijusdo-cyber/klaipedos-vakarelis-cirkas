@@ -55,6 +55,7 @@ function mergeById(
 
 function mergeMovieSeatReservations(existingValue: unknown, incomingValue: unknown, isAdminRequest: boolean) {
   const byId = new Map<number, Record<string, unknown>>();
+  const normalize = (value: unknown) => String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 
   if (Array.isArray(existingValue)) {
     existingValue.forEach((item) => {
@@ -71,6 +72,19 @@ function mergeMovieSeatReservations(existingValue: unknown, incomingValue: unkno
       if (!Number.isFinite(id)) return;
 
       const existingItem = byId.get(id);
+      if (item.reservationStatus === "cancelled") {
+        if (!existingItem) return;
+        const cancellationMatches =
+          String(existingItem.seatId ?? "").trim().toUpperCase() === String(item.seatId ?? "").trim().toUpperCase() &&
+          normalize(existingItem.firstName) === normalize(item.firstName) &&
+          normalize(existingItem.lastName) === normalize(item.lastName);
+
+        if (isAdminRequest || cancellationMatches) {
+          byId.delete(id);
+        }
+        return;
+      }
+
       if (!existingItem || isAdminRequest) {
         byId.set(id, item);
         return;
