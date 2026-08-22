@@ -3,6 +3,10 @@
     {
       "path": "/api/backup",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/movie-reminders",
+      "schedule": "0 * * * *"
     }
   ]
 }

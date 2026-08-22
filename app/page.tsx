@@ -155,6 +155,9 @@ type MovieSeatReservation = {
   seatNumber: number;
   firstName: string;
   lastName: string;
+  reminderEmail?: string;
+  reminderRequested?: boolean;
+  reminderSentAt?: string | null;
   paymentStatus?: "reserved" | "paid_pending_review";
   paidAt?: string | null;
   reservationStatus?: "active" | "cancelled";
@@ -165,6 +168,7 @@ type MovieSeatReservation = {
 type MovieGuestForm = {
   firstName: string;
   lastName: string;
+  reminderEmail: string;
 };
 
 type PendingMovieCancel = MovieSeatReservation | null;
@@ -826,6 +830,7 @@ function normalizeMovieSeatReservations(items: MovieSeatReservation[]): MovieSea
     const seatNumber = Number(item.seatNumber ?? seatId.match(/\d+$/)?.[0]);
     const firstName = String(item.firstName ?? "").trim();
     const lastName = String(item.lastName ?? "").trim();
+    const reminderEmail = String(item.reminderEmail ?? "").trim().toLowerCase();
     const id = Number(item.id);
 
     if (!seatId || !row || !Number.isFinite(seatNumber) || !firstName || !Number.isFinite(id)) {
@@ -839,6 +844,9 @@ function normalizeMovieSeatReservations(items: MovieSeatReservation[]): MovieSea
       seatNumber,
       firstName,
       lastName,
+      reminderEmail,
+      reminderRequested: Boolean(item.reminderRequested && reminderEmail),
+      reminderSentAt: typeof item.reminderSentAt === "string" ? item.reminderSentAt : null,
       paymentStatus: item.paymentStatus === "paid_pending_review" ? "paid_pending_review" as const : "reserved" as const,
       paidAt: typeof item.paidAt === "string" ? item.paidAt : null,
       reservationStatus: item.reservationStatus === "cancelled" ? "cancelled" as const : "active" as const,
@@ -4045,7 +4053,7 @@ export default function Page() {
 
       setMovieGuestForms((forms) => ({
         ...forms,
-        [seatId]: forms[seatId] ?? { firstName: "", lastName: "" },
+        [seatId]: forms[seatId] ?? { firstName: "", lastName: "", reminderEmail: "" },
       }));
       return [...previous, seatId].sort((a, b) => a.localeCompare(b, "lt", { numeric: true }));
     });
@@ -4057,6 +4065,7 @@ export default function Page() {
       [seatId]: {
         firstName: previous[seatId]?.firstName ?? "",
         lastName: previous[seatId]?.lastName ?? "",
+        reminderEmail: previous[seatId]?.reminderEmail ?? "",
         [field]: value,
       },
     }));
@@ -4074,6 +4083,15 @@ export default function Page() {
     });
     if (incompleteSeat) {
       setMovieNotice({ type: "warning", text: `Įrašyk vardą ir pavardę vietai ${incompleteSeat}.` });
+      return;
+    }
+
+    const invalidReminderSeat = movieSelectedSeats.find((seatId) => {
+      const reminderEmail = movieGuestForms[seatId]?.reminderEmail.trim() ?? "";
+      return reminderEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reminderEmail);
+    });
+    if (invalidReminderSeat) {
+      setMovieNotice({ type: "warning", text: `Patikrink el. pašto adresą vietai ${invalidReminderSeat} arba palik lauką tuščią.` });
       return;
     }
 
@@ -4096,6 +4114,9 @@ export default function Page() {
         seatNumber: seat?.seatNumber ?? Number(seatId.match(/\d+$/)?.[0] ?? 0),
         firstName: formValue.firstName.trim(),
         lastName: formValue.lastName.trim(),
+        reminderEmail: formValue.reminderEmail.trim().toLowerCase(),
+        reminderRequested: Boolean(formValue.reminderEmail.trim()),
+        reminderSentAt: null,
         paymentStatus: "reserved" as const,
         paidAt: null,
         reservationStatus: "active" as const,
@@ -4403,6 +4424,16 @@ export default function Page() {
                           placeholder="Pavardė"
                         />
                       </div>
+                      <label className="movie-reminder-field">
+                        <span>Priminimas el. paštu (nebūtina)</span>
+                        <input
+                          type="email"
+                          value={movieGuestForms[seatId]?.reminderEmail ?? ""}
+                          onChange={(event) => updateMovieGuest(seatId, "reminderEmail", event.target.value)}
+                          placeholder="vardas@email.com"
+                        />
+                        <small>Jei įrašysi el. paštą, sistema galės atsiųsti priminimą likus 24 val. iki peržiūros.</small>
+                      </label>
                     </div>
                   ))}
                 </div>
@@ -4500,6 +4531,7 @@ export default function Page() {
                       {reservation.paymentStatus === "paid_pending_review"
                         ? `Apmokėjau pažymėta${reservation.paidAt ? `: ${reservation.paidAt}` : ""}`
                         : `Rezervuota: ${reservation.createdAt}`}
+                      {reservation.reminderRequested ? " · priminimas įjungtas" : ""}
                     </small>
                   </div>
                 ))}
