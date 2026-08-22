@@ -2777,6 +2777,7 @@ export default function Page() {
     () => movieSeatRows.reduce((sum, row) => sum + row.cells.filter((cell) => cell.type === "seat").length, 0),
     [movieSeatRows],
   );
+  const movieAvailableSeatCount = Math.max(0, movieSeatCount - activeMovieSeatReservations.length);
   const movieSeatById = useMemo(
     () =>
       new Map(
@@ -4443,7 +4444,13 @@ export default function Page() {
             </div>
             <div className="movie-premiere-strip" aria-label="Papildomi filmų kadrai">
               {MOVIE_GALLERY_IMAGES.map((imageUrl, index) => (
-                <img src={imageUrl} alt={`Filmo kadras ${index + 1}`} key={imageUrl} />
+                <div
+                  className="movie-premiere-frame"
+                  key={imageUrl}
+                  style={{ backgroundImage: `url("${imageUrl}")` }}
+                >
+                  <img src={imageUrl} alt={`Filmo kadras ${index + 1}`} />
+                </div>
               ))}
             </div>
           </div>
@@ -4481,6 +4488,23 @@ export default function Page() {
           title="Vietų pasirinkimas"
           description="Salės planas atkartoja kino teatro išdėstymą. Pilka - laisva, mėlyna - tavo pasirinkta, raudona - rezervuota, žalia - žmogus pažymėjo, kad apmokėjo."
         >
+          <div className="movie-availability-strip" aria-label="Kino salės užimtumas">
+            <div className="movie-availability-item total">
+              <span>Visos vietos</span>
+              <strong>{movieSeatCount}</strong>
+            </div>
+            <div className="movie-availability-item reserved">
+              <span>Jau rezervuota</span>
+              <strong>{activeMovieSeatReservations.length}</strong>
+            </div>
+            <div className="movie-availability-item available">
+              <span>Liko laisvų</span>
+              <strong>{movieAvailableSeatCount}</strong>
+            </div>
+            <div className="movie-availability-progress" aria-hidden="true">
+              <span style={{ width: `${movieSeatCount ? (activeMovieSeatReservations.length / movieSeatCount) * 100 : 0}%` }} />
+            </div>
+          </div>
           <div className="movie-layout">
             <div className="movie-seat-map" aria-label="Kino salės vietų planas">
               <div className="movie-screen">
@@ -4541,30 +4565,53 @@ export default function Page() {
 
             <div className="movie-booking-panel">
               <div className="movie-total-card">
-                <span>Tavo pasirinkimas</span>
-                <strong>{movieSelectedSeats.length}</strong>
-                <p>{movieSelectedSeats.length ? `Mokėtina suma: ${movieSelectedTotal} €` : "Pasirink vietas salėje"}</p>
-                {movieSelectedSeats.length ? <small>{movieSelectedSeats.join(", ")}</small> : null}
+                <div className="movie-total-heading">
+                  <div>
+                    <span>Pasirinktos vietos</span>
+                    <strong>{movieSelectedSeats.length}</strong>
+                  </div>
+                  <small>1 žingsnis iš 2</small>
+                </div>
+                <div className="movie-total-price">
+                  <span>Mokėtina suma</span>
+                  <strong>{movieSelectedTotal} €</strong>
+                </div>
+                <p>{movieSelectedSeats.length ? `Vietos: ${movieSelectedSeats.join(", ")}` : "Pirmiausia pasirink vietas salės plane"}</p>
               </div>
 
               {movieSelectedSeats.length === 0 ? (
-                <div className="empty-state">Pasirink vietą salės plane.</div>
+                <div className="movie-booking-empty">
+                  <span>Registracija prasideda salės plane</span>
+                  <strong>Paspausk ant norimos laisvos vietos</strong>
+                  <p>Pasirinkus vietą čia iškart atsiras aiškūs vardo ir pavardės laukai.</p>
+                </div>
               ) : (
                 <div className="stack">
                   {movieSelectedSeats.map((seatId) => (
                     <div className="movie-guest-card" key={seatId}>
-                      <strong>Vieta {seatId}</strong>
+                      <div className="movie-guest-heading">
+                        <span>2 žingsnis</span>
+                        <strong>Kas sėdės vietoje {seatId}?</strong>
+                      </div>
                       <div className="form-grid two">
-                        <input
-                          value={movieGuestForms[seatId]?.firstName ?? ""}
-                          onChange={(event) => updateMovieGuest(seatId, "firstName", event.target.value)}
-                          placeholder="Vardas"
-                        />
-                        <input
-                          value={movieGuestForms[seatId]?.lastName ?? ""}
-                          onChange={(event) => updateMovieGuest(seatId, "lastName", event.target.value)}
-                          placeholder="Pavardė"
-                        />
+                        <label className="movie-name-field">
+                          <span>Vardas</span>
+                          <input
+                            value={movieGuestForms[seatId]?.firstName ?? ""}
+                            onChange={(event) => updateMovieGuest(seatId, "firstName", event.target.value)}
+                            placeholder="Įrašyk vardą"
+                            autoComplete="given-name"
+                          />
+                        </label>
+                        <label className="movie-name-field">
+                          <span>Pavardė</span>
+                          <input
+                            value={movieGuestForms[seatId]?.lastName ?? ""}
+                            onChange={(event) => updateMovieGuest(seatId, "lastName", event.target.value)}
+                            placeholder="Įrašyk pavardę"
+                            autoComplete="family-name"
+                          />
+                        </label>
                       </div>
                       <label className="movie-reminder-field">
                         <span>Priminimas el. paštu (nebūtina)</span>
@@ -4584,7 +4631,9 @@ export default function Page() {
               {movieNotice ? <div className={`notice ${movieNotice.type}`}>{movieNotice.text}</div> : null}
 
               <button className="primary-button" type="button" onClick={submitMovieReservation}>
-                Patvirtinti kino vietas
+                {movieSelectedSeats.length
+                  ? `Patvirtinti ${movieSelectedSeats.length} ${movieSelectedSeats.length === 1 ? "vietą" : "vietas"} · ${movieSelectedTotal} €`
+                  : "Patvirtinti kino vietas"}
               </button>
 
               {moviePaymentReservations.length > 0 ? (
