@@ -235,9 +235,8 @@ textarea {
 
 .movie-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
-  align-items: end;
   padding: 34px;
   margin-bottom: 24px;
   border-radius: 32px;
@@ -249,8 +248,134 @@ textarea {
   box-shadow: 0 28px 78px rgba(15, 23, 42, 0.24);
 }
 
+.movie-premiere-cover {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: clamp(320px, 42vw, 560px);
+  border-radius: 28px;
+  overflow: hidden;
+  background: #020617;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+}
+
+.movie-premiere-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.28), transparent 32%, rgba(255, 255, 255, 0.16) 50%, transparent 68%, rgba(2, 6, 23, 0.28)),
+    radial-gradient(circle at 50% 0%, rgba(250, 204, 21, 0.3), transparent 30%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.08), rgba(2, 6, 23, 0.72));
+}
+
+.movie-premiere-cover::after {
+  content: "JW FILMŲ PERŽIŪRA";
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+}
+
+.movie-premiere-panel {
+  position: relative;
+  min-height: 100%;
+  color: white;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.movie-premiere-panel + .movie-premiere-panel {
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.movie-premiere-panel img {
+  width: 100%;
+  height: 100%;
+  min-height: clamp(320px, 42vw, 560px);
+  object-fit: cover;
+  display: block;
+  transform: scale(1.02);
+  transition: transform 0.5s ease, filter 0.5s ease;
+}
+
+.movie-premiere-panel:hover img {
+  transform: scale(1.08);
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.movie-premiere-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.02) 18%, rgba(2, 6, 23, 0.88) 100%),
+    radial-gradient(circle at 50% 78%, rgba(250, 204, 21, 0.28), transparent 34%);
+}
+
+.movie-premiere-copy {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  z-index: 3;
+  display: grid;
+  gap: 10px;
+}
+
+.movie-premiere-copy small {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.movie-premiere-copy strong {
+  font-family: var(--font-heading), serif;
+  max-width: 560px;
+  font-size: clamp(1.65rem, 4.4vw, 3.9rem);
+  line-height: 0.98;
+  text-shadow: 0 14px 38px rgba(0, 0, 0, 0.65);
+}
+
+.movie-premiere-copy em {
+  width: fit-content;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #fde047);
+  color: #431407;
+  font-size: 0.84rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.movie-hero-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
 .movie-info-grid {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -4232,6 +4357,30 @@ th {
   .movie-hero,
   .movie-layout {
     grid-template-columns: 1fr;
+  }
+
+  .movie-premiere-cover,
+  .movie-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .movie-premiere-cover {
+    min-height: auto;
+  }
+
+  .movie-premiere-panel + .movie-premiere-panel {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .movie-premiere-panel img {
+    min-height: 300px;
+  }
+
+  .movie-premiere-copy {
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
   }
 
   .hub-choice-card {

@@ -224,6 +224,20 @@ const MOVIE_SEAT_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const MOVIE_SEATS_PER_ROW = 12;
 const MOVIE_REVOLUT_PAYMENT_URL = REVOLUT_PAYMENT_URL;
 const MOVIE_SWEDBANK_PAYMENT_URL = "https://www.swedbank.lt/private";
+const MOVIE_FEATURES = [
+  {
+    title: "Viliamės to, ko nematome",
+    eyebrow: "Biblijos laikų filmas",
+    imageUrl: "https://cms-imgp.jw-cdn.org/img/p/1102016359/univ/art/1102016359_univ_lsr_lg.jpg",
+    url: "https://www.jw.org/lt/biblioteka/videoteka/#lt/mediaitems/VODMoviesBibleTimes/pub-tiy_1_VIDEO",
+  },
+  {
+    title: "Tavimi, Jehova, aš pasitikiu",
+    eyebrow: "Šių dienų filmas",
+    imageUrl: "https://cms-imgp.jw-cdn.org/img/p/1102016443/univ/art/1102016443_univ_lss_lg.jpg",
+    url: "https://www.jw.org/lt/biblioteka/videoteka/#lt/mediaitems/VODMoviesModernDay/pub-dns_2_VIDEO",
+  },
+];
 const EVENT_NAME = "2026 m. Klaipėdos vakarėlis „CIRKAS”";
 const EVENT_DATE = "2026 m. gegužės 30 d., 17:00–23:00";
 const EVENT_START_ISO = "2026-05-30T17:00:00+03:00";
@@ -4316,13 +4330,28 @@ export default function Page() {
         </button>
 
         <section className="movie-hero">
-          <div>
-            <div className="eyebrow">Kino filmo peržiūra</div>
-            <h1>{MOVIE_EVENT_NAME}</h1>
-            <p>
-              Patogiai išsirink vietas kaip kino teatro salėje, įrašyk dalyvių vardus, atlik mokėjimą ir pažymėk, kad apmokėjai.
-              Organizatorius mokėjimą dar patikrins asmeniškai.
-            </p>
+          <div className="movie-premiere-cover" aria-label="Rodomi filmai">
+            {MOVIE_FEATURES.map((movie) => (
+              <a className="movie-premiere-panel" href={movie.url} key={movie.title} target="_blank" rel="noreferrer">
+                <img src={movie.imageUrl} alt={movie.title} />
+                <span className="movie-premiere-shade" />
+                <span className="movie-premiere-copy">
+                  <small>{movie.eyebrow}</small>
+                  <strong>{movie.title}</strong>
+                  <em>Žiūrėti JW.org</em>
+                </span>
+              </a>
+            ))}
+          </div>
+          <div className="movie-hero-copy">
+            <div>
+              <div className="eyebrow">Kino filmo peržiūra</div>
+              <h1>{MOVIE_EVENT_NAME}</h1>
+              <p>
+                Du filmai viename vakare. Pasirink vietas kaip kino teatro salėje, įrašyk dalyvių vardus, atlik mokėjimą ir pažymėk, kad apmokėjai.
+                Organizatorius mokėjimą dar patikrins asmeniškai.
+              </p>
+            </div>
           </div>
           <div className="movie-info-grid">
             <div className="chip">
