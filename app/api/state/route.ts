@@ -53,6 +53,42 @@ function mergeById(
   return Array.from(byId.values());
 }
 
+function mergeMovieSeatReservations(existingValue: unknown, incomingValue: unknown, isAdminRequest: boolean) {
+  const byId = new Map<number, Record<string, unknown>>();
+
+  if (Array.isArray(existingValue)) {
+    existingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const id = Number(item.id);
+      if (Number.isFinite(id)) byId.set(id, item);
+    });
+  }
+
+  if (Array.isArray(incomingValue)) {
+    incomingValue.forEach((item) => {
+      if (!isRecord(item)) return;
+      const id = Number(item.id);
+      if (!Number.isFinite(id)) return;
+
+      const existingItem = byId.get(id);
+      if (!existingItem || isAdminRequest) {
+        byId.set(id, item);
+        return;
+      }
+
+      if (item.paymentStatus === "paid_pending_review") {
+        byId.set(id, {
+          ...existingItem,
+          paymentStatus: "paid_pending_review",
+          paidAt: typeof item.paidAt === "string" ? item.paidAt : existingItem.paidAt ?? null,
+        });
+      }
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
 function mergeDeletedIds(existingValue: unknown, incomingValue: unknown) {
   const ids = new Set<number>();
 
@@ -425,7 +461,9 @@ export async function POST(request: Request) {
             });
           } else if (key === "songSuggestions") {
             mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);
-          } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications", "championMatches", "movieSeatReservations"].includes(key)) {
+          } else if (key === "movieSeatReservations") {
+            mergedPayload[key] = mergeMovieSeatReservations(existingPayload[key], value, isAdminRequest);
+          } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications", "championMatches"].includes(key)) {
             mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
               overwriteExisting: false,
               overwriteIds: isAdminRequest || (isChampionRequest && key === "championMatches") ? getChangedIdSet(incomingChangedIds[key]) : new Set(),
@@ -442,7 +480,9 @@ export async function POST(request: Request) {
           });
         } else if (key === "songSuggestions") {
           mergedPayload[key] = mergeSongSuggestions(existingPayload[key], value, isAdminRequest, canUpdatePlaylist);
-        } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications", "championMatches", "movieSeatReservations"].includes(key)) {
+        } else if (key === "movieSeatReservations") {
+          mergedPayload[key] = mergeMovieSeatReservations(existingPayload[key], value, isAdminRequest);
+        } else if (["waitingList", "transfers", "votes", "eventIdeas", "gameScores", "notifications", "championMatches"].includes(key)) {
           mergedPayload[key] = mergeById(existingPayload[key], value, new Set(), {
             overwriteExisting: isAdminRequest || (isChampionRequest && key === "championMatches"),
             overwriteIds: isAdminRequest || (isChampionRequest && key === "championMatches") ? getChangedIdSet(incomingChangedIds[key]) : new Set(),

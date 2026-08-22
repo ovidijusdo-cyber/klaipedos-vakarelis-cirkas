@@ -242,10 +242,11 @@ textarea {
   margin-bottom: 24px;
   border-radius: 32px;
   background:
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.24), transparent 32%),
-    linear-gradient(135deg, #0f172a 0%, #1e3a8a 58%, #0284c7 100%);
+    radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.24), transparent 18%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.28), transparent 34%),
+    linear-gradient(135deg, #020617 0%, #172554 48%, #0f766e 100%);
   color: white;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 28px 78px rgba(15, 23, 42, 0.24);
 }
 
 .movie-info-grid {
@@ -261,24 +262,42 @@ textarea {
 }
 
 .movie-seat-map {
-  padding: 20px;
-  border-radius: 24px;
-  background: linear-gradient(180deg, #f8fafc, #e0f2fe);
-  border: 1px solid rgba(14, 165, 233, 0.18);
+  padding: 24px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.16), transparent 32%),
+    linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 44px rgba(15, 23, 42, 0.08);
   overflow-x: auto;
 }
 
 .movie-screen {
   max-width: 620px;
   margin: 0 auto 18px;
-  padding: 14px;
-  border-radius: 0 0 42px 42px;
+  padding: 16px;
+  border-radius: 0 0 52px 52px;
   background: linear-gradient(180deg, #1e293b, #0f172a);
   color: white;
   text-align: center;
   font-weight: 900;
-  letter-spacing: 0.18em;
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.2);
+}
+
+.movie-screen span,
+.movie-screen small {
+  display: block;
+}
+
+.movie-screen span {
+  letter-spacing: 0.18em;
+}
+
+.movie-screen small {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  letter-spacing: 0;
 }
 
 .movie-seat-legend {
@@ -303,7 +322,7 @@ textarea {
   height: 18px;
   border-radius: 6px;
   display: inline-block;
-  background: white;
+  background: #cbd5e1;
   border: 1px solid rgba(100, 116, 139, 0.3);
 }
 
@@ -312,7 +331,11 @@ textarea {
 }
 
 .seat-sample.reserved {
-  background: #94a3b8;
+  background: #ef4444;
+}
+
+.seat-sample.paid {
+  background: #22c55e;
 }
 
 .movie-seat-rows {
@@ -342,13 +365,18 @@ textarea {
 
 .movie-seat {
   min-height: 42px;
-  border: 1px solid rgba(100, 116, 139, 0.28);
+  border: 1px solid rgba(100, 116, 139, 0.2);
   border-radius: 12px 12px 18px 18px;
-  background: white;
-  color: #0f172a;
+  background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
+  color: #334155;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.movie-seat:hover:not(:disabled) {
+  background: linear-gradient(180deg, #dbeafe, #93c5fd);
+  color: #1e3a8a;
 }
 
 .movie-seat.selected {
@@ -358,15 +386,24 @@ textarea {
 }
 
 .movie-seat.reserved {
-  background: #94a3b8;
-  color: #f8fafc;
+  background: linear-gradient(180deg, #f87171, #dc2626);
+  color: white;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.movie-seat.paid {
+  background: linear-gradient(180deg, #4ade80, #16a34a);
+  color: white;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .movie-booking-panel,
 .movie-guest-card,
-.movie-total-card {
+.movie-total-card,
+.movie-payment-card,
+.movie-calendar-card {
   display: grid;
   gap: 12px;
 }
@@ -377,7 +414,9 @@ textarea {
 }
 
 .movie-total-card,
-.movie-guest-card {
+.movie-guest-card,
+.movie-payment-card,
+.movie-calendar-card {
   padding: 16px;
   border-radius: 20px;
   background: #ffffff;
@@ -400,6 +439,54 @@ textarea {
   font-weight: 900;
 }
 
+.movie-total-card small,
+.movie-payment-card small,
+.movie-calendar-card p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.movie-payment-card {
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 34%),
+    #f8fafc;
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.movie-payment-card h3 {
+  margin: 4px 0 8px;
+  font-size: 1.4rem;
+}
+
+.movie-payment-card p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.movie-payment-card code {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: #e0f2fe;
+  color: #075985;
+  font-weight: 800;
+}
+
+.movie-payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.movie-payment-actions a,
+.movie-payment-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .movie-reservation-list {
   display: grid;
   gap: 8px;
@@ -413,6 +500,24 @@ textarea {
   padding: 12px 14px;
   border-radius: 16px;
   background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.movie-reservation-row strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 12px;
+  color: white;
+}
+
+.movie-reservation-row.reserved strong {
+  background: #dc2626;
+}
+
+.movie-reservation-row.paid strong {
+  background: #16a34a;
 }
 
 .movie-reservation-row small {
@@ -698,6 +803,7 @@ textarea {
 .secondary-button,
 .ghost-button,
 .danger-button,
+.success-button,
 .ghost-inline {
   border: 0;
   cursor: pointer;
@@ -708,6 +814,7 @@ textarea {
 .secondary-button:hover,
 .ghost-button:hover,
 .danger-button:hover,
+.success-button:hover,
 .ghost-inline:hover {
   transform: translateY(-1px);
 }
@@ -731,6 +838,16 @@ textarea {
   color: white;
   font-weight: 700;
   animation: pulse-button-soft 2.4s infinite;
+}
+
+.success-button {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.24);
 }
 
 .ghost-button,
