@@ -4304,7 +4304,7 @@ export default function Page() {
           <div className="hub-choice-grid">
             <button className="hub-choice-card movie" type="button" onClick={() => setAppMode("movie")}>
               <span>Kino filmo peržiūra</span>
-              <strong>JW filmų peržiūra Forum Cinemas</strong>
+              <strong>Dviejų filmų peržiūra Forum Cinemas</strong>
               <p>Pasirink vietas kaip kino salėje, įrašyk dalyvių vardus ir iškart matyk mokėtiną sumą.</p>
             </button>
 
