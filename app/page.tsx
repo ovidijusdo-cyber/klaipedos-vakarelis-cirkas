@@ -2501,6 +2501,9 @@ export default function Page() {
   const [movieNotice, setMovieNotice] = useState<Notice | null>(null);
   const [moviePaymentReservationIds, setMoviePaymentReservationIds] = useState<number[]>([]);
   const [movieCancelLookup, setMovieCancelLookup] = useState("");
+  const [movieSeatFinderLookup, setMovieSeatFinderLookup] = useState("");
+  const [movieSeatFinderOpen, setMovieSeatFinderOpen] = useState(false);
+  const [locatedMovieSeatId, setLocatedMovieSeatId] = useState("");
   const [movieDirectoryLookup, setMovieDirectoryLookup] = useState("");
   const [movieDirectoryPage, setMovieDirectoryPage] = useState(1);
   const [pendingMovieCancel, setPendingMovieCancel] = useState<PendingMovieCancel>(null);
@@ -2792,6 +2795,22 @@ export default function Page() {
         ),
       ),
     [movieSeatRows],
+  );
+  const movieSeatFinderMatches = useMemo(() => {
+    const query = normalizeText(movieSeatFinderLookup);
+    if (query.length < 2) return [];
+
+    return activeMovieSeatReservations
+      .filter((reservation) => {
+        if (!movieSeatById.has(reservation.seatId)) return false;
+        return normalizeText(`${reservation.firstName} ${reservation.lastName} ${reservation.seatId}`).includes(query);
+      })
+      .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, "lt"))
+      .slice(0, 8);
+  }, [activeMovieSeatReservations, movieSeatById, movieSeatFinderLookup]);
+  const locatedMovieReservation = useMemo(
+    () => activeMovieSeatReservations.find((reservation) => reservation.seatId === locatedMovieSeatId) ?? null,
+    [activeMovieSeatReservations, locatedMovieSeatId],
   );
   const movieSelectedTotal = movieSelectedSeats.length * MOVIE_TICKET_PRICE;
   const moviePaymentReservations = useMemo(
@@ -4194,6 +4213,20 @@ export default function Page() {
     });
   }
 
+  function locateMovieGuestSeat(reservation: MovieSeatReservation) {
+    setMovieSeatFinderLookup(`${reservation.firstName} ${reservation.lastName}`.trim());
+    setMovieSeatFinderOpen(false);
+    setLocatedMovieSeatId(reservation.seatId);
+
+    window.requestAnimationFrame(() => {
+      document.getElementById(`movie-seat-${reservation.seatId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    });
+  }
+
   function updateMovieGuest(seatId: string, field: keyof MovieGuestForm, value: string) {
     setMovieGuestForms((previous) => ({
       ...previous,
@@ -4529,6 +4562,59 @@ export default function Page() {
           </div>
           <div className="movie-layout">
             <div className="movie-seat-map" aria-label="Kino salės vietų planas">
+              <div className="movie-seat-finder">
+                <div className="movie-seat-finder-heading">
+                  <span>Užsiregistravusių vietos paieška</span>
+                  <small>Įrašyk vardą arba pavardę</small>
+                </div>
+                <div className="movie-seat-finder-control">
+                  <input
+                    aria-label="Ieškoti užsiregistravusio žmogaus vietos"
+                    type="search"
+                    value={movieSeatFinderLookup}
+                    onFocus={() => setMovieSeatFinderOpen(true)}
+                    onChange={(event) => {
+                      setMovieSeatFinderLookup(event.target.value);
+                      setMovieSeatFinderOpen(true);
+                      setLocatedMovieSeatId("");
+                    }}
+                    placeholder="Pvz. Ovidijus Domkus"
+                  />
+                  {movieSeatFinderOpen && normalizeText(movieSeatFinderLookup).length >= 2 ? (
+                    <div className="movie-seat-finder-results">
+                      {movieSeatFinderMatches.length === 0 ? (
+                        <div className="movie-seat-finder-empty">Registruotas žmogus nerastas.</div>
+                      ) : (
+                        movieSeatFinderMatches.map((reservation) => (
+                          <button type="button" key={reservation.id} onClick={() => locateMovieGuestSeat(reservation)}>
+                            <span>{reservation.firstName} {reservation.lastName}</span>
+                            <strong>Vieta {reservation.seatId}</strong>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                {locatedMovieReservation ? (
+                  <div className="movie-seat-finder-found" role="status">
+                    <div>
+                      <span>Vieta pažymėta plane</span>
+                      <strong>{locatedMovieReservation.firstName} {locatedMovieReservation.lastName} · {locatedMovieReservation.seatId}</strong>
+                    </div>
+                    <button
+                      aria-label="Išvalyti vietos paiešką"
+                      type="button"
+                      onClick={() => {
+                        setMovieSeatFinderLookup("");
+                        setLocatedMovieSeatId("");
+                        setMovieSeatFinderOpen(false);
+                      }}
+                    >
+                      Išvalyti
+                    </button>
+                  </div>
+                ) : null}
+              </div>
               <div className="movie-screen">
                 <span>EKRANAS</span>
                 <small>{movieSeatCount} vietos pagal salės planą</small>
@@ -4542,12 +4628,13 @@ export default function Page() {
               <p className="movie-seat-hint">
                 Ant užimtų vietų rodoma, kas rezervavo: vardas ir pavardės pirma raidė.
               </p>
-              <div className="movie-seat-rows">
-                {movieSeatRows.map((seatRow) => (
-                  <div className="movie-seat-row" key={seatRow.row}>
-                    <span className="movie-row-label">{seatRow.row}</span>
-                    <div className="movie-row-seats">
-                      {seatRow.cells.map((seat) => {
+              <div className="movie-seat-rows-scroll">
+                <div className="movie-seat-rows">
+                  {movieSeatRows.map((seatRow) => (
+                    <div className="movie-seat-row" key={seatRow.row}>
+                      <span className="movie-row-label">{seatRow.row}</span>
+                      <div className="movie-row-seats">
+                        {seatRow.cells.map((seat) => {
                         if (seat.type === "space") {
                           return <span aria-hidden="true" className={`movie-seat-space ${seat.size ?? "large"}`} key={seat.key} />;
                         }
@@ -4561,12 +4648,16 @@ export default function Page() {
                         const paid = reservation?.paymentStatus === "paid_pending_review";
                         const selected = movieSelectedSeats.includes(seat.id);
                         return (
-                          <div className={`movie-seat-cell ${reservation ? "occupied" : ""} ${seat.variant ?? "standard"}`} key={seat.id}>
+                          <div
+                            className={`movie-seat-cell ${reservation ? "occupied" : ""} ${locatedMovieSeatId === seat.id ? "located" : ""} ${seat.variant ?? "standard"}`}
+                            id={`movie-seat-${seat.id}`}
+                            key={seat.id}
+                          >
                             <span className="movie-seat-name" title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : ""}>
                               {reservation ? movieSeatGuestLabel(reservation) : ""}
                             </span>
                             <button
-                              aria-label={`Vieta ${seat.id}${paid ? ", apmokėta" : reserved ? ", rezervuota" : selected ? ", pasirinkta" : ", laisva"}`}
+                              aria-label={`Vieta ${seat.id}${paid ? ", apmokėta" : reserved ? ", rezervuota" : selected ? ", pasirinkta" : ", laisva"}${locatedMovieSeatId === seat.id ? ", pažymėta paieškoje" : ""}`}
                               title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : `Vieta ${seat.id}`}
                               className={paid ? "movie-seat paid" : reserved ? "movie-seat reserved" : selected ? "movie-seat selected" : "movie-seat"}
                               disabled={reserved}
@@ -4577,11 +4668,12 @@ export default function Page() {
                             </button>
                           </div>
                         );
-                      })}
+                        })}
+                      </div>
+                      <span className="movie-row-label right">{seatRow.row}</span>
                     </div>
-                    <span className="movie-row-label right">{seatRow.row}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 

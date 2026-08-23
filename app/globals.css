@@ -501,7 +501,13 @@ textarea {
   align-items: start;
 }
 
+.movie-layout > * {
+  min-width: 0;
+}
+
 .movie-seat-map {
+  width: 100%;
+  min-width: 0;
   padding: 24px;
   border-radius: 28px;
   background:
@@ -509,7 +515,176 @@ textarea {
     linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
   border: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 44px rgba(15, 23, 42, 0.08);
-  overflow-x: auto;
+  overflow: visible;
+}
+
+.movie-seat-finder {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  width: min(100%, 430px);
+  gap: 10px;
+  margin: 0 0 18px auto;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.movie-seat-finder-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.movie-seat-finder-heading span {
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.movie-seat-finder-heading small {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.movie-seat-finder-control {
+  position: relative;
+}
+
+.movie-seat-finder-control input {
+  width: 100%;
+  min-height: 46px;
+  padding-right: 42px;
+  background: white;
+  border: 2px solid #cbd5e1;
+}
+
+.movie-seat-finder-control::after {
+  content: "";
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  border: 2px solid #2563eb;
+  border-radius: 999px;
+  box-shadow: 6px 6px 0 -4px #2563eb;
+}
+
+.movie-seat-finder-control:focus-within input {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.movie-seat-finder-results {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  max-height: 280px;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 15px;
+  background: white;
+  border: 1px solid #dbeafe;
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.18);
+}
+
+.movie-seat-finder-results button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 11px;
+  background: white;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+}
+
+.movie-seat-finder-results button:hover,
+.movie-seat-finder-results button:focus-visible {
+  background: #eff6ff;
+  outline: none;
+}
+
+.movie-seat-finder-results button span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movie-seat-finder-results button strong {
+  flex: 0 0 auto;
+  color: #2563eb;
+  font-size: 0.72rem;
+}
+
+.movie-seat-finder-empty {
+  padding: 14px 10px;
+  color: #64748b;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.movie-seat-finder-found {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #fef9c3, #ffedd5);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.movie-seat-finder-found > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.movie-seat-finder-found span {
+  color: #a16207;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.movie-seat-finder-found strong {
+  overflow: hidden;
+  color: #713f12;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movie-seat-finder-found button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(161, 98, 7, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #854d0e;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .movie-screen {
@@ -593,6 +768,16 @@ textarea {
   min-width: 940px;
 }
 
+.movie-seat-rows-scroll {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-bottom: 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+}
+
 .movie-seat-row {
   display: grid;
   grid-template-columns: 24px 1fr 24px;
@@ -619,11 +804,61 @@ textarea {
 }
 
 .movie-seat-cell {
+  position: relative;
   display: grid;
   grid-template-rows: 12px auto;
   gap: 2px;
   min-width: 0;
   align-items: flex-end;
+}
+
+.movie-seat-cell.located {
+  z-index: 6;
+}
+
+.movie-seat-cell.located::after {
+  content: "";
+  position: absolute;
+  inset: 8px -5px -5px;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 13px;
+  background:
+    linear-gradient(90deg, #f59e0b 55%, transparent 55%) repeat-x,
+    linear-gradient(90deg, #f59e0b 55%, transparent 55%) repeat-x,
+    linear-gradient(0deg, #f59e0b 55%, transparent 55%) repeat-y,
+    linear-gradient(0deg, #f59e0b 55%, transparent 55%) repeat-y;
+  background-position: 0 0, 10px 100%, 0 10px, 100% 0;
+  background-size: 10px 3px, 10px 3px, 3px 10px, 3px 10px;
+  filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.8));
+  animation: movie-seat-dashes 650ms linear infinite;
+}
+
+.movie-seat-cell.located .movie-seat {
+  box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.2), 0 0 24px rgba(245, 158, 11, 0.7);
+  animation: movie-seat-found-pulse 1.15s ease-in-out infinite;
+}
+
+.movie-seat-cell.located .movie-seat-name {
+  background: #f59e0b;
+  color: #422006;
+  opacity: 1;
+}
+
+@keyframes movie-seat-dashes {
+  to {
+    background-position: 10px 0, 0 100%, 0 0, 100% 10px;
+  }
+}
+
+@keyframes movie-seat-found-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
 }
 
 .movie-seat-space {
@@ -4897,7 +5132,7 @@ th {
   .hub-choice-grid,
   .movie-hero,
   .movie-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .movie-premiere-cover,
@@ -4978,6 +5213,16 @@ th {
 
   .movie-booking-panel {
     position: static;
+  }
+
+  .movie-seat-finder {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .movie-seat-finder-heading,
+  .movie-seat-finder-found {
+    align-items: flex-start;
   }
 
   .movie-reservation-summary {
@@ -5545,7 +5790,9 @@ th {
 @media (prefers-reduced-motion: reduce) {
   .movie-premiere-cover::before,
   .movie-premiere-panel img,
-  .movie-premiere-frame img {
+  .movie-premiere-frame img,
+  .movie-seat-cell.located::after,
+  .movie-seat-cell.located .movie-seat {
     animation: none;
   }
 }
