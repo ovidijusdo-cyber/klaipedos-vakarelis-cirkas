@@ -4777,8 +4777,8 @@ export default function Page() {
             <div className="movie-seat-map" aria-label="Kino salės vietų planas">
               <div className="movie-seat-finder">
                 <div className="movie-seat-finder-heading">
-                  <span>Užsiregistravusių vietos paieška</span>
-                  <small>Įrašyk vardą arba pavardę</small>
+                  <span>Noriu sėdėti prie draugo</span>
+                  <small>Įrašyk jau užsiregistravusio draugo vardą</small>
                 </div>
                 <div className="movie-seat-finder-control">
                   <input
@@ -4791,7 +4791,7 @@ export default function Page() {
                       setMovieSeatFinderOpen(true);
                       setLocatedMovieSeatId("");
                     }}
-                    placeholder="Pvz. Ovidijus Domkus"
+                    placeholder="Draugo vardas arba pavardė"
                   />
                   {movieSeatFinderOpen && normalizeText(movieSeatFinderLookup).length >= 2 ? (
                     <div className="movie-seat-finder-results">
