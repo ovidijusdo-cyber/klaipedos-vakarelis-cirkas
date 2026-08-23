@@ -431,7 +431,7 @@ textarea {
 .movie-availability-strip {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 18px;
   padding: 12px;
@@ -474,6 +474,10 @@ textarea {
 
 .movie-availability-item.reserved strong {
   color: #fca5a5;
+}
+
+.movie-availability-item.held strong {
+  color: #fde68a;
 }
 
 .movie-availability-progress {
@@ -687,6 +691,32 @@ textarea {
   cursor: pointer;
 }
 
+.movie-nearby-seats {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.movie-nearby-seats small {
+  color: #854d0e;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.movie-nearby-seats > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.movie-nearby-seats button {
+  min-height: 30px;
+  padding: 0 9px;
+  background: white;
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
 .movie-screen {
   max-width: 620px;
   margin: 0 auto 18px;
@@ -752,6 +782,10 @@ textarea {
 
 .seat-sample.selected {
   background: #2563eb;
+}
+
+.seat-sample.held {
+  background: #f59e0b;
 }
 
 .seat-sample.reserved {
@@ -950,6 +984,25 @@ textarea {
   background: linear-gradient(180deg, #3b82f6, #1d4ed8);
   color: white;
   border-color: rgba(29, 78, 216, 0.35);
+}
+
+.movie-seat.held {
+  background: linear-gradient(180deg, #fbbf24, #d97706);
+  color: #422006;
+  cursor: not-allowed;
+}
+
+.movie-seat.pending {
+  opacity: 0.58;
+  cursor: wait;
+  animation: movie-seat-pending 780ms ease-in-out infinite alternate;
+}
+
+@keyframes movie-seat-pending {
+  to {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.22);
+  }
 }
 
 .movie-seat.reserved {
@@ -1167,6 +1220,115 @@ textarea {
 .movie-cancel-card p {
   color: var(--muted);
   line-height: 1.5;
+}
+
+.movie-hold-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.movie-total-card .movie-hold-countdown span {
+  color: #fde68a;
+  font-size: 0.78rem;
+}
+
+.movie-total-card .movie-hold-countdown strong {
+  color: white;
+  font-size: 1.18rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.movie-group-email-field,
+.movie-admin-settings,
+.movie-admin-settings label {
+  display: grid;
+  gap: 7px;
+}
+
+.movie-group-email-field {
+  padding: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #eff6ff, #eef2ff);
+}
+
+.movie-group-email-field > span,
+.movie-admin-settings label > span {
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.movie-group-email-field small,
+.movie-admin-settings > small {
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.movie-waitlist-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f5f3ff, #fff);
+}
+
+.movie-waitlist-card h3 {
+  margin: 4px 0 6px;
+}
+
+.movie-waitlist-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.movie-admin-settings {
+  gap: 14px;
+}
+
+.movie-admin-settings code {
+  padding: 2px 5px;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.movie-share-button {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.movie-share-button:hover {
+  background: rgba(255, 255, 255, 0.23);
+  transform: translateY(-1px);
+}
+
+.movie-live-status {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.66rem;
+  font-weight: 700;
 }
 
 .movie-reminder-field {
@@ -5185,7 +5347,7 @@ th {
   }
 
   .movie-availability-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     padding: 8px;
   }
@@ -5792,7 +5954,8 @@ th {
   .movie-premiere-panel img,
   .movie-premiere-frame img,
   .movie-seat-cell.located::after,
-  .movie-seat-cell.located .movie-seat {
+  .movie-seat-cell.located .movie-seat,
+  .movie-seat.pending {
     animation: none;
   }
 }

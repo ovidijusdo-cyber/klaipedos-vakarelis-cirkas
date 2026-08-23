@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
+import { normalizeMovieSettings, type MovieSettings } from "../../../lib/movie";
 
 export const dynamic = "force-dynamic";
 
 const STATE_ID = "main";
 const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
-const MOVIE_EVENT_NAME = process.env.MOVIE_EVENT_NAME ?? "JW filmų peržiūra";
-const MOVIE_EVENT_DATE = process.env.MOVIE_EVENT_DATE ?? "Data ir laikas bus patikslinti";
-const MOVIE_EVENT_PLACE = process.env.MOVIE_EVENT_PLACE ?? "Forum Cinemas";
-const MOVIE_EVENT_START_ISO = process.env.MOVIE_EVENT_START_ISO ?? process.env.NEXT_PUBLIC_MOVIE_EVENT_START_ISO ?? "";
 
 type MovieSeatReservation = {
   id: number;
@@ -59,7 +56,7 @@ function parseReservations(value: unknown): MovieSeatReservation[] {
   });
 }
 
-async function sendReminderEmail(reservation: MovieSeatReservation) {
+async function sendReminderEmail(reservations: MovieSeatReservation[], settings: MovieSettings) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.REMINDER_EMAIL_FROM;
 
@@ -67,7 +64,10 @@ async function sendReminderEmail(reservation: MovieSeatReservation) {
     return { sent: false, skipped: "missing_email_config" };
   }
 
-  const fullName = `${reservation.firstName} ${reservation.lastName}`.trim();
+  const firstReservation = reservations[0];
+  const guestRows = reservations
+    .map((reservation) => `<li>${escapeHtml(`${reservation.firstName} ${reservation.lastName}`.trim())} - vieta <strong>${escapeHtml(reservation.seatId)}</strong></li>`)
+    .join("");
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -76,19 +76,20 @@ async function sendReminderEmail(reservation: MovieSeatReservation) {
     },
     body: JSON.stringify({
       from,
-      to: reservation.reminderEmail,
-      subject: `Priminimas: ${MOVIE_EVENT_NAME}`,
+      to: firstReservation.reminderEmail,
+      subject: `Priminimas: ${settings.eventName}`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.55; color: #111827;">
           <h2 style="margin: 0 0 12px;">Primename apie kino peržiūrą</h2>
-          <p>Sveiki, ${escapeHtml(fullName)}.</p>
+          <p>Sveiki!</p>
           <p>Iki renginio liko apie 24 val.</p>
           <p>
-            <strong>Renginys:</strong> ${escapeHtml(MOVIE_EVENT_NAME)}<br />
-            <strong>Vieta:</strong> ${escapeHtml(MOVIE_EVENT_PLACE)}<br />
-            <strong>Laikas:</strong> ${escapeHtml(MOVIE_EVENT_DATE)}<br />
-            <strong>Jūsų vieta:</strong> ${escapeHtml(reservation.seatId)}
+            <strong>Renginys:</strong> ${escapeHtml(settings.eventName)}<br />
+            <strong>Vieta:</strong> ${escapeHtml(settings.place)}<br />
+            <strong>Laikas:</strong> ${escapeHtml(settings.dateLabel)}<br />
+            <strong>Rezervuotos vietos:</strong>
           </p>
+          <ul>${guestRows}</ul>
           <p>Iki susitikimo!</p>
         </div>
       `,
@@ -111,11 +112,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!MOVIE_EVENT_START_ISO) {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.from("event_state").select("payload").eq("id", STATE_ID).maybeSingle();
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const payload = isRecord(data?.payload) ? { ...data.payload } : {};
+  const settings = normalizeMovieSettings(payload.movieSettings);
+
+  if (!settings.startIso) {
     return NextResponse.json({ sent: 0, skipped: "missing_movie_event_start" });
   }
 
-  const eventStart = new Date(MOVIE_EVENT_START_ISO);
+  const eventStart = new Date(settings.startIso);
   if (Number.isNaN(eventStart.getTime())) {
     return NextResponse.json({ sent: 0, skipped: "invalid_movie_event_start" });
   }
@@ -126,13 +136,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ sent: 0, skipped: "not_due_yet" });
   }
 
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase.from("event_state").select("payload").eq("id", STATE_ID).maybeSingle();
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const payload = isRecord(data?.payload) ? { ...data.payload } : {};
   const reservations = parseReservations(payload.movieSeatReservations);
   const dueReservations = reservations.filter(
     (reservation) =>
@@ -143,17 +146,25 @@ export async function GET(request: Request) {
   );
 
   let sent = 0;
+  let emailsSent = 0;
   const skipped: string[] = [];
   const sentAt = new Date().toISOString();
   const sentIds = new Set<number>();
 
-  for (const reservation of dueReservations) {
-    const result = await sendReminderEmail(reservation);
+  const reservationsByEmail = new Map<string, MovieSeatReservation[]>();
+  dueReservations.forEach((reservation) => {
+    const email = reservation.reminderEmail ?? "";
+    reservationsByEmail.set(email, [...(reservationsByEmail.get(email) ?? []), reservation]);
+  });
+
+  for (const reservationsForEmail of reservationsByEmail.values()) {
+    const result = await sendReminderEmail(reservationsForEmail, settings);
     if (result.sent) {
-      sent += 1;
-      sentIds.add(reservation.id);
+      sent += reservationsForEmail.length;
+      emailsSent += 1;
+      reservationsForEmail.forEach((reservation) => sentIds.add(reservation.id));
     } else if (result.skipped) {
-      skipped.push(`${reservation.seatId}:${result.skipped}`);
+      skipped.push(`${reservationsForEmail.map((reservation) => reservation.seatId).join(",")}:${result.skipped}`);
     }
   }
 
@@ -174,5 +185,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ due: dueReservations.length, sent, skipped });
+  return NextResponse.json({ due: dueReservations.length, sent, emailsSent, skipped });
 }
