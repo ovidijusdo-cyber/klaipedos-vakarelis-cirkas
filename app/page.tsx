@@ -2,6 +2,7 @@
 
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import jsQR from "jsqr";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -2423,6 +2424,8 @@ function ClownJumpGame({
 }
 
 export default function Page() {
+  const pathname = usePathname();
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerStreamRef = useRef<MediaStream | null>(null);
   const scannerFrameRef = useRef<number | null>(null);
@@ -2443,7 +2446,7 @@ export default function Page() {
   const [movieSettings, setMovieSettings] = useState<MovieSettings>(DEFAULT_MOVIE_SETTINGS);
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
 
-  const [appMode, setAppMode] = useState<AppMode>("home");
+  const [appMode, setAppMode] = useState<AppMode>(() => pathname === "/kino-filmas" ? "movie" : "home");
   const [registerOpen, setRegisterOpen] = useState(false);
   const [myTicketOpen, setMyTicketOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -2655,6 +2658,14 @@ export default function Page() {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (pathname === "/kino-filmas") {
+      setAppMode("movie");
+    } else if (pathname === "/") {
+      setAppMode((current) => current === "movie" ? "home" : current);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (appMode !== "movie") return;
@@ -4555,6 +4566,12 @@ export default function Page() {
     })),
   );
 
+  function openAppMode(mode: AppMode) {
+    setAppMode(mode);
+    const targetPath = mode === "movie" ? "/kino-filmas" : "/";
+    if (pathname !== targetPath) router.push(targetPath);
+  }
+
   function renderAdminPersonRow(reservation: Reservation, person: Person) {
     const isEditing =
       adminPersonEdit?.reservationId === reservation.id &&
@@ -4654,13 +4671,13 @@ export default function Page() {
           </div>
 
           <div className="hub-choice-grid">
-            <button className="hub-choice-card movie" type="button" onClick={() => setAppMode("movie")}>
+            <button className="hub-choice-card movie" type="button" onClick={() => openAppMode("movie")}>
               <span>Kino filmo peržiūra</span>
               <strong>Dviejų filmų peržiūra {movieSettings.place}</strong>
               <p>Pasirink vietas kaip kino salėje, įrašyk dalyvių vardus ir iškart matyk mokėtiną sumą.</p>
             </button>
 
-            <button className="hub-choice-card party" type="button" onClick={() => setAppMode("party")}>
+            <button className="hub-choice-card party" type="button" onClick={() => openAppMode("party")}>
               <span>Klaipėdos vakarėlis</span>
               <strong>Vakarėlio CIRKAS archyvas ir sistema</strong>
               <p>Visas ankstesnis vakarėlio puslapis, registracijos, programos blokai, admin zona ir žaidimai lieka čia.</p>
@@ -4681,7 +4698,7 @@ export default function Page() {
         <div className="page-glow page-glow-left" />
         <div className="page-glow page-glow-right" />
 
-        <button className="ghost-button back-home-button" type="button" onClick={() => setAppMode("home")}>
+        <button className="ghost-button back-home-button" type="button" onClick={() => openAppMode("home")}>
           Grįžti į pasirinkimą
         </button>
 
@@ -5251,7 +5268,7 @@ export default function Page() {
           </div>
         ) : null}
 
-        <button className="ghost-button back-home-button" type="button" onClick={() => setAppMode("home")}>
+        <button className="ghost-button back-home-button" type="button" onClick={() => openAppMode("home")}>
           Grįžti į pasirinkimą
         </button>
 
