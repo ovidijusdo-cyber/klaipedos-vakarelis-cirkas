@@ -4677,10 +4677,13 @@ export default function Page() {
               <p>Pasirink vietas kaip kino salėje, įrašyk dalyvių vardus ir iškart matyk mokėtiną sumą.</p>
             </button>
 
-            <button className="hub-choice-card party" type="button" onClick={() => openAppMode("party")}>
-              <span>Klaipėdos vakarėlis</span>
-              <strong>Vakarėlio CIRKAS archyvas ir sistema</strong>
-              <p>Visas ankstesnis vakarėlio puslapis, registracijos, programos blokai, admin zona ir žaidimai lieka čia.</p>
+            <button className="hub-choice-card party locked" type="button" disabled aria-disabled="true">
+              <div className="hub-choice-topline">
+                <span>Klaipėdos vakarėlis</span>
+                <span className="hub-lock-badge"><i aria-hidden="true" /> Užrakinta</span>
+              </div>
+              <strong>Laukite naujienų</strong>
+              <p>Naujas Klaipėdos vakarėlis numatomas spalio pabaigoje arba lapkričio pradžioje.</p>
             </button>
           </div>
         </section>

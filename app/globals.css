@@ -201,6 +201,73 @@ textarea {
   background: linear-gradient(135deg, #7f1d1d, #ea580c 54%, #facc15);
 }
 
+.hub-choice-card.party.locked {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(251, 191, 36, 0.2), transparent 28%),
+    linear-gradient(135deg, #111827, #292524 58%, #78350f);
+  cursor: not-allowed;
+  opacity: 0.94;
+}
+
+.hub-choice-card.party.locked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(135deg, transparent 0 16px, rgba(255, 255, 255, 0.025) 16px 17px);
+}
+
+.hub-choice-card.party.locked:hover {
+  transform: none;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.16);
+}
+
+.hub-choice-topline {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hub-choice-card .hub-lock-badge {
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.hub-lock-badge i {
+  position: relative;
+  display: inline-block;
+  width: 11px;
+  height: 9px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: #fbbf24;
+}
+
+.hub-lock-badge i::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -6px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #fbbf24;
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+}
+
+.hub-choice-card.party.locked strong,
+.hub-choice-card.party.locked p {
+  position: relative;
+  z-index: 1;
+}
+
 .hub-choice-card span {
   display: inline-flex;
   padding: 7px 12px;
