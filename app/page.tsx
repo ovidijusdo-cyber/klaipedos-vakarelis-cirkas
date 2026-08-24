@@ -4801,6 +4801,7 @@ export default function Page() {
               <div className="movie-event-highlight-date">
                 <span>Filmai jau suplanuoti</span>
                 <strong>{movieEventHighlight.date}</strong>
+                <small className="movie-final-screening-badge">Paskutinė šiais metais organizuojama peržiūra</small>
               </div>
               <div>
                 <span>Pradžia</span>

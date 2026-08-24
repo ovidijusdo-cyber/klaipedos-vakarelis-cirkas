@@ -611,6 +611,22 @@ textarea {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.movie-final-screening-badge {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 3px;
+  padding: 5px 9px;
+  border: 1px solid rgba(254, 240, 138, 0.38);
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.14);
+  color: #fef08a;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
 .movie-event-highlight span {
   color: #fde68a;
   font-size: 0.7rem;
