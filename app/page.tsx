@@ -3,6 +3,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import jsQR from "jsqr";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -257,6 +258,9 @@ const BANK_ACCOUNT = {
 };
 const TELEGRAM_GROUP_URL = "https://t.me/+2Lo4XbXkjcM3NTBk";
 const MOVIE_DIRECTORY_PAGE_SIZE = 10;
+const SITE_PRESENCE_CHANNEL = process.env.NODE_ENV === "production"
+  ? "klaipedos-jw-site-viewers"
+  : "klaipedos-jw-site-viewers-development";
 const MOVIE_FEATURES = [
   {
     title: "Viliamės to, ko nematome",
@@ -917,6 +921,14 @@ function normalizeMovieSeatReservations(items: MovieSeatReservation[]): MovieSea
       createdAt: typeof item.createdAt === "string" ? item.createdAt : formatDateTime(),
     }];
   });
+}
+
+function onlineViewerLabel(count: number) {
+  const lastTwoDigits = count % 100;
+  const lastDigit = count % 10;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return "žiūrovas";
+  if (lastDigit >= 2 && lastDigit <= 9 && (lastTwoDigits < 11 || lastTwoDigits > 19)) return "žiūrovai";
+  return "žiūrovų";
 }
 
 function parseSyncedArray(value: string | undefined) {
@@ -2545,6 +2557,8 @@ export default function Page() {
   const [moviePaymentLookup, setMoviePaymentLookup] = useState("");
   const [movieAdminPaymentLookup, setMovieAdminPaymentLookup] = useState("");
   const [moviePaymentSaving, setMoviePaymentSaving] = useState(false);
+  const [liveViewerCount, setLiveViewerCount] = useState<number | null>(null);
+  const [liveViewerStatus, setLiveViewerStatus] = useState<"connecting" | "live" | "unavailable">("connecting");
   const [movieCancelLookup, setMovieCancelLookup] = useState("");
   const [movieSeatFinderLookup, setMovieSeatFinderLookup] = useState("");
   const [movieSeatFinderOpen, setMovieSeatFinderOpen] = useState(false);
@@ -2688,6 +2702,81 @@ export default function Page() {
       setAppMode((current) => current === "movie" ? "home" : current);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      setLiveViewerStatus("unavailable");
+      return;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    });
+    const presenceKey = window.crypto.randomUUID();
+    const presenceConfig = { key: presenceKey, enabled: true };
+    const channel = supabase.channel(SITE_PRESENCE_CHANNEL, {
+      config: { presence: presenceConfig },
+    });
+    let subscribed = false;
+    let selfTracked = false;
+    let stopped = false;
+
+    const syncViewerCount = () => {
+      if (stopped) return;
+      const presenceState = channel.presenceState();
+      const serverCount = Object.values(presenceState).reduce((total, presences) => total + presences.length, 0);
+      const selfAlreadyIncluded = Boolean(presenceState[presenceKey]?.length);
+      const count = serverCount + (selfTracked && !selfAlreadyIncluded ? 1 : 0);
+      setLiveViewerCount(count);
+    };
+
+    const trackVisibleViewer = async () => {
+      if (!subscribed || document.visibilityState !== "visible") return;
+      const result = await channel.track({ active: true });
+      if (stopped) return;
+      if (result === "ok") {
+        selfTracked = true;
+        setLiveViewerStatus("live");
+        syncViewerCount();
+      } else {
+        setLiveViewerStatus("unavailable");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void trackVisibleViewer();
+      } else {
+        selfTracked = false;
+        void channel.untrack();
+      }
+    };
+
+    channel
+      .on("presence", { event: "sync" }, syncViewerCount)
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          subscribed = true;
+          void trackVisibleViewer();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setLiveViewerStatus("unavailable");
+        }
+      });
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      stopped = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      void channel.untrack();
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     const seatId = movieGuestScrollSeatRef.current;
@@ -4938,6 +5027,15 @@ export default function Page() {
           title="Vietų pasirinkimas"
           description="Salės planas atkartoja kino teatro išdėstymą. Pilka - laisva, mėlyna - tavo pasirinkta, raudona - rezervuota, žalia - žmogus pažymėjo, kad apmokėjo."
         >
+          <div className={`movie-live-viewers ${liveViewerStatus}`} role="status" aria-live="polite">
+            <span><i aria-hidden="true" /> Šiuo metu svetainėje</span>
+            <strong>{liveViewerCount ?? "..."}</strong>
+            <small>
+              {liveViewerStatus === "live" && liveViewerCount !== null
+                ? onlineViewerLabel(liveViewerCount)
+                : liveViewerStatus === "unavailable" ? "gyvas skaičius nepasiekiamas" : "jungiamasi..."}
+            </small>
+          </div>
           <div className="movie-availability-strip" aria-label="Kino salės užimtumas">
             <div className="movie-availability-item total">
               <span>Visos vietos</span>
