@@ -13,8 +13,8 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Klaipėdos vakarėlis CIRKAS",
-  description: "Privati vakarėlio registracijos svetainė.",
+  title: "Klaipėdos JW renginiai",
+  description: "Klaipėdos JW renginių informacija ir registracija.",
   robots: {
     index: false,
     follow: false,
