@@ -4412,6 +4412,16 @@ export default function Page() {
           ...forms,
           [seatId]: forms[seatId] ?? { firstName: "", lastName: "", reminderEmail: "" },
         }));
+        if (window.matchMedia("(max-width: 720px)").matches) {
+          window.setTimeout(() => {
+            const guestCard = document.getElementById(`movie-guest-${seatId}`);
+            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            guestCard?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+            window.setTimeout(() => {
+              guestCard?.querySelector<HTMLInputElement>('input[autocomplete="given-name"]')?.focus({ preventScroll: true });
+            }, 450);
+          }, 0);
+        }
       }
     } catch (error) {
       if (selected) {
@@ -5091,7 +5101,7 @@ export default function Page() {
                     </label>
                   ) : null}
                   {movieSelectedSeats.map((seatId) => (
-                    <div className="movie-guest-card" key={seatId}>
+                    <div className="movie-guest-card" id={`movie-guest-${seatId}`} key={seatId}>
                       <div className="movie-guest-heading">
                         <span>2 žingsnis</span>
                         <strong>Kas sėdės vietoje {seatId}?</strong>

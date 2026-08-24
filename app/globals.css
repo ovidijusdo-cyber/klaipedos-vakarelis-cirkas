@@ -1354,6 +1354,7 @@ textarea {
 .movie-booking-panel .movie-guest-card {
   gap: 16px;
   padding: 20px;
+  scroll-margin-top: 16px;
   border-color: rgba(37, 99, 235, 0.2);
   background: linear-gradient(180deg, #ffffff, #f8fbff);
   box-shadow: 0 14px 34px rgba(30, 64, 175, 0.08);
