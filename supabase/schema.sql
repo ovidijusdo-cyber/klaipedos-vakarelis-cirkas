@@ -36,6 +36,14 @@ insert into public.event_state (id, payload)
 values ('main', '{}'::jsonb)
 on conflict (id) do nothing;
 
+alter table public.event_state enable row level security;
+revoke all on table public.event_state from anon, authenticated;
+grant select, insert, update, delete on table public.event_state to service_role;
+
+alter table public.event_state_backups enable row level security;
+revoke all on table public.event_state_backups from anon, authenticated;
+grant select, insert, update, delete on table public.event_state_backups to service_role;
+
 create table if not exists public.movie_seat_holds (
   seat_id text primary key,
   hold_token uuid not null,
