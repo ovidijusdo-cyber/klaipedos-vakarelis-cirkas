@@ -269,6 +269,18 @@ const MOVIE_FEATURES = [
     imageUrl: "https://cms-imgp.jw-cdn.org/img/p/1102016443/univ/art/1102016443_univ_lss_lg.jpg",
   },
 ];
+const MOVIE_PREVIEW_LINKS = [
+  {
+    eyebrow: "Įvadinis filmukas",
+    label: "Apie šių dienų filmą",
+    url: "https://www.jw.org/lt/biblioteka/videoteka/#lt/mediaitems/VODMoviesExtras/pub-dns_1_VIDEO",
+  },
+  {
+    eyebrow: "Apie filmą",
+    label: "Apie Biblijos laikų filmą",
+    url: "https://www.jw.org/lt/biblioteka/videoteka/#lt/mediaitems/pub-jwb_201705_9_VIDEO",
+  },
+];
 const MOVIE_GALLERY_IMAGES = [
   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-gOcgVp_HxieA8hWaeFqxMtQE1ZAx3tihDQYoG-k0wQ&s=10",
   "https://cms-imgp.jw-cdn.org/img/p/1102016359/univ/art/1102016359_univ_lsr_lg.jpg",
@@ -4827,6 +4839,22 @@ export default function Page() {
                 </div>
               ))}
             </div>
+          </div>
+          <div className="movie-preview-links" aria-label="Papildomi filmų vaizdo įrašai">
+            {MOVIE_PREVIEW_LINKS.map((preview, index) => {
+              const title = index === 0 ? movieSettings.firstMovieTitle : movieSettings.secondMovieTitle;
+              return (
+                <a href={preview.url} key={preview.url} target="_blank" rel="noreferrer">
+                  <span className="movie-preview-play" aria-hidden="true"><i /></span>
+                  <span className="movie-preview-copy">
+                    <small>{preview.eyebrow}</small>
+                    <strong>{preview.label}</strong>
+                    <span>{title}</span>
+                  </span>
+                  <span className="movie-preview-domain">jw.org</span>
+                </a>
+              );
+            })}
           </div>
           <div className="movie-hero-copy">
             <div>
