@@ -495,6 +495,54 @@ textarea {
   gap: 12px;
 }
 
+.movie-event-highlight {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(130px, 0.45fr) minmax(0, 1.85fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(254, 240, 138, 0.38);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(250, 204, 21, 0.32), transparent 32%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(120, 53, 15, 0.9));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+}
+
+.movie-event-highlight > div {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 76px;
+  padding: 13px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.movie-event-highlight span {
+  color: #fde68a;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.movie-event-highlight strong {
+  color: white;
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+  line-height: 1.12;
+}
+
+.movie-event-highlight-date strong,
+.movie-event-highlight > div:nth-child(2) strong {
+  color: #fef08a;
+}
+
+.movie-event-highlight-place strong {
+  font-size: clamp(0.96rem, 1.8vw, 1.28rem);
+  line-height: 1.25;
+}
+
 .movie-availability-strip {
   position: relative;
   display: grid;
@@ -5367,6 +5415,14 @@ th {
   .movie-premiere-cover,
   .movie-info-grid {
     grid-template-columns: 1fr;
+  }
+
+  .movie-event-highlight {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .movie-event-highlight-place {
+    grid-column: 1 / -1;
   }
 
   .movie-premiere-main {

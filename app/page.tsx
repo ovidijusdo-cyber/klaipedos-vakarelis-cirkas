@@ -2951,6 +2951,23 @@ export default function Page() {
   const moviePaymentSeats = moviePaymentReservations.map((reservation) => reservation.seatId);
   const moviePaymentTotal = moviePaymentReservations.length * movieSettings.ticketPrice;
   const movieCalendarLink = googleCalendarUrl(movieSettings);
+  const movieEventHighlight = useMemo(() => {
+    const start = new Date(movieSettings.startIso);
+    if (Number.isNaN(start.getTime())) return null;
+
+    return {
+      date: new Intl.DateTimeFormat("lt-LT", {
+        timeZone: "Europe/Vilnius",
+        month: "long",
+        day: "numeric",
+      }).format(start),
+      time: new Intl.DateTimeFormat("lt-LT", {
+        timeZone: "Europe/Vilnius",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(start),
+    };
+  }, [movieSettings.startIso]);
   const movieCancellationMatches = useMemo(() => {
     const query = normalizeText(movieCancelLookup);
     if (query.length < 2) return [];
@@ -4706,6 +4723,22 @@ export default function Page() {
         </button>
 
         <section className="movie-hero">
+          {movieEventHighlight ? (
+            <div className="movie-event-highlight" aria-label="Svarbiausia kino peržiūros informacija">
+              <div className="movie-event-highlight-date">
+                <span>Filmai jau suplanuoti</span>
+                <strong>{movieEventHighlight.date}</strong>
+              </div>
+              <div>
+                <span>Pradžia</span>
+                <strong>{movieEventHighlight.time}</strong>
+              </div>
+              <div className="movie-event-highlight-place">
+                <span>Susitinkame</span>
+                <strong>{movieSettings.place}</strong>
+              </div>
+            </div>
+          ) : null}
           <div className="movie-premiere-cover" aria-label="Rodomi filmai">
             <div className="movie-premiere-main">
               {MOVIE_FEATURES.map((movie, index) => {

@@ -13,10 +13,10 @@ export type MovieSettings = {
 
 export const DEFAULT_MOVIE_SETTINGS: MovieSettings = {
   eventName: "Kviečiame jus į dviejų filmų peržiūrą",
-  dateLabel: "Data ir laikas bus patikslinti",
-  startIso: "",
-  endIso: "",
-  place: "Forum Cinemas",
+  dateLabel: "2026 m. rugsėjo 26 d., pradžia 18:20",
+  startIso: "2026-09-26T18:20:00+03:00",
+  endIso: "2026-09-26T21:20:00+03:00",
+  place: "Forum Cinemas Klaipėda „Akropolis“, 2 aukštas, salė Nr. 2",
   ticketPrice: 6,
   revolutPaymentUrl: "https://revolut.me/ovidij1c5",
   swedbankPaymentUrl: "https://www.swedbank.lt/private",
