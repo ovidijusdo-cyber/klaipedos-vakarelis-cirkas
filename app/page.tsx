@@ -2559,6 +2559,7 @@ export default function Page() {
   const syncedStateRef = useRef<Record<string, string>>({});
   const remoteStateLoadedRef = useRef(false);
   const movieHoldTokenRef = useRef("");
+  const movieGuestScrollSeatRef = useRef("");
   const [voteVoterLookup, setVoteVoterLookup] = useState("");
   const [selectedVoterId, setSelectedVoterId] = useState("");
   const [selectedVoteCategory, setSelectedVoteCategory] = useState("");
@@ -2687,6 +2688,47 @@ export default function Page() {
       setAppMode((current) => current === "movie" ? "home" : current);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    const seatId = movieGuestScrollSeatRef.current;
+    if (!seatId || !movieSelectedSeats.includes(seatId)) return;
+
+    const mobileDevice = window.innerWidth <= 1024 || window.matchMedia("(pointer: coarse)").matches;
+    if (!mobileDevice) {
+      movieGuestScrollSeatRef.current = "";
+      return;
+    }
+
+    let cancelled = false;
+    let frameId = 0;
+    let focusTimer = 0;
+    let attempts = 0;
+
+    const scrollToGuestCard = () => {
+      if (cancelled) return;
+      const guestCard = document.getElementById(`movie-guest-${seatId}`);
+      if (!guestCard && attempts < 12) {
+        attempts += 1;
+        frameId = window.requestAnimationFrame(scrollToGuestCard);
+        return;
+      }
+      if (!guestCard) return;
+
+      movieGuestScrollSeatRef.current = "";
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      guestCard.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+      focusTimer = window.setTimeout(() => {
+        guestCard.querySelector<HTMLInputElement>('input[autocomplete="given-name"]')?.focus({ preventScroll: true });
+      }, reducedMotion ? 0 : 650);
+    };
+
+    frameId = window.requestAnimationFrame(scrollToGuestCard);
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(focusTimer);
+    };
+  }, [movieSelectedSeats]);
 
   useEffect(() => {
     if (appMode !== "movie") return;
@@ -4407,21 +4449,12 @@ export default function Page() {
         setMovieSeatHolds((previous) => previous.filter((hold) => hold.seatId !== seatId || !hold.owned));
       } else if (data.hold) {
         setMovieSeatHolds((previous) => [...previous.filter((hold) => hold.seatId !== seatId), data.hold as MovieSeatHold]);
+        movieGuestScrollSeatRef.current = seatId;
         setMovieSelectedSeats((previous) => [...previous, seatId].sort((a, b) => a.localeCompare(b, "lt", { numeric: true })));
         setMovieGuestForms((forms) => ({
           ...forms,
           [seatId]: forms[seatId] ?? { firstName: "", lastName: "", reminderEmail: "" },
         }));
-        if (window.matchMedia("(max-width: 720px)").matches) {
-          window.setTimeout(() => {
-            const guestCard = document.getElementById(`movie-guest-${seatId}`);
-            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            guestCard?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
-            window.setTimeout(() => {
-              guestCard?.querySelector<HTMLInputElement>('input[autocomplete="given-name"]')?.focus({ preventScroll: true });
-            }, 450);
-          }, 0);
-        }
       }
     } catch (error) {
       if (selected) {
