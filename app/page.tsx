@@ -5067,6 +5067,23 @@ export default function Page() {
                     <a className="secondary-button" href={movieSettings.swedbankPaymentUrl} target="_blank" rel="noreferrer">
                       Apmokėti per Swedbank
                     </a>
+                    <details className="movie-bank-details">
+                      <summary>Bankiniai duomenys</summary>
+                      <dl>
+                        <div>
+                          <dt>Gavėjas</dt>
+                          <dd>{movieSettings.bankRecipient}</dd>
+                        </div>
+                        <div>
+                          <dt>IBAN</dt>
+                          <dd>{movieSettings.bankIban}</dd>
+                        </div>
+                        <div>
+                          <dt>BIC / SWIFT</dt>
+                          <dd>{movieSettings.bankBic}</dd>
+                        </div>
+                      </dl>
+                    </details>
                     <button className="success-button" type="button" onClick={() => void confirmMoviePayment()}>
                       Apmokėjau
                     </button>
@@ -5972,6 +5989,20 @@ export default function Page() {
                     <label>
                       <span>Swedbank mokėjimo nuoroda</span>
                       <input type="url" value={movieSettings.swedbankPaymentUrl} onChange={(event) => updateMovieSetting("swedbankPaymentUrl", event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="form-grid three">
+                    <label>
+                      <span>Bankinio pavedimo gavėjas</span>
+                      <input value={movieSettings.bankRecipient} onChange={(event) => updateMovieSetting("bankRecipient", event.target.value)} />
+                    </label>
+                    <label>
+                      <span>IBAN</span>
+                      <input value={movieSettings.bankIban} onChange={(event) => updateMovieSetting("bankIban", event.target.value)} />
+                    </label>
+                    <label>
+                      <span>BIC / SWIFT</span>
+                      <input value={movieSettings.bankBic} onChange={(event) => updateMovieSetting("bankBic", event.target.value)} />
                     </label>
                   </div>
                   <small>24 val. el. priminimams būtina įrašyti tikslią pradžią su Lietuvos laiko juosta, pavyzdžiui, <code>+03:00</code>.</small>

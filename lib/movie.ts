@@ -7,6 +7,9 @@ export type MovieSettings = {
   ticketPrice: number;
   revolutPaymentUrl: string;
   swedbankPaymentUrl: string;
+  bankRecipient: string;
+  bankIban: string;
+  bankBic: string;
   firstMovieTitle: string;
   secondMovieTitle: string;
 };
@@ -19,7 +22,10 @@ export const DEFAULT_MOVIE_SETTINGS: MovieSettings = {
   place: "Forum Cinemas Klaipėda „Akropolis“, 2 aukštas, salė Nr. 2",
   ticketPrice: 6,
   revolutPaymentUrl: "https://revolut.me/ovidij1c5",
-  swedbankPaymentUrl: "https://www.swedbank.lt/private",
+  swedbankPaymentUrl: "https://www.swedbank.lt/pay?id=pr-hifleifwnfuq",
+  bankRecipient: "Ovidijus Domkus",
+  bankIban: "LT42 3250 0669 2279 1534",
+  bankBic: "REVOLT21",
   firstMovieTitle: "Viliamės to, ko nematome",
   secondMovieTitle: "Tavimi, Jehova, aš pasitikiu",
 };
@@ -48,6 +54,9 @@ export function normalizeMovieSettings(value: unknown): MovieSettings {
     ticketPrice: Number.isFinite(price) && price >= 0 && price <= 1000 ? Math.round(price * 100) / 100 : DEFAULT_MOVIE_SETTINGS.ticketPrice,
     revolutPaymentUrl: textSetting(settings.revolutPaymentUrl, DEFAULT_MOVIE_SETTINGS.revolutPaymentUrl, 500),
     swedbankPaymentUrl: textSetting(settings.swedbankPaymentUrl, DEFAULT_MOVIE_SETTINGS.swedbankPaymentUrl, 500),
+    bankRecipient: textSetting(settings.bankRecipient, DEFAULT_MOVIE_SETTINGS.bankRecipient, 160),
+    bankIban: textSetting(settings.bankIban, DEFAULT_MOVIE_SETTINGS.bankIban, 80),
+    bankBic: textSetting(settings.bankBic, DEFAULT_MOVIE_SETTINGS.bankBic, 40),
     firstMovieTitle: textSetting(settings.firstMovieTitle, DEFAULT_MOVIE_SETTINGS.firstMovieTitle),
     secondMovieTitle: textSetting(settings.secondMovieTitle, DEFAULT_MOVIE_SETTINGS.secondMovieTitle),
   };
