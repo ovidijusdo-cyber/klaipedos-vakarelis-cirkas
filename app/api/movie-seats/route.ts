@@ -341,7 +341,7 @@ export async function POST(request: Request) {
         .gt("expires_at", new Date().toISOString());
       if (holdsError) throw holdsError;
       if ((holds ?? []).length !== seatIds.length) {
-        return NextResponse.json({ error: "Baigėsi 3 minučių vietų laikymo laikas. Pasirink vietas iš naujo." }, { status: 409 });
+        return NextResponse.json({ error: "Baigėsi 5 minučių vietų laikymo laikas. Pasirink vietas iš naujo." }, { status: 409 });
       }
 
       const createdAt = formatDateTime();

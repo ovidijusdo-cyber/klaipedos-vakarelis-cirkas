@@ -30,7 +30,7 @@ export const DEFAULT_MOVIE_SETTINGS: MovieSettings = {
   secondMovieTitle: "Tavimi, Jehova, aš pasitikiu",
 };
 
-export const MOVIE_SEAT_HOLD_SECONDS = 180;
+export const MOVIE_SEAT_HOLD_SECONDS = 300;
 export const MOVIE_SEAT_COUNT = 172;
 
 function textSetting(value: unknown, fallback: string, maxLength = 240) {
