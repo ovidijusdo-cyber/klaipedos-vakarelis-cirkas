@@ -347,23 +347,28 @@ textarea {
   animation: movie-cover-light 8s ease-in-out infinite alternate;
 }
 
-.movie-premiere-cover::after {
-  content: "KVIEČIAME JUS Į DVIEJŲ FILMŲ PERŽIŪRĄ";
-  position: absolute;
-  top: 10px;
-  left: 50%;
+.movie-final-screening-banner {
+  position: relative;
   z-index: 3;
-  transform: translateX(-50%);
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(2, 6, 23, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: clamp(0.56rem, 1.3vw, 0.72rem);
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  white-space: nowrap;
-  backdrop-filter: blur(10px);
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 16px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(254, 240, 138, 0.42);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(250, 204, 21, 0.28), transparent 34%),
+    linear-gradient(100deg, rgba(120, 53, 15, 0.9), rgba(15, 23, 42, 0.94) 52%, rgba(120, 53, 15, 0.9));
+  color: #fef3c7;
+  font-size: clamp(0.82rem, 1.8vw, 1.2rem);
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.34);
 }
 
 .movie-premiere-main {
@@ -609,22 +614,6 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.08);
-}
-
-.movie-final-screening-badge {
-  display: inline-flex;
-  width: fit-content;
-  max-width: 100%;
-  margin-top: 3px;
-  padding: 5px 9px;
-  border: 1px solid rgba(254, 240, 138, 0.38);
-  border-radius: 999px;
-  background: rgba(250, 204, 21, 0.14);
-  color: #fef08a;
-  font-size: 0.62rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  line-height: 1.25;
 }
 
 .movie-event-highlight span {

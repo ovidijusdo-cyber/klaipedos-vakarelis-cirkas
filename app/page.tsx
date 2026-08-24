@@ -4811,7 +4811,6 @@ export default function Page() {
               <div className="movie-event-highlight-date">
                 <span>Filmai jau suplanuoti</span>
                 <strong>{movieEventHighlight.date}</strong>
-                <small className="movie-final-screening-badge">Paskutinė šiais metais organizuojama peržiūra</small>
               </div>
               <div>
                 <span>Pradžia</span>
@@ -4824,6 +4823,7 @@ export default function Page() {
             </div>
           ) : null}
           <div className="movie-premiere-cover" aria-label="Rodomi filmai">
+            <div className="movie-final-screening-banner">Paskutinė šiais metais organizuojama peržiūra</div>
             <div className="movie-premiere-main">
               {MOVIE_FEATURES.map((movie, index) => {
                 const title = index === 0 ? movieSettings.firstMovieTitle : movieSettings.secondMovieTitle;
