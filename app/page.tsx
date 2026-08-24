@@ -210,6 +210,11 @@ type MovieSeatRow = {
 
 type PendingMovieCancel = MovieSeatReservation | null;
 
+type PendingMoviePayment = {
+  reservation: MovieSeatReservation;
+  source: "customer" | "admin";
+} | null;
+
 type PendingCancel = {
   reservationId: number;
   personId: string;
@@ -2525,6 +2530,9 @@ export default function Page() {
   const [movieLastSyncedAt, setMovieLastSyncedAt] = useState<Date | null>(null);
   const [movieNotice, setMovieNotice] = useState<Notice | null>(null);
   const [moviePaymentReservationIds, setMoviePaymentReservationIds] = useState<number[]>([]);
+  const [moviePaymentLookup, setMoviePaymentLookup] = useState("");
+  const [movieAdminPaymentLookup, setMovieAdminPaymentLookup] = useState("");
+  const [moviePaymentSaving, setMoviePaymentSaving] = useState(false);
   const [movieCancelLookup, setMovieCancelLookup] = useState("");
   const [movieSeatFinderLookup, setMovieSeatFinderLookup] = useState("");
   const [movieSeatFinderOpen, setMovieSeatFinderOpen] = useState(false);
@@ -2532,6 +2540,7 @@ export default function Page() {
   const [movieDirectoryLookup, setMovieDirectoryLookup] = useState("");
   const [movieDirectoryPage, setMovieDirectoryPage] = useState(1);
   const [pendingMovieCancel, setPendingMovieCancel] = useState<PendingMovieCancel>(null);
+  const [pendingMoviePayment, setPendingMoviePayment] = useState<PendingMoviePayment>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [celebratingRegistration, setCelebratingRegistration] = useState(false);
   const [highlightGuestKey, setHighlightGuestKey] = useState("");
@@ -2980,6 +2989,26 @@ export default function Page() {
       .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
       .slice(0, 8);
   }, [activeMovieSeatReservations, movieCancelLookup]);
+  const moviePaymentLookupMatches = useMemo(() => {
+    const query = normalizeText(moviePaymentLookup);
+    if (query.length < 2) return [];
+
+    return activeMovieSeatReservations
+      .filter((reservation) => normalizeText(`${reservation.firstName} ${reservation.lastName} ${reservation.seatId}`).includes(query))
+      .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
+      .slice(0, 8);
+  }, [activeMovieSeatReservations, moviePaymentLookup]);
+  const movieAdminPaymentMatches = useMemo(() => {
+    const query = normalizeText(movieAdminPaymentLookup);
+
+    return activeMovieSeatReservations
+      .filter((reservation) => {
+        if (!query) return reservation.paymentStatus !== "paid_pending_review";
+        return normalizeText(`${reservation.firstName} ${reservation.lastName} ${reservation.seatId}`).includes(query);
+      })
+      .sort((a, b) => a.seatId.localeCompare(b.seatId, "lt", { numeric: true }))
+      .slice(0, 20);
+  }, [activeMovieSeatReservations, movieAdminPaymentLookup]);
   const movieDirectoryReservations = useMemo(() => {
     const query = normalizeText(movieDirectoryLookup);
 
@@ -4484,25 +4513,57 @@ export default function Page() {
     }
   }
 
-  async function confirmMoviePayment() {
-    if (moviePaymentReservationIds.length === 0) {
+  async function markMovieReservationsPaid(reservationsToMark: MovieSeatReservation[], source: "customer" | "admin") {
+    if (reservationsToMark.length === 0) {
       setMovieNotice({ type: "warning", text: "Pirma rezervuok kino vietas, tada galėsi pažymėti apmokėjimą." });
-      return;
+      return false;
     }
 
+    setMoviePaymentSaving(true);
     try {
       const response = await fetch("/api/movie-seats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "payment", reservationIds: moviePaymentReservationIds }),
+        body: JSON.stringify({
+          action: "payment",
+          reservationIds: reservationsToMark.map((reservation) => reservation.id),
+          claims: reservationsToMark.map((reservation) => ({
+            id: reservation.id,
+            seatId: reservation.seatId,
+            firstName: reservation.firstName,
+            lastName: reservation.lastName,
+          })),
+          adminPin: source === "admin" ? adminPin : undefined,
+        }),
       });
       const data = (await response.json()) as { error?: string; reservations?: MovieSeatReservation[] };
       if (!response.ok) throw new Error(data.error || "Nepavyko pažymėti apmokėjimo.");
       setMovieSeatReservations(normalizeMovieSeatReservations(data.reservations ?? []));
-      setMovieNotice({ type: "success", text: `Pažymėta kaip apmokėta: ${moviePaymentSeats.join(", ")}. Organizatorius mokėjimą dar patikrins asmeniškai.` });
+      const seats = reservationsToMark.map((reservation) => reservation.seatId).join(", ");
+      setMovieNotice({ type: "success", text: `Pažymėta kaip apmokėta: ${seats}. Organizatorius mokėjimą dar patikrins asmeniškai.` });
+      if (source === "admin") setDoorNotice({ type: "success", text: `Kino vieta ${seats} pažymėta kaip apmokėta.` });
+      return true;
     } catch (error) {
-      setMovieNotice({ type: "warning", text: error instanceof Error ? error.message : "Nepavyko pažymėti apmokėjimo." });
+      const text = error instanceof Error ? error.message : "Nepavyko pažymėti apmokėjimo.";
+      setMovieNotice({ type: "warning", text });
+      if (source === "admin") setDoorNotice({ type: "warning", text });
+      return false;
+    } finally {
+      setMoviePaymentSaving(false);
     }
+  }
+
+  async function confirmMoviePayment() {
+    await markMovieReservationsPaid(moviePaymentReservations, "customer");
+  }
+
+  async function confirmSelectedMoviePayment() {
+    if (!pendingMoviePayment) return;
+    const { reservation, source } = pendingMoviePayment;
+    const updated = await markMovieReservationsPaid([reservation], source);
+    if (!updated) return;
+    if (source === "customer") setMoviePaymentLookup("");
+    setPendingMoviePayment(null);
   }
 
   function requestMovieCancellation(reservation: MovieSeatReservation) {
@@ -5084,13 +5145,55 @@ export default function Page() {
                         </div>
                       </dl>
                     </details>
-                    <button className="success-button" type="button" onClick={() => void confirmMoviePayment()}>
-                      Apmokėjau
+                    <button className="success-button" type="button" onClick={() => void confirmMoviePayment()} disabled={moviePaymentSaving}>
+                      {moviePaymentSaving ? "Žymima..." : "Apmokėjau"}
                     </button>
                   </div>
                   <small>Paspaudus „Apmokėjau“, vietos taps žalios. Galutinis patvirtinimas lieka organizatoriui.</small>
                 </div>
               ) : null}
+
+              <div className="movie-payment-return-card">
+                <div>
+                  <span className="muted-label">Jau rezervavai anksčiau?</span>
+                  <h3>Pažymėk „Apmokėjau“ grįžęs</h3>
+                  <p>Įrašyk savo vardą ir pavardę, pasirink rezervuotą vietą ir patvirtink apmokėjimą.</p>
+                </div>
+                <div className="movie-return-payment-links">
+                  <a href={movieSettings.revolutPaymentUrl} target="_blank" rel="noreferrer">Revolut</a>
+                  <a href={movieSettings.swedbankPaymentUrl} target="_blank" rel="noreferrer">Swedbank</a>
+                </div>
+                <input
+                  type="search"
+                  value={moviePaymentLookup}
+                  onChange={(event) => setMoviePaymentLookup(event.target.value)}
+                  placeholder="Įrašyk savo vardą ir pavardę"
+                />
+                {moviePaymentLookup.trim().length < 2 ? (
+                  <small>Įrašyk bent 2 raides, kad parodytų rezervacijas.</small>
+                ) : moviePaymentLookupMatches.length === 0 ? (
+                  <div className="empty-state compact">Pagal šį vardą rezervacijų nerasta.</div>
+                ) : (
+                  <div className="movie-payment-lookup-results">
+                    {moviePaymentLookupMatches.map((reservation) => {
+                      const paid = reservation.paymentStatus === "paid_pending_review";
+                      return (
+                        <button
+                          className={`movie-payment-lookup-result ${paid ? "paid" : ""}`}
+                          disabled={paid}
+                          key={reservation.id}
+                          type="button"
+                          onClick={() => setPendingMoviePayment({ reservation, source: "customer" })}
+                        >
+                          <strong>{reservation.firstName} {reservation.lastName}</strong>
+                          <span>Vieta {reservation.seatId}</span>
+                          <small>{paid ? "Jau pažymėta apmokėta" : "Paspausk ir patvirtink „Apmokėjau“"}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div className="movie-calendar-card">
                 <span className="muted-label">Priminimas telefone</span>
@@ -5264,9 +5367,109 @@ export default function Page() {
           )}
         </SectionCard>
 
+        <SectionCard title="Kino administratoriui" description="Rask žiūrovą pagal vardą, pavardę arba vietą ir pažymėk jo apmokėjimą.">
+          {!adminUnlocked ? (
+            <div className="movie-admin-unlock">
+              {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
+              <label>
+                <span>Admin PIN</span>
+                <input value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN" type="password" />
+              </label>
+              <button className="primary-button" type="button" onClick={unlockAdmin} disabled={adminUnlocking}>
+                {adminUnlocking ? "Tikrinama..." : "Atrakinti kino valdymą"}
+              </button>
+            </div>
+          ) : (
+            <div className="movie-admin-payment-panel">
+              {doorNotice ? <div className={`notice ${doorNotice.type}`}>{doorNotice.text}</div> : null}
+              <div className="movie-admin-payment-heading">
+                <div>
+                  <span>Neapmokėta</span>
+                  <strong>{activeMovieSeatReservations.length - paidMovieSeatReservationCount}</strong>
+                </div>
+                <div>
+                  <span>Pažymėta apmokėta</span>
+                  <strong>{paidMovieSeatReservationCount}</strong>
+                </div>
+              </div>
+              <label className="movie-admin-payment-search">
+                <span>Ieškoti žiūrovo</span>
+                <input
+                  type="search"
+                  value={movieAdminPaymentLookup}
+                  onChange={(event) => setMovieAdminPaymentLookup(event.target.value)}
+                  placeholder="Vardas, pavardė arba vieta"
+                />
+              </label>
+              <div className="movie-admin-payment-results">
+                {movieAdminPaymentMatches.length === 0 ? (
+                  <div className="empty-state compact">Nėra neapmokėtų rezervacijų arba nieko nerasta.</div>
+                ) : movieAdminPaymentMatches.map((reservation) => {
+                  const paid = reservation.paymentStatus === "paid_pending_review";
+                  return (
+                    <div className="movie-admin-payment-result" key={reservation.id}>
+                      <div>
+                        <strong>{reservation.firstName} {reservation.lastName}</strong>
+                        <span>Vieta {reservation.seatId}</span>
+                      </div>
+                      {paid ? (
+                        <span className="movie-admin-paid-label">Apmokėta</span>
+                      ) : (
+                        <button
+                          className="success-button"
+                          type="button"
+                          onClick={() => setPendingMoviePayment({ reservation, source: "admin" })}
+                        >
+                          Pažymėti apmokėta
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </SectionCard>
+
         <footer className="site-footer">
           Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
         </footer>
+
+        <Modal
+          open={Boolean(pendingMoviePayment)}
+          title={pendingMoviePayment?.source === "admin" ? "Pažymėti apmokėjimą?" : "Ar tikrai apmokėjai?"}
+          description={pendingMoviePayment?.source === "admin"
+            ? "Ši vieta viešai taps žalia ir bus rodoma kaip apmokėta."
+            : "Spausk patvirtinti tik tada, kai mokėjimą jau atlikai."}
+          onClose={() => setPendingMoviePayment(null)}
+        >
+          {pendingMoviePayment ? (
+            <>
+              <div className="confirmation-grid">
+                <div>
+                  <span>Žiūrovas</span>
+                  <strong>{pendingMoviePayment.reservation.firstName} {pendingMoviePayment.reservation.lastName}</strong>
+                </div>
+                <div>
+                  <span>Vieta</span>
+                  <strong>{pendingMoviePayment.reservation.seatId}</strong>
+                </div>
+                <div>
+                  <span>Suma</span>
+                  <strong>{movieSettings.ticketPrice} €</strong>
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button className="ghost-button" type="button" onClick={() => setPendingMoviePayment(null)} disabled={moviePaymentSaving}>
+                  Atšaukti
+                </button>
+                <button className="success-button" type="button" onClick={() => void confirmSelectedMoviePayment()} disabled={moviePaymentSaving}>
+                  {moviePaymentSaving ? "Žymima..." : "Patvirtinti „Apmokėjau“"}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </Modal>
 
         <Modal
           open={Boolean(pendingMovieCancel)}

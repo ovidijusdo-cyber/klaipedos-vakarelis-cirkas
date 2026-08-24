@@ -8,6 +8,7 @@ import {
 } from "../../../lib/movie";
 
 const STATE_ID = "main";
+const ADMIN_PIN = process.env.ADMIN_PIN;
 const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
 const MAX_SAVE_RETRIES = 6;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,6 +29,13 @@ type StoredMovieReservation = {
   reservationStatus: "active";
   cancelledAt: null;
   createdAt: string;
+};
+
+type PaymentClaim = {
+  id: number;
+  seatId: string;
+  firstName: string;
+  lastName: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -377,17 +385,47 @@ export async function POST(request: Request) {
     }
 
     if (action === "payment") {
-      const ids = Array.isArray(body?.reservationIds)
+      const ids: number[] = Array.isArray(body?.reservationIds)
         ? body.reservationIds.map(Number).filter(Number.isSafeInteger).slice(0, 12)
         : [];
       if (!ids.length) return NextResponse.json({ error: "Nepasirinktos rezervacijos." }, { status: 400 });
+      const isAdminRequest = Boolean(ADMIN_PIN) && body?.adminPin === ADMIN_PIN;
+      const claims: PaymentClaim[] = Array.isArray(body?.claims)
+        ? body.claims.slice(0, 12).map((item: unknown) => {
+            const value = isRecord(item) ? item : {};
+            return {
+              id: Number(value.id),
+              seatId: cleanText(value.seatId, 12),
+              firstName: normalizeName(value.firstName),
+              lastName: normalizeName(value.lastName),
+            };
+          })
+        : [];
+      if (!isAdminRequest && claims.length !== ids.length) {
+        return NextResponse.json({ error: "Nepavyko patvirtinti rezervacijos duomenų." }, { status: 403 });
+      }
       const idSet = new Set(ids);
       const paidAt = formatDateTime();
-      const updateResult = await updateMovieReservations((existing) => ({
-        reservations: existing.map((reservation) => idSet.has(reservation.id)
-          ? { ...reservation, paymentStatus: "paid_pending_review", paidAt }
-          : reservation),
-      }));
+      const updateResult = await updateMovieReservations((existing) => {
+        if (!isAdminRequest) {
+          const claimById = new Map(claims.map((claim) => [claim.id, claim] as const));
+          const invalidClaim = ids.some((id) => {
+            const claim = claimById.get(id);
+            const reservation = existing.find((item) => item.id === id);
+            return !claim || !reservation ||
+              reservation.seatId !== claim.seatId ||
+              normalizeName(reservation.firstName) !== claim.firstName ||
+              normalizeName(reservation.lastName) !== claim.lastName;
+          });
+          if (invalidClaim) return { error: "Rezervacija nerasta arba jos duomenys pasikeitė." };
+        }
+
+        return {
+          reservations: existing.map((reservation) => idSet.has(reservation.id)
+            ? { ...reservation, paymentStatus: "paid_pending_review", paidAt }
+            : reservation),
+        };
+      });
       if (updateResult.error) return NextResponse.json({ error: updateResult.error }, { status: 409 });
       return NextResponse.json({ ok: true, reservations: publicReservations(updateResult.reservations) });
     }
