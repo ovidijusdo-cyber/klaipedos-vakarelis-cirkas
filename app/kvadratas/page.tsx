@@ -118,6 +118,7 @@ export default function KvadratasPage() {
   const [teamCapacities, setTeamCapacities] = useState<Record<string, number>>({});
   const [captainSelections, setCaptainSelections] = useState<Record<string, string>>({});
   const [captainCodes, setCaptainCodes] = useState<Record<string, string>>({});
+  const [captainNotices, setCaptainNotices] = useState<Record<string, Notice>>({});
   const [matchTeamA, setMatchTeamA] = useState("");
   const [matchTeamB, setMatchTeamB] = useState("");
   const [matchCourt, setMatchCourt] = useState("Aikštelė 1");
@@ -172,25 +173,72 @@ export default function KvadratasPage() {
     ])));
   }, [matches]);
 
-  async function runAction(body: Record<string, unknown>, successText?: string) {
+  async function runAction(body: Record<string, unknown>, successText?: string, inlineNotice?: (notice: Notice) => void) {
     setSaving(true);
     setNotice(null);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch("/api/kvadratas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
       const data = (await response.json()) as KvadratasState & { error?: string; ok?: boolean };
       if (!response.ok) throw new Error(data.error || "Nepavyko išsaugoti pakeitimo.");
       if (Array.isArray(data.teams) && Array.isArray(data.players)) applyState(data);
-      if (successText) setNotice({ type: "success", text: successText });
+      if (successText) {
+        const nextNotice: Notice = { type: "success", text: successText };
+        setNotice(nextNotice);
+        inlineNotice?.(nextNotice);
+      }
       return true;
     } catch (error) {
-      setNotice({ type: "warning", text: error instanceof Error ? error.message : "Nepavyko išsaugoti pakeitimo." });
+      const message = error instanceof DOMException && error.name === "AbortError"
+        ? "Serveris neatsakė per 15 sekundžių. Bandyk dar kartą."
+        : error instanceof Error ? error.message : "Nepavyko išsaugoti pakeitimo.";
+      const nextNotice: Notice = { type: "warning", text: message };
+      setNotice(nextNotice);
+      inlineNotice?.(nextNotice);
       return false;
     } finally {
+      window.clearTimeout(timeout);
       setSaving(false);
+    }
+  }
+
+  async function assignCaptain(team: KvadratasTeam) {
+    const playerId = captainSelections[team.id] || "";
+    const enteredCode = (captainCodes[team.id] ?? "").trim();
+    const generatedCode = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000);
+    const code = playerId ? enteredCode || generatedCode : "";
+    const setInlineNotice = (nextNotice: Notice) => {
+      setCaptainNotices((current) => ({ ...current, [team.id]: nextNotice }));
+    };
+
+    if (playerId && !enteredCode) {
+      setCaptainCodes((current) => ({ ...current, [team.id]: code }));
+    }
+    setCaptainNotices((current) => {
+      const next = { ...current };
+      delete next[team.id];
+      return next;
+    });
+
+    const successText = playerId
+      ? `Kapitonas paskirtas. Jo prisijungimo kodas: ${code}`
+      : "Kapitonas pašalintas.";
+    const success = await runAction({
+      action: "assign_captain",
+      adminPin,
+      teamId: team.id,
+      playerId: playerId || null,
+      captainCode: code,
+    }, successText, setInlineNotice);
+
+    if (success && !playerId) {
+      setCaptainCodes((current) => ({ ...current, [team.id]: "" }));
     }
   }
 
@@ -773,9 +821,10 @@ export default function KvadratasPage() {
                   <label><span>Žaidėjų vietų</span><input type="number" min={2} max={30} value={teamCapacities[team.id] ?? team.maxPlayers} onChange={(event) => setTeamCapacities((current) => ({ ...current, [team.id]: Number(event.target.value) }))} /></label>
                   <button type="button" disabled={saving} onClick={() => void runAction({ action: "update_team_capacity", adminPin, teamId: team.id, maxPlayers: teamCapacities[team.id] }, "Komandos vietų skaičius išsaugotas.")}>{saving ? "Saugoma..." : "Išsaugoti vietų skaičių"}</button>
                   <label><span>Kapitonas</span><select value={captainSelections[team.id] ?? ""} onChange={(event) => setCaptainSelections((current) => ({ ...current, [team.id]: event.target.value }))}><option value="">Nepaskirtas</option>{players.map((player) => <option value={player.id} key={player.id}>{playerName(player)}</option>)}</select></label>
-                  <label><span>Kapitono kodas</span><input type="text" value={captainCodes[team.id] ?? ""} onChange={(event) => setCaptainCodes((current) => ({ ...current, [team.id]: event.target.value }))} placeholder={team.captainPlayerId ? "Įrašyk naują tik keičiant" : "Bent 4 simboliai"} /></label>
-                  {captainSelections[team.id] ? <small className={styles.adminHint}>Paskiriant ar keičiant kapitoną įrašyk jam bent 4 simbolių prisijungimo kodą.</small> : null}
-                  <button type="button" disabled={saving} onClick={() => void runAction({ action: "assign_captain", adminPin, teamId: team.id, playerId: captainSelections[team.id] || null, captainCode: captainCodes[team.id] ?? "" }, captainSelections[team.id] ? "Kapitonas paskirtas. Perduok jam įrašytą kodą." : "Kapitonas pašalintas.").then((success) => { if (success) setCaptainCodes((current) => ({ ...current, [team.id]: "" })); })}>{saving ? "Saugoma..." : captainSelections[team.id] ? "Paskirti kapitoną" : "Pašalinti kapitoną"}</button>
+                  <label><span>Kapitono prisijungimo kodas</span><input type="text" value={captainCodes[team.id] ?? ""} onChange={(event) => setCaptainCodes((current) => ({ ...current, [team.id]: event.target.value }))} placeholder="Nebūtina – sistema sugeneruos" /></label>
+                  {captainSelections[team.id] ? <small className={styles.adminHint}>Kodo įrašyti nebūtina. Palikus lauką tuščią, sistema pati sugeneruos 6 skaitmenų kodą.</small> : null}
+                  <button type="button" disabled={saving} onClick={() => void assignCaptain(team)}>{saving ? "Saugoma..." : captainSelections[team.id] ? "Paskirti kapitoną" : "Pašalinti kapitoną"}</button>
+                  {captainNotices[team.id] ? <div className={`${styles.inlineAdminNotice} ${styles[captainNotices[team.id].type]}`} role="status">{captainNotices[team.id].text}</div> : null}
                   <button className={styles.dangerButton} type="button" disabled={saving} onClick={() => { if (window.confirm(`Ar tikrai ištrinti komandą „${team.name}“? Žaidėjai liks registruoti, bet taps nepriskirti.`)) void runAction({ action: "delete_team", adminPin, teamId: team.id }, "Komanda ištrinta."); }}>Ištrinti komandą</button>
                 </article>
               ))}

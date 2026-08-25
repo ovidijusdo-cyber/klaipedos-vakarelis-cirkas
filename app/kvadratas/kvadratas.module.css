@@ -1132,6 +1132,19 @@
 
 .adminHint { margin-top: -4px; color: #8a5a3b; font-size: .66rem; line-height: 1.4; }
 
+.inlineAdminNotice {
+  padding: 10px 12px;
+  border: 1px solid;
+  border-radius: 11px;
+  font-size: .75rem;
+  font-weight: 850;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.inlineAdminNotice.success { border-color: #86efac; background: #f0fdf4; color: #166534; }
+.inlineAdminNotice.warning { border-color: #fdba74; background: #fff7ed; color: #9a3412; }
+
 .modalBackdrop {
   position: fixed;
   z-index: 100;
