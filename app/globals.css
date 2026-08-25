@@ -172,7 +172,7 @@ textarea {
 
 .hub-choice-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 18px;
 }
 
@@ -195,6 +195,12 @@ textarea {
 
 .hub-choice-card.movie {
   background: linear-gradient(135deg, #0f172a, #1d4ed8 54%, #38bdf8);
+}
+
+.hub-choice-card.square {
+  background:
+    radial-gradient(circle at 85% 18%, transparent 0 38px, rgba(255, 255, 255, 0.72) 39px 42px, transparent 43px),
+    linear-gradient(135deg, #111827, #c2410c 58%, #f97316);
 }
 
 .hub-choice-card.party {

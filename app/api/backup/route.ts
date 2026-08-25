@@ -21,14 +21,25 @@ function isAuthorized(request: Request) {
 
 async function createBackup() {
   const supabase = createSupabaseServerClient();
-  const { data: state, error: stateError } = await supabase
-    .from("event_state")
-    .select("payload, updated_at")
-    .eq("id", STATE_ID)
-    .maybeSingle();
+  const [stateResult, teamsResult, playersResult] = await Promise.all([
+    supabase
+      .from("event_state")
+      .select("payload, updated_at")
+      .eq("id", STATE_ID)
+      .maybeSingle(),
+    supabase.from("kvadratas_teams").select("*"),
+    supabase.from("kvadratas_players").select("*"),
+  ]);
+  const { data: state, error: stateError } = stateResult;
 
   if (stateError) {
     throw stateError;
+  }
+  if (teamsResult.error) {
+    throw teamsResult.error;
+  }
+  if (playersResult.error) {
+    throw playersResult.error;
   }
 
   if (!state?.payload) {
@@ -50,6 +61,21 @@ async function createBackup() {
 
   if (backupError) {
     throw backupError;
+  }
+
+  const { error: kvadratasBackupError } = await supabase.from("kvadratas_backups").upsert(
+    {
+      backup_date: backupDate,
+      teams: teamsResult.data ?? [],
+      players: playersResult.data ?? [],
+    },
+    {
+      onConflict: "backup_date",
+    },
+  );
+
+  if (kvadratasBackupError) {
+    throw kvadratasBackupError;
   }
 
   return NextResponse.json({ ok: true, backupDate });

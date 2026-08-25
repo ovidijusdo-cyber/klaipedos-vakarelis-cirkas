@@ -1,0 +1,741 @@
+.page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 24px clamp(16px, 4vw, 56px) 38px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.9)),
+    repeating-linear-gradient(90deg, #e7e5e4 0 1px, transparent 1px 72px),
+    #f8fafc;
+  color: #172033;
+}
+
+.orangeGlow,
+.blueGlow {
+  position: absolute;
+  width: 430px;
+  height: 430px;
+  border-radius: 50%;
+  filter: blur(105px);
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+.orangeGlow { top: -140px; right: -120px; background: #f97316; }
+.blueGlow { top: 620px; left: -220px; background: #2563eb; }
+
+.topbar,
+.hero,
+.scoreboard,
+.notice,
+.registrationGrid,
+.section,
+.footer {
+  position: relative;
+  z-index: 1;
+  width: min(1380px, 100%);
+  margin-inline: auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #d7dde8;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #263247;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.liveStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #526078;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.liveStatus i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.12);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
+  min-height: 410px;
+  overflow: hidden;
+  border: 8px solid #111827;
+  border-radius: 36px;
+  background: #111827;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.24);
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(30px, 5vw, 64px);
+  background:
+    radial-gradient(circle at 92% 10%, rgba(249, 115, 22, 0.26), transparent 34%),
+    linear-gradient(135deg, #111827, #1f2937);
+  color: #ffffff;
+}
+
+.kicker,
+.sectionEyebrow {
+  margin: 0;
+  color: #f97316;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.hero h1 {
+  max-width: 620px;
+  margin: 18px 0 16px;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.8rem, 6vw, 5.7rem);
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+}
+
+.heroCopy > p {
+  max-width: 640px;
+  margin: 0;
+  color: #d8dee9;
+  font-size: 1.02rem;
+  line-height: 1.65;
+}
+
+.heroRules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.heroRules span {
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.court {
+  position: relative;
+  min-height: 410px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 78px, rgba(100, 55, 22, 0.1) 78px 80px),
+    linear-gradient(135deg, #f97316 0%, #ea580c 48%, #c2410c 100%);
+}
+
+.court::before,
+.court::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 210px;
+  height: 290px;
+  border: 4px solid rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.court::before { left: -135px; }
+.court::after { right: -135px; }
+
+.courtLine {
+  position: absolute;
+  inset: 0 50% 0 auto;
+  width: 4px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.centerCircle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 154px;
+  height: 154px;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.courtKeyLeft,
+.courtKeyRight {
+  position: absolute;
+  top: 50%;
+  width: 118px;
+  height: 210px;
+  border: 4px solid rgba(255, 255, 255, 0.88);
+  transform: translateY(-50%);
+}
+
+.courtKeyLeft { left: -4px; border-left: 0; }
+.courtKeyRight { right: -4px; border-right: 0; }
+
+.ball {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 106px;
+  height: 106px;
+  overflow: hidden;
+  border: 5px solid #111827;
+  border-radius: 50%;
+  background: #fb923c;
+  box-shadow: 0 22px 35px rgba(91, 33, 6, 0.3);
+  transform: translate(-50%, -50%) rotate(-12deg);
+}
+
+.ball::before,
+.ball::after,
+.ball i,
+.ball b,
+.ball span {
+  content: "";
+  position: absolute;
+  display: block;
+  background: #111827;
+}
+
+.ball::before { top: 48px; left: -6px; width: 118px; height: 5px; }
+.ball::after { top: -6px; left: 48px; width: 5px; height: 118px; }
+.ball i { top: -13px; left: -18px; width: 62px; height: 126px; border-radius: 50%; background: transparent; border-right: 5px solid #111827; }
+.ball b { top: -13px; right: -18px; width: 62px; height: 126px; border-radius: 50%; background: transparent; border-left: 5px solid #111827; }
+.ball span { display: none; }
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-top: 18px;
+  border-radius: 24px;
+  background: #273246;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
+}
+
+.scoreboard > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 12px;
+  padding: 18px 22px;
+  background: #111827;
+  color: #ffffff;
+}
+
+.scoreboard span {
+  color: #f97316;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.scoreboard strong {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.scoreboard small { color: #94a3b8; font-size: 0.72rem; font-weight: 800; }
+
+.notice {
+  margin-top: 18px;
+  padding: 14px 18px;
+  border: 1px solid;
+  border-radius: 16px;
+  font-weight: 850;
+}
+
+.notice.success { border-color: #86efac; background: #f0fdf4; color: #166534; }
+.notice.warning { border-color: #fdba74; background: #fff7ed; color: #9a3412; }
+
+.registrationGrid,
+.section {
+  margin-top: 24px;
+  border: 1px solid #dde3ec;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.08);
+}
+
+.registrationGrid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.68fr) minmax(0, 1.32fr);
+  overflow: hidden;
+}
+
+.registrationIntro {
+  padding: clamp(28px, 4vw, 48px);
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.94)),
+    repeating-linear-gradient(45deg, #f97316 0 18px, #ea580c 18px 36px);
+  color: #ffffff;
+}
+
+.sectionNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: #f97316;
+  color: #ffffff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.registrationIntro h2,
+.sectionHeading h2 {
+  margin: 10px 0 12px;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3.1rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.registrationIntro > p:last-child,
+.sectionHeading > div:last-child > p {
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.registrationIntro > p:last-child { color: #cbd5e1; }
+
+.registrationForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: clamp(28px, 4vw, 48px);
+}
+
+.registrationForm label,
+.unlockForm label,
+.newTeamForm label,
+.adminTeamGrid label {
+  display: grid;
+  gap: 7px;
+  color: #4b5565;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.registrationForm input,
+.registrationForm select,
+.unlockForm input,
+.unlockForm select,
+.newTeamForm input,
+.adminTeamGrid input,
+.adminTeamGrid select,
+.adminPlayers select,
+.directoryToolbar input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 15px;
+  border: 1px solid #cfd7e4;
+  border-radius: 14px;
+  outline: none;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.registrationForm input:focus,
+.unlockForm input:focus,
+.unlockForm select:focus,
+.newTeamForm input:focus,
+.adminTeamGrid input:focus,
+.adminTeamGrid select:focus,
+.adminPlayers select:focus,
+.directoryToolbar input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+}
+
+.registrationForm fieldset {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.registrationForm legend {
+  margin-bottom: 10px;
+  color: #4b5565;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.registrationForm legend small { color: #94a3b8; }
+
+.preferenceGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preferenceGrid button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #d6dde8;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #4b5565;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.preferenceGrid button.selectedPreference {
+  border-color: #f97316;
+  background: #fff7ed;
+  color: #c2410c;
+  box-shadow: inset 0 0 0 1px #f97316;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.primaryButton {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(234, 88, 12, 0.22);
+}
+
+.secondaryButton { background: #111827; color: #ffffff; }
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.adminTeamGrid button:disabled,
+.adminPlayers button:disabled { opacity: 0.55; cursor: wait; }
+
+.section { padding: clamp(24px, 4vw, 44px); }
+
+.sectionHeading {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-bottom: 28px;
+}
+
+.sectionHeading .sectionNumber { margin-bottom: 9px; }
+.sectionHeading h2 { margin-top: 0; }
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.teamCard {
+  --accent: #f97316;
+  overflow: hidden;
+  border: 1px solid #dbe2ec;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+}
+
+.teamCard:nth-child(3n + 2) { --accent: #2563eb; }
+.teamCard:nth-child(3n + 3) { --accent: #16a34a; }
+
+.teamCard > header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  padding: 20px;
+  overflow: hidden;
+  background: #111827;
+  color: #ffffff;
+}
+
+.teamCard > header::after {
+  content: "";
+  position: absolute;
+  right: -28px;
+  bottom: -42px;
+  width: 120px;
+  height: 120px;
+  border: 22px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.28;
+}
+
+.teamCard > header span {
+  grid-column: 1 / -1;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.67rem;
+  font-weight: 950;
+}
+
+.teamCard > header strong { position: relative; z-index: 1; margin-top: 5px; font-size: 1.25rem; }
+.teamCard > header small { position: relative; z-index: 1; align-self: end; color: #cbd5e1; font-weight: 800; }
+
+.captainRow {
+  display: grid;
+  gap: 4px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5eaf1;
+  background: color-mix(in srgb, var(--accent) 9%, white);
+}
+
+.captainRow span,
+.wishList > span {
+  color: var(--accent);
+  letter-spacing: 0.09em;
+  font-size: 0.64rem;
+  font-weight: 950;
+}
+
+.captainRow strong { font-size: 0.9rem; }
+
+.memberList {
+  min-height: 142px;
+  margin: 0;
+  padding: 10px 18px;
+  list-style: none;
+}
+
+.memberList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed #dfe5ed;
+  font-size: 0.86rem;
+  font-weight: 780;
+}
+
+.memberList li:last-child { border-bottom: 0; }
+.memberList li.captainMember { color: #9a3412; font-weight: 950; }
+.memberList li small { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: white; font-weight: 950; }
+.memberList li.emptyRow { color: #94a3b8; font-style: italic; font-weight: 700; }
+
+.wishList {
+  min-height: 86px;
+  padding: 14px 18px;
+  border-top: 1px solid #e5eaf1;
+  background: #f8fafc;
+}
+
+.wishList p { margin: 5px 0 0; color: #667085; font-size: 0.75rem; line-height: 1.5; }
+
+.directoryToolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.directoryToolbar strong { padding: 10px 14px; border-radius: 999px; background: #111827; color: #ffffff; font-size: 0.78rem; }
+
+.tableWrap { overflow-x: auto; border: 1px solid #dde3eb; border-radius: 18px; }
+.playerTable { width: 100%; border-collapse: collapse; min-width: 720px; }
+.playerTable th { padding: 12px 14px; background: #111827; color: #ffffff; text-align: left; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.68rem; }
+.playerTable td { padding: 13px 14px; border-bottom: 1px solid #e6eaf0; color: #536077; font-size: 0.83rem; }
+.playerTable tr:last-child td { border-bottom: 0; }
+.playerTable tbody tr:nth-child(even) { background: #f8fafc; }
+.playerTable td:first-child { width: 64px; color: #94a3b8; font-weight: 900; }
+.playerTable td strong { color: #172033; }
+.emptyTable { padding: 32px !important; text-align: center; color: #94a3b8 !important; }
+
+.confirmedBadge,
+.waitingBadge {
+  display: inline-flex;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.confirmedBadge { background: #dcfce7; color: #166534; }
+.waitingBadge { background: #ffedd5; color: #9a3412; }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+.pagination button { min-height: 38px; padding: 0 14px; border: 1px solid #d5dce7; border-radius: 999px; background: white; color: #334155; font-weight: 850; cursor: pointer; }
+.pagination button:disabled { opacity: 0.45; cursor: not-allowed; }
+.pagination span { font-weight: 900; }
+
+.controlSection { border-color: #fed7aa; background: linear-gradient(135deg, #fff7ed, #ffffff 55%); }
+.adminSection { border-color: #bfdbfe; background: linear-gradient(135deg, #eff6ff, #ffffff 55%); }
+
+.unlockForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+  max-width: 980px;
+}
+
+.captainDashboard,
+.adminDashboard { display: grid; gap: 20px; }
+
+.controlHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #111827;
+  color: #ffffff;
+}
+
+.controlHeader div { display: grid; gap: 2px; }
+.controlHeader span { color: #fb923c; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.65rem; font-weight: 950; }
+.controlHeader button { padding: 8px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: transparent; color: white; font-weight: 850; cursor: pointer; }
+
+.candidateGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.candidateGrid article { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid #e0e5ed; border-radius: 15px; background: white; }
+.candidateGrid article.preferredCandidate { border-color: #fb923c; background: #fff7ed; }
+.candidateGrid article div { display: grid; gap: 3px; }
+.candidateGrid article small { color: #768297; }
+.candidateGrid article button,
+.adminTeamGrid button,
+.adminPlayers button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.emptyControl { margin: 0; color: #778398; }
+
+.newTeamForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  padding: 18px;
+  border: 1px solid #dbe6f6;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.newTeamForm .primaryButton { grid-column: auto; }
+
+.adminTeamGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.adminTeamGrid article {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.adminTeamGrid button.dangerButton,
+.adminPlayers button.dangerButton { background: #fee2e2; color: #b91c1c; }
+
+.adminPlayers {
+  overflow: hidden;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.adminPlayers h3 { margin: 0; padding: 18px; border-bottom: 1px solid #e5eaf1; }
+.adminPlayers > div { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 0.8fr) auto; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #edf0f4; }
+.adminPlayers > div:last-child { border-bottom: 0; }
+
+.footer { padding: 34px 0 4px; color: #7a8699; text-align: center; font-size: 0.76rem; font-weight: 800; }
+
+@media (max-width: 1050px) {
+  .hero { grid-template-columns: 1fr; }
+  .court { min-height: 270px; }
+  .teamGrid,
+  .adminTeamGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .page { padding: 14px 12px 28px; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .liveStatus { padding-left: 8px; }
+  .hero { min-height: 0; border-width: 5px; border-radius: 25px; }
+  .heroCopy { padding: 30px 24px; }
+  .hero h1 {
+    font-size: clamp(2.2rem, 10.5vw, 3.2rem);
+    line-height: 0.92;
+    overflow-wrap: anywhere;
+  }
+  .court { min-height: 220px; }
+  .scoreboard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scoreboard > div { padding: 14px; }
+  .scoreboard strong { font-size: 2.1rem; }
+  .registrationGrid { grid-template-columns: 1fr; }
+  .registrationForm { grid-template-columns: 1fr; padding: 24px 18px; }
+  .registrationForm fieldset,
+  .primaryButton { grid-column: auto; }
+  .section { padding: 24px 16px; border-radius: 24px; }
+  .sectionHeading { grid-template-columns: 1fr; gap: 5px; }
+  .teamGrid,
+  .adminTeamGrid,
+  .candidateGrid { grid-template-columns: 1fr; }
+  .unlockForm { grid-template-columns: 1fr; }
+  .directoryToolbar { grid-template-columns: 1fr; }
+  .directoryToolbar strong { justify-self: start; }
+  .newTeamForm { grid-template-columns: 1fr; }
+  .adminPlayers > div { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after { scroll-behavior: auto !important; transition: none !important; }
+}

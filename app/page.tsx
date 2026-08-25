@@ -4888,7 +4888,7 @@ export default function Page() {
             <div className="eyebrow">klaipedosvakaras.fun</div>
             <h1>Pasirink, kur nori keliauti</h1>
             <p>
-              Viena nuoroda, du atskiri renginiai: kino filmo peržiūros vietų registracija ir buvęs Klaipėdos vakarėlio puslapis.
+              Viena nuoroda, atskiros veiklos: kino filmo peržiūra, kvadrato žaidimas ir Klaipėdos vakarėlio naujienos.
             </p>
           </div>
 
@@ -4897,6 +4897,12 @@ export default function Page() {
               <span>Kino filmo peržiūra</span>
               <strong>Dviejų filmų peržiūra {movieSettings.place}</strong>
               <p>Pasirink vietas kaip kino salėje, įrašyk dalyvių vardus ir iškart matyk mokėtiną sumą.</p>
+            </button>
+
+            <button className="hub-choice-card square" type="button" onClick={() => router.push("/kvadratas")}>
+              <span>Kvadrato registracija</span>
+              <strong>Susitinkame aikštelėje</strong>
+              <p>Įrašyk savo vardą, pasirink norimą komandą ir stebėk viešai formuojamas sudėtis.</p>
             </button>
 
             <button className="hub-choice-card party locked" type="button" disabled aria-disabled="true">
