@@ -21,7 +21,7 @@ function isAuthorized(request: Request) {
 
 async function createBackup() {
   const supabase = createSupabaseServerClient();
-  const [stateResult, teamsResult, playersResult] = await Promise.all([
+  const [stateResult, teamsResult, playersResult, matchesResult] = await Promise.all([
     supabase
       .from("event_state")
       .select("payload, updated_at")
@@ -29,6 +29,7 @@ async function createBackup() {
       .maybeSingle(),
     supabase.from("kvadratas_teams").select("*"),
     supabase.from("kvadratas_players").select("*"),
+    supabase.from("kvadratas_matches").select("*"),
   ]);
   const { data: state, error: stateError } = stateResult;
 
@@ -40,6 +41,9 @@ async function createBackup() {
   }
   if (playersResult.error) {
     throw playersResult.error;
+  }
+  if (matchesResult.error) {
+    throw matchesResult.error;
   }
 
   if (!state?.payload) {
@@ -68,6 +72,7 @@ async function createBackup() {
       backup_date: backupDate,
       teams: teamsResult.data ?? [],
       players: playersResult.data ?? [],
+      matches: matchesResult.data ?? [],
     },
     {
       onConflict: "backup_date",

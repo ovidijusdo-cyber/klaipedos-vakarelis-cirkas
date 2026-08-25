@@ -91,9 +91,24 @@ create table if not exists public.kvadratas_teams (
   captain_code_hash text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
+  max_players integer not null default 8,
   constraint kvadratas_teams_name_length check (char_length(name) between 1 and 60),
-  constraint kvadratas_teams_sort_order_range check (sort_order between 0 and 1000)
+  constraint kvadratas_teams_sort_order_range check (sort_order between 0 and 1000),
+  constraint kvadratas_teams_max_players_range check (max_players between 2 and 30)
 );
+
+alter table public.kvadratas_teams
+  add column if not exists max_players integer not null default 8;
+
+do $$
+begin
+  alter table public.kvadratas_teams
+    add constraint kvadratas_teams_max_players_range
+    check (max_players between 2 and 30);
+exception
+  when duplicate_object then null;
+end;
+$$;
 
 create unique index if not exists kvadratas_teams_name_idx
   on public.kvadratas_teams (lower(name));
@@ -108,11 +123,29 @@ create table if not exists public.kvadratas_players (
   last_name text not null,
   preferred_team_id uuid references public.kvadratas_teams(id) on delete set null,
   assigned_team_id uuid references public.kvadratas_teams(id) on delete set null,
+  skill_level text check (skill_level in ('A', 'B', 'C', 'D')),
+  arrived boolean not null default false,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint kvadratas_players_first_name_length check (char_length(first_name) between 1 and 80),
   constraint kvadratas_players_last_name_length check (char_length(last_name) between 1 and 80)
 );
+
+alter table public.kvadratas_players
+  add column if not exists skill_level text;
+
+alter table public.kvadratas_players
+  add column if not exists arrived boolean not null default false;
+
+do $$
+begin
+  alter table public.kvadratas_players
+    add constraint kvadratas_players_skill_level_check
+    check (skill_level in ('A', 'B', 'C', 'D'));
+exception
+  when duplicate_object then null;
+end;
+$$;
 
 create unique index if not exists kvadratas_players_name_idx
   on public.kvadratas_players (lower(first_name), lower(last_name));
@@ -157,13 +190,50 @@ alter table public.kvadratas_players enable row level security;
 revoke all on table public.kvadratas_players from anon, authenticated;
 grant select, insert, update, delete on table public.kvadratas_players to service_role;
 
+create table if not exists public.kvadratas_matches (
+  id uuid primary key default gen_random_uuid(),
+  court text not null default 'Aikštelė',
+  starts_at timestamptz not null,
+  team_a_id uuid not null references public.kvadratas_teams(id) on delete cascade,
+  team_b_id uuid not null references public.kvadratas_teams(id) on delete cascade,
+  team_a_score integer not null default 0,
+  team_b_score integer not null default 0,
+  status text not null default 'scheduled',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint kvadratas_matches_different_teams check (team_a_id <> team_b_id),
+  constraint kvadratas_matches_score_range check (
+    team_a_score between 0 and 999 and team_b_score between 0 and 999
+  ),
+  constraint kvadratas_matches_status_check check (status in ('scheduled', 'live', 'finished')),
+  constraint kvadratas_matches_court_length check (char_length(court) between 1 and 60)
+);
+
+create index if not exists kvadratas_matches_schedule_idx
+  on public.kvadratas_matches (starts_at, sort_order);
+
+create index if not exists kvadratas_matches_team_a_idx
+  on public.kvadratas_matches (team_a_id);
+
+create index if not exists kvadratas_matches_team_b_idx
+  on public.kvadratas_matches (team_b_id);
+
+alter table public.kvadratas_matches enable row level security;
+revoke all on table public.kvadratas_matches from anon, authenticated;
+grant select, insert, update, delete on table public.kvadratas_matches to service_role;
+
 create table if not exists public.kvadratas_backups (
   id bigserial primary key,
   backup_date date not null unique,
   teams jsonb not null default '[]'::jsonb,
   players jsonb not null default '[]'::jsonb,
+  matches jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.kvadratas_backups
+  add column if not exists matches jsonb not null default '[]'::jsonb;
 
 alter table public.kvadratas_backups enable row level security;
 revoke all on table public.kvadratas_backups from anon, authenticated;
