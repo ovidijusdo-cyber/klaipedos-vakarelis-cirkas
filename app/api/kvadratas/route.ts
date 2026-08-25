@@ -260,6 +260,41 @@ export async function POST(request: Request) {
       return await stateResponse(201);
     }
 
+    if (action === "set_team_preference") {
+      const playerId = cleanId(body?.playerId);
+      const teamId = cleanId(body?.teamId);
+      if (!playerId || !teamId) {
+        return NextResponse.json({ error: "Pasirink save ir norimą komandą." }, { status: 400 });
+      }
+      if (!(await existingTeam(teamId))) {
+        return NextResponse.json({ error: "Pasirinkta komanda neberasta." }, { status: 409 });
+      }
+
+      const { data: player, error: playerError } = await supabase
+        .from("kvadratas_players")
+        .select("id, assigned_team_id")
+        .eq("id", playerId)
+        .maybeSingle();
+      if (playerError) throw playerError;
+      if (!player) return NextResponse.json({ error: "Registracija neberasta." }, { status: 404 });
+      if (player.assigned_team_id) {
+        return NextResponse.json({ error: "Tavo komanda jau patvirtinta. Dėl pakeitimo kreipkis į kapitoną arba organizatorių." }, { status: 409 });
+      }
+
+      const { data: updatedPlayer, error } = await supabase
+        .from("kvadratas_players")
+        .update({ preferred_team_id: teamId, updated_at: now })
+        .eq("id", playerId)
+        .is("assigned_team_id", null)
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!updatedPlayer) {
+        return NextResponse.json({ error: "Komanda ką tik buvo patvirtinta. Atnaujink puslapį." }, { status: 409 });
+      }
+      return await stateResponse();
+    }
+
     if (action === "cancel_registration") {
       const playerId = cleanId(body?.playerId);
       const firstName = normalizeName(body?.firstName);

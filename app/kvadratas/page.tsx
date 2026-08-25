@@ -103,8 +103,8 @@ export default function KvadratasPage() {
   const [preferredTeamId, setPreferredTeamId] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
   const [quickTeamId, setQuickTeamId] = useState("");
-  const [quickFirstName, setQuickFirstName] = useState("");
-  const [quickLastName, setQuickLastName] = useState("");
+  const [quickPlayerSearch, setQuickPlayerSearch] = useState("");
+  const [quickPlayerId, setQuickPlayerId] = useState("");
   const [cancelSearch, setCancelSearch] = useState("");
   const [directorySearch, setDirectorySearch] = useState("");
   const [directoryPage, setDirectoryPage] = useState(1);
@@ -262,18 +262,28 @@ export default function KvadratasPage() {
   async function submitTeamWish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const team = teams.find((item) => item.id === quickTeamId);
-    if (!team) return;
+    const player = players.find((item) => item.id === quickPlayerId);
+    if (!team || !player) return;
     const success = await runAction({
-      action: "register",
-      firstName: quickFirstName,
-      lastName: quickLastName,
-      preferredTeamId: team.id,
+      action: "set_team_preference",
+      playerId: player.id,
+      teamId: team.id,
     }, `Pageidavimas prisijungti prie „${team.name}“ išsaugotas. Kapitonas jį matys savo valdyme.`);
     if (success) {
-      setQuickTeamId("");
-      setQuickFirstName("");
-      setQuickLastName("");
+      closeTeamWish();
     }
+  }
+
+  function openTeamWish(teamId: string) {
+    setQuickTeamId(teamId);
+    setQuickPlayerSearch("");
+    setQuickPlayerId("");
+  }
+
+  function closeTeamWish() {
+    setQuickTeamId("");
+    setQuickPlayerSearch("");
+    setQuickPlayerId("");
   }
 
   async function unlockCaptain(event: FormEvent<HTMLFormElement>) {
@@ -327,6 +337,13 @@ export default function KvadratasPage() {
   const neutralWaitingPlayers = unassignedPlayers.filter((player) => !player.preferredTeamId);
   const captainTeams = teams.filter((team) => team.captainPlayerId);
   const quickTeam = teamsById.get(quickTeamId) ?? null;
+  const quickSelectedPlayer = playersById.get(quickPlayerId) ?? null;
+  const normalizedQuickPlayerSearch = normalizeText(quickPlayerSearch);
+  const quickPlayerCandidates = normalizedQuickPlayerSearch.length >= 2
+    ? players
+      .filter((player) => normalizeText(playerName(player)).includes(normalizedQuickPlayerSearch))
+      .slice(0, 8)
+    : [];
   const unlockedCaptainTeam = teamsById.get(captainUnlockedTeamId) ?? null;
   const unlockedCaptainMembers = players.filter((player) => player.assignedTeamId === captainUnlockedTeamId);
   const captainCandidates = unassignedPlayers.slice().sort((a, b) => {
@@ -464,7 +481,7 @@ export default function KvadratasPage() {
 
       {notice ? <div className={`${styles.notice} ${styles[notice.type]}`} role="status">{notice.text}</div> : null}
 
-      <section className={styles.registrationGrid}>
+      <section className={styles.registrationGrid} id="registracija">
         <div className={styles.registrationIntro}>
           <span className={styles.sectionNumber}>01</span>
           <p className={styles.sectionEyebrow}>Žaidėjo registracija</p>
@@ -566,7 +583,7 @@ export default function KvadratasPage() {
                 <div className={styles.wishList}>
                   <div>
                     <span>NORI Į ŠIĄ KOMANDĄ</span>
-                    <button type="button" title={`Įrašyk save į norinčių prisijungti prie „${team.name}“ sąrašą`} aria-label={`Noriu prisijungti prie ${team.name}`} onClick={() => setQuickTeamId(team.id)}>+</button>
+                    <button type="button" title={`Surask savo registraciją ir išreikšk norą prisijungti prie „${team.name}“`} aria-label={`Noriu prisijungti prie ${team.name}`} onClick={() => openTeamWish(team.id)}>+</button>
                   </div>
                   <small className={styles.plusTip}>Spausk +, jei norėtum žaisti šioje komandoje</small>
                   {wishes.length ? <p>{wishes.map(playerName).join(" · ")}</p> : <p>Pageidavimų dar nėra</p>}
@@ -888,18 +905,39 @@ export default function KvadratasPage() {
       </section>
 
       {quickTeam ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setQuickTeamId(""); }}>
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) closeTeamWish(); }}>
           <form className={styles.teamWishModal} role="dialog" aria-modal="true" aria-labelledby="team-wish-title" onSubmit={submitTeamWish}>
-            <button className={styles.modalClose} type="button" aria-label="Uždaryti" onClick={() => setQuickTeamId("")}>×</button>
+            <button className={styles.modalClose} type="button" aria-label="Uždaryti" onClick={closeTeamWish}>×</button>
             <div className={styles.modalTeamLogo}>{teamCode(quickTeam, Math.max(0, teams.findIndex((team) => team.id === quickTeam.id)))}</div>
             <span className={styles.sectionEyebrow}>Komandos pageidavimas</span>
             <h2 id="team-wish-title">Noriu į „{quickTeam.name}“</h2>
-            <p>Įrašyk vardą ir pavardę. Atsidursi šios komandos norinčiųjų sąraše, o galutinai patvirtins kapitonas.</p>
-            <div className={styles.modalFields}>
-              <label><span>Vardas</span><input autoFocus value={quickFirstName} onChange={(event) => setQuickFirstName(event.target.value)} placeholder="Tavo vardas" maxLength={80} required /></label>
-              <label><span>Pavardė</span><input value={quickLastName} onChange={(event) => setQuickLastName(event.target.value)} placeholder="Tavo pavardė" maxLength={80} required /></label>
+            <p>Pirma surask savo jau esančią registraciją. Taip atnaujinsime tavo pageidavimą nesukurdami antro įrašo.</p>
+            <label className={styles.modalPlayerSearch}>
+              <span>Ieškok savęs pagal vardą arba pavardę</span>
+              <input autoFocus type="search" value={quickPlayerSearch} onChange={(event) => { setQuickPlayerSearch(event.target.value); setQuickPlayerId(""); }} placeholder="Pradėk rašyti bent 2 raides" autoComplete="off" />
+            </label>
+            <div className={styles.modalPlayerResults} aria-live="polite">
+              {normalizedQuickPlayerSearch.length < 2 ? <p>Įrašyk bent 2 vardo arba pavardės raides.</p> : null}
+              {quickPlayerCandidates.map((player) => {
+                const assignedTeam = player.assignedTeamId ? teamsById.get(player.assignedTeamId) : null;
+                const preferredTeam = player.preferredTeamId ? teamsById.get(player.preferredTeamId) : null;
+                const selected = player.id === quickPlayerId;
+                return (
+                  <button key={player.id} className={selected ? styles.selectedModalPlayer : ""} type="button" disabled={Boolean(assignedTeam)} onClick={() => setQuickPlayerId(player.id)}>
+                    <span className={styles.modalPlayerInitials}>{player.firstName[0]}{player.lastName[0]}</span>
+                    <span><strong>{playerName(player)}</strong><small>{assignedTeam ? `Jau patvirtinta: ${assignedTeam.name}` : preferredTeam ? `Dabartinis pageidavimas: ${preferredTeam.name}` : "Komandos dar nepasirinko"}</small></span>
+                    <b>{assignedTeam ? "Patvirtinta" : selected ? "Pasirinkta" : "Pasirinkti"}</b>
+                  </button>
+                );
+              })}
+              {normalizedQuickPlayerSearch.length >= 2 && !quickPlayerCandidates.length ? (
+                <div className={styles.modalNoPlayer}>
+                  <p>Tokios registracijos neradome.</p>
+                  <button type="button" onClick={() => { closeTeamWish(); window.setTimeout(() => document.getElementById("registracija")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }}>Pirma užsiregistruoti</button>
+                </div>
+              ) : null}
             </div>
-            <button className={styles.primaryButton} type="submit" disabled={saving}>{saving ? "Saugoma..." : `Prašyti priimti į „${quickTeam.name}“`}</button>
+            <button className={styles.primaryButton} type="submit" disabled={saving || !quickSelectedPlayer || Boolean(quickSelectedPlayer.assignedTeamId)}>{saving ? "Saugoma..." : quickSelectedPlayer ? `Patvirtinti: ${playerName(quickSelectedPlayer)} → ${quickTeam.name}` : "Pirma pasirink save"}</button>
           </form>
         </div>
       ) : null}
