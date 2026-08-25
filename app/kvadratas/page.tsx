@@ -77,6 +77,19 @@ function matchStatusLabel(status: KvadratasMatch["status"]) {
   return "Suplanuota";
 }
 
+function teamCode(team: KvadratasTeam, index: number) {
+  const match = team.name.toUpperCase().match(/([A-ZĄČĘĖĮŠŲŪŽ]\d+)$/);
+  return match?.[1] ?? `${String.fromCharCode(65 + index)}${index + 1}`;
+}
+
+function CaptainIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 17h16l-1.4-9-4.2 3.5L12 5l-2.4 6.5L5.4 8 4 17Zm1 2h14v2H5v-2Z" />
+    </svg>
+  );
+}
+
 export default function KvadratasPage() {
   const [teams, setTeams] = useState<KvadratasTeam[]>([]);
   const [players, setPlayers] = useState<KvadratasPlayer[]>([]);
@@ -89,6 +102,9 @@ export default function KvadratasPage() {
   const [lastName, setLastName] = useState("");
   const [preferredTeamId, setPreferredTeamId] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
+  const [quickTeamId, setQuickTeamId] = useState("");
+  const [quickFirstName, setQuickFirstName] = useState("");
+  const [quickLastName, setQuickLastName] = useState("");
   const [cancelSearch, setCancelSearch] = useState("");
   const [directorySearch, setDirectorySearch] = useState("");
   const [directoryPage, setDirectoryPage] = useState(1);
@@ -195,6 +211,23 @@ export default function KvadratasPage() {
     }
   }
 
+  async function submitTeamWish(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const team = teams.find((item) => item.id === quickTeamId);
+    if (!team) return;
+    const success = await runAction({
+      action: "register",
+      firstName: quickFirstName,
+      lastName: quickLastName,
+      preferredTeamId: team.id,
+    }, `Pageidavimas prisijungti prie „${team.name}“ išsaugotas. Kapitonas jį matys savo valdyme.`);
+    if (success) {
+      setQuickTeamId("");
+      setQuickFirstName("");
+      setQuickLastName("");
+    }
+  }
+
   async function unlockCaptain(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -243,7 +276,9 @@ export default function KvadratasPage() {
   const assignedCount = players.filter((player) => player.assignedTeamId).length;
   const arrivedCount = players.filter((player) => player.arrived).length;
   const unassignedPlayers = players.filter((player) => !player.assignedTeamId);
+  const neutralWaitingPlayers = unassignedPlayers.filter((player) => !player.preferredTeamId);
   const captainTeams = teams.filter((team) => team.captainPlayerId);
+  const quickTeam = teamsById.get(quickTeamId) ?? null;
   const unlockedCaptainTeam = teamsById.get(captainUnlockedTeamId) ?? null;
   const unlockedCaptainMembers = players.filter((player) => player.assignedTeamId === captainUnlockedTeamId);
   const captainCandidates = unassignedPlayers.slice().sort((a, b) => {
@@ -412,39 +447,30 @@ export default function KvadratasPage() {
           </fieldset>
           <fieldset>
             <legend>Kurioje komandoje norėtum žaisti? <small>nebūtina</small></legend>
-            <div className={styles.preferenceGrid}>
-              <button className={!preferredTeamId ? styles.selectedPreference : ""} type="button" onClick={() => setPreferredTeamId("")}>Nesvarbu</button>
-              {teams.map((team) => (
-                <button className={preferredTeamId === team.id ? styles.selectedPreference : ""} type="button" key={team.id} onClick={() => setPreferredTeamId(team.id)}>{team.name}</button>
-              ))}
+            <p className={styles.fieldHint}>Prie kiekvienos komandos matysi jos kapitoną, kai organizatorius jį paskirs.</p>
+            <div className={styles.teamPreferenceGrid}>
+              <button className={!preferredTeamId ? styles.selectedTeamPreference : ""} type="button" onClick={() => setPreferredTeamId("")}>
+                <b>?</b>
+                <span><strong>Nesvarbu</strong><small>Lauksiu kapitono pasirinkimo</small></span>
+              </button>
+              {teams.map((team, index) => {
+                const captain = team.captainPlayerId ? playersById.get(team.captainPlayerId) : null;
+                return (
+                  <button className={preferredTeamId === team.id ? styles.selectedTeamPreference : ""} type="button" key={team.id} onClick={() => setPreferredTeamId(team.id)}>
+                    <b>{teamCode(team, index)}</b>
+                    <span>
+                      <strong>{team.name}</strong>
+                      <small className={captain ? styles.hasCaptain : ""}><CaptainIcon /> {captain ? playerName(captain) : "Kapitonas dar nepaskirtas"}</small>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </fieldset>
           <button className={styles.primaryButton} type="submit" disabled={saving || loading}>
             {saving ? "Saugoma..." : "Registruotis į kvadratą"}
           </button>
         </form>
-      </section>
-
-      <section className={styles.cancelSection}>
-        <div>
-          <span className={styles.sectionEyebrow}>Pasikeitė planai?</span>
-          <h2>Atšauk savo registraciją</h2>
-          <p>Įrašyk vardą arba pavardę, surask save ir paspausk savo įrašą. Prieš ištrinant dar kartą paklausime, ar tikrai nebežaisi.</p>
-        </div>
-        <div className={styles.cancelSearch}>
-          <input type="search" value={cancelSearch} onChange={(event) => setCancelSearch(event.target.value)} placeholder="Pradėk rašyti vardą arba pavardę" />
-          {normalizeText(cancelSearch).length > 0 && normalizeText(cancelSearch).length < 2 ? <small>Įrašyk bent 2 raides.</small> : null}
-          {cancellationCandidates.length ? (
-            <div className={styles.cancelResults}>
-              {cancellationCandidates.map((player) => (
-                <button type="button" key={player.id} disabled={saving} onClick={() => void cancelPlayer(player)}>
-                  <span><strong>{playerName(player)}</strong><small>{player.assignedTeamId ? teamsById.get(player.assignedTeamId)?.name : "Dar nepriskirtas"}</small></span>
-                  <b>Atšaukti</b>
-                </button>
-              ))}
-            </div>
-          ) : normalizeText(cancelSearch).length >= 2 ? <p className={styles.emptyControl}>Atitinkančios registracijos nerasta.</p> : null}
-        </div>
       </section>
 
       <section className={styles.section}>
@@ -461,8 +487,11 @@ export default function KvadratasPage() {
             return (
               <article className={styles.teamCard} key={team.id} style={{ "--team-index": index } as React.CSSProperties}>
                 <header>
-                  <span>Komanda {String(index + 1).padStart(2, "0")}</span>
-                  <strong>{team.name}</strong>
+                  <div className={styles.teamIdentity}>
+                    <b className={styles.teamLogo}>{teamCode(team, index)}</b>
+                    <span>Komanda {String(index + 1).padStart(2, "0")}</span>
+                    <strong>{team.name}</strong>
+                  </div>
                   <small>{members.length}/{team.maxPlayers}</small>
                 </header>
                 <div className={styles.teamCapacity}>
@@ -470,6 +499,7 @@ export default function KvadratasPage() {
                   <strong>{missing ? `Trūksta ${missing} žaid.` : "Komanda pilna"}</strong>
                 </div>
                 <div className={styles.captainRow}>
+                  <i><CaptainIcon /></i>
                   <span>KAPITONAS</span>
                   <strong>{captain ? playerName(captain) : "Dar nepaskirtas"}</strong>
                 </div>
@@ -486,12 +516,49 @@ export default function KvadratasPage() {
                   )) : <li className={styles.emptyRow}>Komanda dar renkama</li>}
                 </ol>
                 <div className={styles.wishList}>
-                  <span>NORI Į ŠIĄ KOMANDĄ</span>
+                  <div>
+                    <span>NORI Į ŠIĄ KOMANDĄ</span>
+                    <button type="button" title={`Įrašyk save į norinčių prisijungti prie „${team.name}“ sąrašą`} aria-label={`Noriu prisijungti prie ${team.name}`} onClick={() => setQuickTeamId(team.id)}>+</button>
+                  </div>
+                  <small className={styles.plusTip}>Spausk +, jei norėtum žaisti šioje komandoje</small>
                   {wishes.length ? <p>{wishes.map(playerName).join(" · ")}</p> : <p>Pageidavimų dar nėra</p>}
                 </div>
               </article>
             );
           })}
+        </div>
+        <div className={styles.waitingPool}>
+          <div className={styles.waitingPoolHeader}>
+            <div>
+              <span>Laisvi žaidėjai</span>
+              <h3>Laukia kapitono kvietimo</h3>
+              <p>Čia patenka pasirinkę „Nesvarbu“. Prisijungęs kapitonas gali vienu paspaudimu pakviesti žaidėją į savo komandą.</p>
+            </div>
+            <strong>{neutralWaitingPlayers.length}</strong>
+          </div>
+          <div className={styles.waitingPlayerGrid}>
+            {neutralWaitingPlayers.map((player) => (
+              <article key={player.id}>
+                <span className={styles.waitingAvatar}>{player.firstName.slice(0, 1)}{player.lastName.slice(0, 1)}</span>
+                <div><strong>{playerName(player)}</strong><small>{player.skillLevel ? `${player.skillLevel} lygis` : "Lygis nepasirinktas"}</small></div>
+                <button
+                  type="button"
+                  disabled={saving || Boolean(captainUnlockedTeamId && unlockedCaptainMembers.length >= (unlockedCaptainTeam?.maxPlayers ?? 0))}
+                  title={captainUnlockedTeamId ? `Pakviesti į „${unlockedCaptainTeam?.name}“` : "Pirmiausia prisijunk kapitono valdyme žemiau"}
+                  onClick={() => {
+                    if (!captainUnlockedTeamId) {
+                      document.getElementById("kapitonams")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      return;
+                    }
+                    void runAction({ action: "captain_assign_player", teamId: captainUnlockedTeamId, captainCode, playerId: player.id }, `${playerName(player)} perkeltas į „${unlockedCaptainTeam?.name}“.`);
+                  }}
+                >
+                  <b>+</b><span>{captainUnlockedTeamId ? unlockedCaptainTeam?.name : "Kapitonui"}</span>
+                </button>
+              </article>
+            ))}
+            {!neutralWaitingPlayers.length ? <p className={styles.emptyWaiting}>Pasirinkusių „Nesvarbu“ kol kas nėra.</p> : null}
+          </div>
         </div>
       </section>
 
@@ -507,9 +574,9 @@ export default function KvadratasPage() {
               <>
                 <small>{formatMatchTime(featuredMatch.startsAt)} · {featuredMatch.court}</small>
                 <div>
-                  <strong>{teamsById.get(featuredMatch.teamAId)?.name ?? "Komanda A"}</strong>
+                  <strong>{teamsById.get(featuredMatch.teamAId)?.name ?? "Komanda A1"}</strong>
                   <b>{featuredMatch.status === "scheduled" ? "VS" : `${featuredMatch.teamAScore} : ${featuredMatch.teamBScore}`}</b>
-                  <strong>{teamsById.get(featuredMatch.teamBId)?.name ?? "Komanda B"}</strong>
+                  <strong>{teamsById.get(featuredMatch.teamBId)?.name ?? "Komanda B2"}</strong>
                 </div>
               </>
             ) : <p>Organizatorius čia paskelbs rungtynių laikus ir komandas.</p>}
@@ -598,7 +665,29 @@ export default function KvadratasPage() {
         ) : null}
       </section>
 
-      <section className={`${styles.section} ${styles.controlSection}`}>
+      <section className={styles.cancelSection}>
+        <div>
+          <span className={styles.sectionEyebrow}>Pasikeitė planai?</span>
+          <h2>Atšauk savo registraciją</h2>
+          <p>Įrašyk vardą arba pavardę, surask save ir paspausk savo įrašą. Prieš ištrinant dar kartą paklausime, ar tikrai nebežaisi.</p>
+        </div>
+        <div className={styles.cancelSearch}>
+          <input type="search" value={cancelSearch} onChange={(event) => setCancelSearch(event.target.value)} placeholder="Pradėk rašyti vardą arba pavardę" />
+          {normalizeText(cancelSearch).length > 0 && normalizeText(cancelSearch).length < 2 ? <small>Įrašyk bent 2 raides.</small> : null}
+          {cancellationCandidates.length ? (
+            <div className={styles.cancelResults}>
+              {cancellationCandidates.map((player) => (
+                <button type="button" key={player.id} disabled={saving} onClick={() => void cancelPlayer(player)}>
+                  <span><strong>{playerName(player)}</strong><small>{player.assignedTeamId ? teamsById.get(player.assignedTeamId)?.name : "Dar nepriskirtas"}</small></span>
+                  <b>Atšaukti</b>
+                </button>
+              ))}
+            </div>
+          ) : normalizeText(cancelSearch).length >= 2 ? <p className={styles.emptyControl}>Atitinkančios registracijos nerasta.</p> : null}
+        </div>
+      </section>
+
+      <section id="kapitonams" className={`${styles.section} ${styles.controlSection}`}>
         <div className={styles.sectionHeading}>
           <div><span className={styles.sectionNumber}>05</span><p className={styles.sectionEyebrow}>Kapitonams</p></div>
           <div><h2>Formuok ir sužymėk savo komandą</h2><p>Patvirtink arba atmesk pageidavimus, grąžink žaidėją į bendrą sąrašą ir renginio dieną pažymėk atvykusius.</p></div>
@@ -680,12 +769,13 @@ export default function KvadratasPage() {
               {teams.map((team) => (
                 <article key={team.id}>
                   <label><span>Komandos pavadinimas</span><input value={teamNames[team.id] ?? team.name} onChange={(event) => setTeamNames((current) => ({ ...current, [team.id]: event.target.value }))} /></label>
-                  <button type="button" disabled={saving || (teamNames[team.id] ?? team.name).trim() === team.name} onClick={() => void runAction({ action: "rename_team", adminPin, teamId: team.id, name: teamNames[team.id] }, "Komandos pavadinimas pakeistas.")}>Išsaugoti pavadinimą</button>
+                  <button type="button" disabled={saving} onClick={() => void runAction({ action: "rename_team", adminPin, teamId: team.id, name: teamNames[team.id] }, "Komandos pavadinimas išsaugotas.")}>{saving ? "Saugoma..." : "Išsaugoti pavadinimą"}</button>
                   <label><span>Žaidėjų vietų</span><input type="number" min={2} max={30} value={teamCapacities[team.id] ?? team.maxPlayers} onChange={(event) => setTeamCapacities((current) => ({ ...current, [team.id]: Number(event.target.value) }))} /></label>
-                  <button type="button" disabled={saving || teamCapacities[team.id] === team.maxPlayers} onClick={() => void runAction({ action: "update_team_capacity", adminPin, teamId: team.id, maxPlayers: teamCapacities[team.id] }, "Komandos talpa atnaujinta.")}>Išsaugoti vietų skaičių</button>
+                  <button type="button" disabled={saving} onClick={() => void runAction({ action: "update_team_capacity", adminPin, teamId: team.id, maxPlayers: teamCapacities[team.id] }, "Komandos vietų skaičius išsaugotas.")}>{saving ? "Saugoma..." : "Išsaugoti vietų skaičių"}</button>
                   <label><span>Kapitonas</span><select value={captainSelections[team.id] ?? ""} onChange={(event) => setCaptainSelections((current) => ({ ...current, [team.id]: event.target.value }))}><option value="">Nepaskirtas</option>{players.map((player) => <option value={player.id} key={player.id}>{playerName(player)}</option>)}</select></label>
                   <label><span>Kapitono kodas</span><input type="text" value={captainCodes[team.id] ?? ""} onChange={(event) => setCaptainCodes((current) => ({ ...current, [team.id]: event.target.value }))} placeholder={team.captainPlayerId ? "Įrašyk naują tik keičiant" : "Bent 4 simboliai"} /></label>
-                  <button type="button" disabled={saving || (Boolean(captainSelections[team.id]) && (captainCodes[team.id]?.trim().length ?? 0) < 4)} onClick={() => void runAction({ action: "assign_captain", adminPin, teamId: team.id, playerId: captainSelections[team.id] || null, captainCode: captainCodes[team.id] ?? "" }, captainSelections[team.id] ? "Kapitonas paskirtas. Perduok jam įrašytą kodą." : "Kapitonas pašalintas.").then((success) => { if (success) setCaptainCodes((current) => ({ ...current, [team.id]: "" })); })}>{captainSelections[team.id] ? "Paskirti kapitoną" : "Pašalinti kapitoną"}</button>
+                  {captainSelections[team.id] ? <small className={styles.adminHint}>Paskiriant ar keičiant kapitoną įrašyk jam bent 4 simbolių prisijungimo kodą.</small> : null}
+                  <button type="button" disabled={saving} onClick={() => void runAction({ action: "assign_captain", adminPin, teamId: team.id, playerId: captainSelections[team.id] || null, captainCode: captainCodes[team.id] ?? "" }, captainSelections[team.id] ? "Kapitonas paskirtas. Perduok jam įrašytą kodą." : "Kapitonas pašalintas.").then((success) => { if (success) setCaptainCodes((current) => ({ ...current, [team.id]: "" })); })}>{saving ? "Saugoma..." : captainSelections[team.id] ? "Paskirti kapitoną" : "Pašalinti kapitoną"}</button>
                   <button className={styles.dangerButton} type="button" disabled={saving} onClick={() => { if (window.confirm(`Ar tikrai ištrinti komandą „${team.name}“? Žaidėjai liks registruoti, bet taps nepriskirti.`)) void runAction({ action: "delete_team", adminPin, teamId: team.id }, "Komanda ištrinta."); }}>Ištrinti komandą</button>
                 </article>
               ))}
@@ -747,6 +837,23 @@ export default function KvadratasPage() {
           </div>
         )}
       </section>
+
+      {quickTeam ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setQuickTeamId(""); }}>
+          <form className={styles.teamWishModal} role="dialog" aria-modal="true" aria-labelledby="team-wish-title" onSubmit={submitTeamWish}>
+            <button className={styles.modalClose} type="button" aria-label="Uždaryti" onClick={() => setQuickTeamId("")}>×</button>
+            <div className={styles.modalTeamLogo}>{teamCode(quickTeam, Math.max(0, teams.findIndex((team) => team.id === quickTeam.id)))}</div>
+            <span className={styles.sectionEyebrow}>Komandos pageidavimas</span>
+            <h2 id="team-wish-title">Noriu į „{quickTeam.name}“</h2>
+            <p>Įrašyk vardą ir pavardę. Atsidursi šios komandos norinčiųjų sąraše, o galutinai patvirtins kapitonas.</p>
+            <div className={styles.modalFields}>
+              <label><span>Vardas</span><input autoFocus value={quickFirstName} onChange={(event) => setQuickFirstName(event.target.value)} placeholder="Tavo vardas" maxLength={80} required /></label>
+              <label><span>Pavardė</span><input value={quickLastName} onChange={(event) => setQuickLastName(event.target.value)} placeholder="Tavo pavardė" maxLength={80} required /></label>
+            </div>
+            <button className={styles.primaryButton} type="submit" disabled={saving}>{saving ? "Saugoma..." : `Prašyti priimti į „${quickTeam.name}“`}</button>
+          </form>
+        </div>
+      ) : null}
 
       <footer className={styles.footer}>Klaipėdos kvadrato registracija · klaipedosvakaras.fun</footer>
     </main>

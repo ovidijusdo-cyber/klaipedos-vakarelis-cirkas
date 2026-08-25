@@ -171,12 +171,12 @@ $$;
 insert into public.kvadratas_teams (name, sort_order)
 select defaults.name, defaults.sort_order
 from (values
-  ('Komanda A', 10),
-  ('Komanda B', 20),
-  ('Komanda C', 30),
-  ('Komanda D', 40),
-  ('Komanda E', 50),
-  ('Komanda F', 60)
+  ('Komanda A1', 10),
+  ('Komanda B2', 20),
+  ('Komanda C3', 30),
+  ('Komanda D4', 40),
+  ('Komanda E5', 50),
+  ('Komanda F6', 60)
 ) as defaults(name, sort_order)
 where not exists (
   select 1 from public.kvadratas_teams team where lower(team.name) = lower(defaults.name)

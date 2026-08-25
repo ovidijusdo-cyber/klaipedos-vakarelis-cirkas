@@ -449,7 +449,7 @@
 .primaryButton:disabled,
 .secondaryButton:disabled,
 .adminTeamGrid button:disabled,
-.adminPlayers button:disabled { opacity: 0.55; cursor: wait; }
+.adminPlayers button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .section { padding: clamp(24px, 4vw, 44px); }
 
@@ -479,16 +479,22 @@
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
 }
 
-.teamCard:nth-child(3n + 2) { --accent: #2563eb; }
-.teamCard:nth-child(3n + 3) { --accent: #16a34a; }
+.teamCard:nth-child(1) { --accent: #f97316; }
+.teamCard:nth-child(2) { --accent: #2563eb; }
+.teamCard:nth-child(3) { --accent: #16a34a; }
+.teamCard:nth-child(4) { --accent: #a855f7; }
+.teamCard:nth-child(5) { --accent: #e11d48; }
+.teamCard:nth-child(6) { --accent: #0891b2; }
 
 .teamCard > header {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   padding: 20px;
   overflow: hidden;
-  background: #111827;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--accent) 28%, #111827), #111827 68%);
   color: #ffffff;
 }
 
@@ -504,8 +510,33 @@
   opacity: 0.28;
 }
 
-.teamCard > header span {
-  grid-column: 1 / -1;
+.teamIdentity {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: center;
+}
+
+.teamLogo {
+  grid-row: 1 / span 2;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--accent) 65%, white);
+  border-radius: 15px 6px 15px 6px;
+  background: var(--accent);
+  color: #ffffff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: -0.04em;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 30%, transparent);
+  transform: rotate(-3deg);
+}
+
+.teamIdentity > span {
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -513,25 +544,37 @@
   font-weight: 950;
 }
 
-.teamCard > header strong { position: relative; z-index: 1; margin-top: 5px; font-size: 1.25rem; }
+.teamIdentity > strong { position: relative; z-index: 1; font-size: 1.25rem; }
 .teamCard > header small { position: relative; z-index: 1; align-self: end; color: #cbd5e1; font-weight: 800; }
 
 .captainRow {
   display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
   gap: 4px;
+  align-items: center;
   padding: 14px 18px;
   border-bottom: 1px solid #e5eaf1;
   background: color-mix(in srgb, var(--accent) 9%, white);
 }
 
 .captainRow span,
-.wishList > span {
+.wishList > div > span {
   color: var(--accent);
   letter-spacing: 0.09em;
   font-size: 0.64rem;
   font-weight: 950;
 }
 
+.captainRow i {
+  grid-row: 1 / span 2;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--accent);
+}
+.captainRow i svg { width: 19px; height: 19px; fill: #ffffff; }
 .captainRow strong { font-size: 0.9rem; }
 
 .memberList {
@@ -564,6 +607,24 @@
   background: #f8fafc;
 }
 
+.wishList > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wishList > div > button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 11px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 7px 16px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.wishList .plusTip { display: block; margin-top: 5px; color: #8a94a4; font-size: 0.65rem; }
 .wishList p { margin: 5px 0 0; color: #667085; font-size: 0.75rem; line-height: 1.5; }
 
 .directoryToolbar {
@@ -994,6 +1055,113 @@
 .matchEditorList article > button { min-height: 46px; padding: 0 12px; border: 0; border-radius: 11px; background: #111827; color: #ffffff; font-weight: 900; cursor: pointer; }
 .matchEditorList article > button.dangerButton { background: #fee2e2; color: #b91c1c; }
 
+.teamPreferenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 10px;
+}
+.teamPreferenceGrid > button {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 66px;
+  padding: 9px 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 15px;
+  background: #ffffff;
+  color: #253047;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.teamPreferenceGrid > button:hover { border-color: #fb923c; transform: translateY(-1px); }
+.teamPreferenceGrid > button > b {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px 5px 12px 5px;
+  background: #111827;
+  color: #ffffff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: .9rem;
+}
+.teamPreferenceGrid > button > span { display: grid; gap: 4px; min-width: 0; }
+.teamPreferenceGrid > button strong { font-size: .78rem; }
+.teamPreferenceGrid > button small { display: flex; align-items: center; gap: 5px; overflow: hidden; color: #8a94a4; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
+.teamPreferenceGrid > button small svg { flex: 0 0 auto; width: 14px; height: 14px; fill: currentColor; }
+.teamPreferenceGrid > button small.hasCaptain { color: #c2410c; font-weight: 850; }
+.teamPreferenceGrid > button.selectedTeamPreference { border-color: #f97316; background: #fff7ed; box-shadow: inset 0 0 0 1px #f97316, 0 8px 18px rgba(249,115,22,.1); }
+.teamPreferenceGrid > button.selectedTeamPreference > b { background: #ea580c; }
+
+.waitingPool {
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+}
+.waitingPoolHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #111827;
+  color: #ffffff;
+}
+.waitingPoolHeader > div { display: grid; gap: 3px; }
+.waitingPoolHeader span { color: #fb923c; text-transform: uppercase; letter-spacing: .1em; font-size: .65rem; font-weight: 950; }
+.waitingPoolHeader h3 { margin: 0; font-size: 1.12rem; }
+.waitingPoolHeader p { margin: 0; color: #aeb8c8; font-size: .72rem; line-height: 1.45; }
+.waitingPoolHeader > strong { display: grid; flex: 0 0 auto; width: 50px; height: 50px; place-items: center; border-radius: 50%; background: #f97316; font-family: var(--font-heading), sans-serif; font-size: 1.35rem; }
+.waitingPlayerGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; padding: 14px; }
+.waitingPlayerGrid article { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; }
+.waitingAvatar { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #e2e8f0; color: #334155; font-size: .7rem; font-weight: 950; text-transform: uppercase; }
+.waitingPlayerGrid article > div { display: grid; gap: 2px; min-width: 0; }
+.waitingPlayerGrid article > div strong { overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+.waitingPlayerGrid article > div small { color: #8490a2; font-size: .66rem; }
+.waitingPlayerGrid article > button { display: flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 9px; border: 0; border-radius: 10px; background: #111827; color: #ffffff; cursor: pointer; }
+.waitingPlayerGrid article > button b { font-size: 1.1rem; }
+.waitingPlayerGrid article > button span { font-size: .65rem; font-weight: 850; }
+.waitingPlayerGrid article > button:disabled { opacity: .5; cursor: not-allowed; }
+.emptyWaiting { grid-column: 1 / -1; margin: 0; padding: 18px; color: #8a94a4; text-align: center; font-size: .8rem; }
+
+.adminHint { margin-top: -4px; color: #8a5a3b; font-size: .66rem; line-height: 1.4; }
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, .72);
+  backdrop-filter: blur(8px);
+}
+.teamWishModal {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  width: min(520px, 100%);
+  padding: clamp(24px, 5vw, 38px);
+  border: 1px solid rgba(255,255,255,.6);
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow: 0 30px 90px rgba(15,23,42,.35);
+}
+.teamWishModal h2 { margin: 0; font-family: var(--font-heading), sans-serif; font-size: clamp(1.8rem, 6vw, 2.8rem); line-height: 1; }
+.teamWishModal > p { margin: 0; color: #667085; line-height: 1.55; }
+.modalTeamLogo { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 18px 7px 18px 7px; background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; font-family: var(--font-heading), sans-serif; font-size: 1.1rem; transform: rotate(-3deg); }
+.modalClose { position: absolute; top: 14px; right: 14px; display: grid; width: 38px; height: 38px; place-items: center; border: 0; border-radius: 50%; background: #eef2f7; color: #334155; font-size: 1.4rem; cursor: pointer; }
+.modalFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 5px; }
+.modalFields label { display: grid; gap: 6px; color: #4b5565; font-size: .72rem; font-weight: 900; }
+.modalFields input { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid #cfd7e4; border-radius: 13px; outline: none; background: #ffffff; color: #172033; font: inherit; }
+.modalFields input:focus { border-color: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,.12); }
+
 @media (max-width: 1050px) {
   .eventInfo { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .gameStage,
@@ -1002,6 +1170,7 @@
   .matchForm { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .matchEditorList article { grid-template-columns: minmax(180px, 1fr) 80px auto 80px 130px; }
   .matchEditorList article > button { grid-column: span 2; }
+  .waitingPlayerGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -1024,4 +1193,8 @@
   .matchEditorList article > select { grid-column: 1 / -1; }
   .matchEditorList article > b { display: none; }
   .matchEditorList article > button { grid-column: auto; }
+  .teamPreferenceGrid,
+  .waitingPlayerGrid,
+  .modalFields { grid-template-columns: 1fr; }
+  .waitingPlayerGrid article { grid-template-columns: 38px minmax(0, 1fr) auto; }
 }
