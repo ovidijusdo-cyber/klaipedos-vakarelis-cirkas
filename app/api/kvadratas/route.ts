@@ -277,21 +277,18 @@ export async function POST(request: Request) {
         .maybeSingle();
       if (playerError) throw playerError;
       if (!player) return NextResponse.json({ error: "Registracija neberasta." }, { status: 404 });
-      if (player.assigned_team_id) {
-        return NextResponse.json({ error: "Tavo komanda jau patvirtinta. Dėl pakeitimo kreipkis į kapitoną arba organizatorių." }, { status: 409 });
+      if (player.assigned_team_id === teamId) {
+        return NextResponse.json({ error: "Tu jau esi šioje komandoje." }, { status: 409 });
       }
 
       const { data: updatedPlayer, error } = await supabase
         .from("kvadratas_players")
         .update({ preferred_team_id: teamId, updated_at: now })
         .eq("id", playerId)
-        .is("assigned_team_id", null)
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      if (!updatedPlayer) {
-        return NextResponse.json({ error: "Komanda ką tik buvo patvirtinta. Atnaujink puslapį." }, { status: 409 });
-      }
+      if (!updatedPlayer) return NextResponse.json({ error: "Registracija neberasta." }, { status: 404 });
       return await stateResponse();
     }
 
@@ -340,9 +337,21 @@ export async function POST(request: Request) {
 
       if (action === "captain_assign_player") {
         if (player.assigned_team_id && player.assigned_team_id !== teamId) {
-          return NextResponse.json({ error: "Žaidėją jau patvirtino kita komanda." }, { status: 409 });
+          if (player.preferred_team_id !== teamId) {
+            return NextResponse.json({ error: "Žaidėjas nepateikė prašymo pereiti į tavo komandą." }, { status: 409 });
+          }
+          const { data: captainTeam, error: captainTeamError } = await supabase
+            .from("kvadratas_teams")
+            .select("id, name")
+            .eq("captain_player_id", playerId)
+            .neq("id", teamId)
+            .maybeSingle();
+          if (captainTeamError) throw captainTeamError;
+          if (captainTeam) {
+            return NextResponse.json({ error: `Žaidėjas yra „${captainTeam.name}“ kapitonas. Pirmiausia organizatorius turi pakeisti tos komandos kapitoną.` }, { status: 409 });
+          }
         }
-        if (!player.assigned_team_id && await teamMemberCount(teamId) >= team.max_players) {
+        if (player.assigned_team_id !== teamId && await teamMemberCount(teamId) >= team.max_players) {
           return NextResponse.json({ error: "Komanda jau pilna." }, { status: 409 });
         }
         const { error } = await supabase
@@ -354,7 +363,7 @@ export async function POST(request: Request) {
       }
 
       if (action === "captain_reject_preference") {
-        if (player.preferred_team_id !== teamId || player.assigned_team_id) {
+        if (player.preferred_team_id !== teamId || player.assigned_team_id === teamId) {
           return NextResponse.json({ error: "Šis pageidavimas nebeaktyvus." }, { status: 409 });
         }
         const { error } = await supabase
