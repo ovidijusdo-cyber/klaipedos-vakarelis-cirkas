@@ -451,11 +451,35 @@ export default function KvadratasPage() {
           </div>
         </div>
         <div className={styles.court} aria-hidden="true">
+          <div className={styles.courtBoundary} />
           <div className={styles.courtLine} />
-          <div className={styles.centerCircle} />
-          <div className={styles.courtKeyLeft} />
-          <div className={styles.courtKeyRight} />
-          <div className={styles.ball}><i /><b /><span /></div>
+          <div className={styles.centerSquare} />
+          <div className={styles.courtBackZoneLeft} />
+          <div className={styles.courtBackZoneRight} />
+          <div className={styles.volleyball}>
+            <svg viewBox="0 0 120 120" focusable="false">
+              <defs>
+                <clipPath id="volleyball-clip">
+                  <circle cx="60" cy="60" r="52" />
+                </clipPath>
+              </defs>
+              <circle cx="60" cy="60" r="52" fill="#f8fafc" />
+              <g clipPath="url(#volleyball-clip)">
+                <path d="M58 5c17 7 30 20 37 37-17 4-32-1-44-13 1-9 3-17 7-24Z" fill="#2563eb" />
+                <path d="M95 42c9 17 10 34 2 51-14-10-22-23-23-39 6-6 13-10 21-12Z" fill="#facc15" />
+                <path d="M97 93c-10 15-25 24-43 25-1-17 5-32 17-44 9 3 18 10 26 19Z" fill="#2563eb" />
+                <path d="M54 118c-19-2-34-11-44-26 15-9 31-11 47-5 1 10 0 20-3 31Z" fill="#facc15" />
+                <path d="M10 92C1 74 2 56 11 40c14 11 22 25 21 42-6 5-13 8-22 10Z" fill="#2563eb" />
+                <path d="M11 40C21 22 37 10 58 5c0 18-6 34-19 45-10-1-19-4-28-10Z" fill="#facc15" />
+                <path d="M58 5c0 18-6 34-19 45-13 11-22 25-29 42" fill="none" stroke="#172033" strokeWidth="3.5" />
+                <path d="M95 42c-17 4-32-1-44-13-10 5-17 12-20 21" fill="none" stroke="#172033" strokeWidth="3.5" />
+                <path d="M97 93c-14-10-22-23-23-39-12-1-23 2-33 10" fill="none" stroke="#172033" strokeWidth="3.5" />
+                <path d="M54 118c-1-17 5-32 17-44-6-9-14-15-25-18" fill="none" stroke="#172033" strokeWidth="3.5" />
+                <path d="M10 92c15-9 31-11 47-5" fill="none" stroke="#172033" strokeWidth="3.5" />
+              </g>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#172033" strokeWidth="5" />
+            </svg>
+          </div>
         </div>
       </header>
 
