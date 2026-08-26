@@ -185,6 +185,14 @@ type MovieSeatHold = {
   owned: boolean;
 };
 
+function getServerClockOffset(serverTime: unknown, requestStartedAt: number, responseReceivedAt: number) {
+  const serverTimeMs = typeof serverTime === "string" ? Date.parse(serverTime) : Number.NaN;
+  if (!Number.isFinite(serverTimeMs)) return null;
+
+  const estimatedServerTimeAtReceipt = serverTimeMs + Math.max(0, responseReceivedAt - requestStartedAt) / 2;
+  return estimatedServerTimeAtReceipt - responseReceivedAt;
+}
+
 type MovieSeatCell =
   | {
       type: "seat";
@@ -2573,6 +2581,7 @@ export default function Page() {
   const syncedStateRef = useRef<Record<string, string>>({});
   const remoteStateLoadedRef = useRef(false);
   const movieHoldTokenRef = useRef("");
+  const movieServerClockOffsetRef = useRef(0);
   const movieGuestScrollSeatRef = useRef("");
   const [voteVoterLookup, setVoteVoterLookup] = useState("");
   const [selectedVoterId, setSelectedVoterId] = useState("");
@@ -2833,22 +2842,31 @@ export default function Page() {
 
     async function refreshMovieSeats() {
       try {
+        const requestStartedAt = Date.now();
         const response = await fetch(`/api/movie-seats?holdToken=${encodeURIComponent(holdToken)}`, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to refresh movie seats");
         const data = (await response.json()) as {
           reservations?: MovieSeatReservation[];
           holds?: MovieSeatHold[];
           settings?: MovieSettings;
+          serverTime?: string;
         };
         if (ignore) return;
 
+        const responseReceivedAt = Date.now();
+        const nextClockOffset = getServerClockOffset(data.serverTime, requestStartedAt, responseReceivedAt);
+        if (nextClockOffset !== null) {
+          movieServerClockOffsetRef.current = nextClockOffset;
+        }
+        const serverNow = responseReceivedAt + movieServerClockOffsetRef.current;
         const nextReservations = normalizeMovieSeatReservations(Array.isArray(data.reservations) ? data.reservations : []);
         const nextHolds = Array.isArray(data.holds) ? data.holds : [];
         const activeOwnHoldIds = new Set(
           nextHolds
-            .filter((hold) => hold.owned && Date.parse(hold.expiresAt) > Date.now())
+            .filter((hold) => hold.owned && Date.parse(hold.expiresAt) > serverNow)
             .map((hold) => hold.seatId),
         );
+        setMovieHoldNow(serverNow);
         setMovieSeatReservations(nextReservations);
         setMovieSeatHolds(nextHolds);
         setMovieSettings(normalizeMovieSettings(data.settings));
@@ -2867,7 +2885,10 @@ export default function Page() {
 
     void refreshMovieSeats();
     const refreshTimer = window.setInterval(() => void refreshMovieSeats(), 3000);
-    const countdownTimer = window.setInterval(() => setMovieHoldNow(Date.now()), 1000);
+    const countdownTimer = window.setInterval(
+      () => setMovieHoldNow(Date.now() + movieServerClockOffsetRef.current),
+      1000,
+    );
 
     return () => {
       ignore = true;
@@ -4526,13 +4547,21 @@ export default function Page() {
     }
 
     try {
+      const requestStartedAt = Date.now();
       const response = await fetch("/api/movie-seats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: selected ? "release" : "hold", holdToken, seatId }),
       });
-      const data = (await response.json()) as { error?: string; hold?: MovieSeatHold };
+      const data = (await response.json()) as { error?: string; hold?: MovieSeatHold; serverTime?: string };
       if (!response.ok) throw new Error(data.error || "Nepavyko pasirinkti vietos.");
+
+      const responseReceivedAt = Date.now();
+      const nextClockOffset = getServerClockOffset(data.serverTime, requestStartedAt, responseReceivedAt);
+      if (nextClockOffset !== null) {
+        movieServerClockOffsetRef.current = nextClockOffset;
+        setMovieHoldNow(responseReceivedAt + nextClockOffset);
+      }
 
       if (selected) {
         setMovieSeatHolds((previous) => previous.filter((hold) => hold.seatId !== seatId || !hold.owned));

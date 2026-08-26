@@ -292,7 +292,11 @@ export async function POST(request: Request) {
         if (insertError) throw insertError;
       }
 
-      return NextResponse.json({ ok: true, hold: { seatId, expiresAt, owned: true } });
+      return NextResponse.json({
+        ok: true,
+        hold: { seatId, expiresAt, owned: true },
+        serverTime: new Date().toISOString(),
+      });
     }
 
     if (action === "release") {
