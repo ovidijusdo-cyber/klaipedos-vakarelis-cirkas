@@ -98,10 +98,8 @@ export default function KvadratasPage() {
   const [saving, setSaving] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [preferredTeamId, setPreferredTeamId] = useState("");
-  const [skillLevel, setSkillLevel] = useState("");
   const [quickTeamId, setQuickTeamId] = useState("");
   const [quickPlayerSearch, setQuickPlayerSearch] = useState("");
   const [quickPlayerId, setQuickPlayerId] = useState("");
@@ -244,18 +242,22 @@ export default function KvadratasPage() {
 
   async function submitRegistration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2) {
+      setNotice({ type: "warning", text: "Įrašyk vardą ir pavardę." });
+      return;
+    }
+
+    const [firstName, ...lastNameParts] = nameParts;
     const success = await runAction({
       action: "register",
       firstName,
-      lastName,
+      lastName: lastNameParts.join(" "),
       preferredTeamId: preferredTeamId || null,
-      skillLevel: skillLevel || null,
     }, "Registracija išsaugota. Tavo vardas jau matomas bendrame sąraše.");
     if (success) {
-      setFirstName("");
-      setLastName("");
+      setFullName("");
       setPreferredTeamId("");
-      setSkillLevel("");
     }
   }
 
@@ -515,30 +517,15 @@ export default function KvadratasPage() {
           <span className={styles.sectionNumber}>01</span>
           <p className={styles.sectionEyebrow}>Žaidėjo registracija</p>
           <h2>Įrašyk save į rungtynių sąrašą</h2>
-          <p>Komandos ir pajėgumo pasirinkimai nėra privalomi. Jie padės organizatoriui sudaryti lygesnes komandas.</p>
+          <p>Įrašyk vardą ir pavardę. Komandą gali pasirinkti, tačiau tai nėra privaloma.</p>
         </div>
 
         <form className={styles.registrationForm} onSubmit={submitRegistration}>
-          <label>
-            <span>Vardas</span>
-            <input value={firstName} onChange={(event) => setFirstName(event.target.value)} autoComplete="given-name" placeholder="Tavo vardas" maxLength={80} required />
+          <label className={styles.fullNameField}>
+            <span>Vardas ir pavardė</span>
+            <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" placeholder="Pvz. Jonas Jonaitis" maxLength={160} required />
+            <small>Įrašyk abu viename laukelyje.</small>
           </label>
-          <label>
-            <span>Pavardė</span>
-            <input value={lastName} onChange={(event) => setLastName(event.target.value)} autoComplete="family-name" placeholder="Tavo pavardė" maxLength={80} required />
-          </label>
-          <fieldset>
-            <legend>Jėgų lygis <small>nebūtina</small></legend>
-            <div className={styles.preferenceGrid}>
-              <button className={!skillLevel ? styles.selectedPreference : ""} type="button" onClick={() => setSkillLevel("")}>Nepasirinkti</button>
-              {SKILL_LEVELS.map((level) => (
-                <button className={skillLevel === level ? styles.selectedPreference : ""} type="button" key={level} onClick={() => setSkillLevel(level)}>
-                  {level} lygis
-                </button>
-              ))}
-            </div>
-            <p className={styles.fieldHint}>A – stipriausias, D – pradedantysis. Pasirinkimas matomas organizatoriui ir bendrame sąraše.</p>
-          </fieldset>
           <fieldset>
             <legend>Kurioje komandoje norėtum žaisti? <small>nebūtina</small></legend>
             <p className={styles.fieldHint}>Prie kiekvienos komandos matysi jos kapitoną, kai organizatorius jį paskirs.</p>
@@ -561,8 +548,9 @@ export default function KvadratasPage() {
               })}
             </div>
           </fieldset>
-          <button className={styles.primaryButton} type="submit" disabled={saving || loading}>
-            {saving ? "Saugoma..." : "Registruotis į kvadratą"}
+          <button className={`${styles.primaryButton} ${styles.registrationSubmitButton}`} type="submit" disabled={saving || loading}>
+            <span>{saving ? "Registracija saugoma..." : "Registruotis į kvadratą"}</span>
+            {!saving ? <b aria-hidden="true">→</b> : null}
           </button>
         </form>
       </section>
