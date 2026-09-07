@@ -91,14 +91,14 @@ create table if not exists public.kvadratas_teams (
   captain_code_hash text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
-  max_players integer not null default 8,
+  max_players integer not null default 7,
   constraint kvadratas_teams_name_length check (char_length(name) between 1 and 60),
   constraint kvadratas_teams_sort_order_range check (sort_order between 0 and 1000),
   constraint kvadratas_teams_max_players_range check (max_players between 2 and 30)
 );
 
 alter table public.kvadratas_teams
-  add column if not exists max_players integer not null default 8;
+  add column if not exists max_players integer not null default 7;
 
 do $$
 begin
