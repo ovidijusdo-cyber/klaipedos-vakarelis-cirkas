@@ -77,6 +77,32 @@ function matchStatusLabel(status: KvadratasMatch["status"]) {
   return "Suplanuota";
 }
 
+function buildRoundRobinPairings(teamIds: string[]) {
+  let remaining = teamIds.flatMap((teamAId, index) =>
+    teamIds.slice(index + 1).map((teamBId) => ({ teamAId, teamBId })),
+  );
+  const pairings: Array<{ teamAId: string; teamBId: string }> = [];
+
+  while (remaining.length > 0) {
+    const usedTeamIds = new Set<string>();
+    const nextRound: typeof remaining = [];
+    const deferred: typeof remaining = [];
+    for (const pairing of remaining) {
+      if (!usedTeamIds.has(pairing.teamAId) && !usedTeamIds.has(pairing.teamBId)) {
+        nextRound.push(pairing);
+        usedTeamIds.add(pairing.teamAId);
+        usedTeamIds.add(pairing.teamBId);
+      } else {
+        deferred.push(pairing);
+      }
+    }
+    pairings.push(...nextRound);
+    remaining = deferred;
+  }
+
+  return pairings;
+}
+
 function teamCode(team: KvadratasTeam, index: number) {
   const match = team.name.toUpperCase().match(/([A-ZĄČĘĖĮŠŲŪŽ]\d+)$/);
   return match?.[1] ?? `${String.fromCharCode(65 + index)}${index + 1}`;
@@ -369,13 +395,34 @@ export default function KvadratasPage() {
   const pageCount = Math.max(1, Math.ceil(filteredPlayers.length / PAGE_SIZE));
   const safePage = Math.min(directoryPage, pageCount);
   const visiblePlayers = filteredPlayers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const liveMatch = matches.find((match) => match.status === "live") ?? null;
-  const scheduledMatches = matches.filter((match) => match.status === "scheduled");
+  const orderedMatches = useMemo(() => [...matches].sort((a, b) => a.sortOrder - b.sortOrder), [matches]);
+  const previewPairings = useMemo(
+    () => buildRoundRobinPairings(teams.filter((team) => team.captainPlayerId).map((team) => team.id)),
+    [teams],
+  );
+  const tournamentTeams = useMemo(() => {
+    if (!matches.length) return teams.filter((team) => team.captainPlayerId);
+    const participatingTeamIds = new Set(matches.flatMap((match) => [match.teamAId, match.teamBId]));
+    return teams.filter((team) => participatingTeamIds.has(team.id));
+  }, [matches, teams]);
+  const liveMatch = orderedMatches.find((match) => match.status === "live") ?? null;
+  const scheduledMatches = orderedMatches.filter((match) => match.status === "scheduled");
+  const finishedMatches = orderedMatches.filter((match) => match.status === "finished");
   const featuredMatch = liveMatch ?? scheduledMatches[0] ?? null;
   const nextMatch = liveMatch ? scheduledMatches[0] ?? null : scheduledMatches[1] ?? null;
+  const currentMatchNumber = liveMatch ? orderedMatches.findIndex((match) => match.id === liveMatch.id) + 1 : 0;
+  const featuredMatchNumber = featuredMatch ? orderedMatches.findIndex((match) => match.id === featuredMatch.id) + 1 : 0;
+  const nextMatchNumber = nextMatch ? orderedMatches.findIndex((match) => match.id === nextMatch.id) + 1 : 0;
+  const totalTournamentMatches = orderedMatches.length || previewPairings.length;
+  const tournamentProgress = totalTournamentMatches ? finishedMatches.length / totalTournamentMatches * 100 : 0;
+
+  function captainName(team?: KvadratasTeam) {
+    if (!team?.captainPlayerId) return "Kapitonas nepaskirtas";
+    return playerName(playersById.get(team.captainPlayerId)) || "Kapitonas nepaskirtas";
+  }
 
   const standings = useMemo(() => {
-    const table = new Map(teams.map((team) => [team.id, {
+    const table = new Map(tournamentTeams.map((team) => [team.id, {
       team,
       played: 0,
       wins: 0,
@@ -415,7 +462,25 @@ export default function KvadratasPage() {
       || (b.scored - b.conceded) - (a.scored - a.conceded)
       || b.scored - a.scored
       || a.team.sortOrder - b.team.sortOrder);
-  }, [matches, teams]);
+  }, [matches, tournamentTeams]);
+
+  async function startRoundRobin() {
+    if (!matches.length && !window.confirm(`Pradėti turnyrą su ${captainTeams.length} komandomis ir ${previewPairings.length} rungtynėmis?`)) return;
+    await runAction({ action: "start_round_robin", adminPin }, matches.length ? "Turnyras tęsiamas." : "Turnyras pradėtas. Pirmosios rungtynės jau rodomos visiems.");
+  }
+
+  async function recordMatchWinner(match: KvadratasMatch, winnerTeamId: string) {
+    const winner = teamsById.get(winnerTeamId);
+    if (!winner || !window.confirm(`Patvirtinti, kad „${winner.name}“ laimėjo šias rungtynes?`)) return;
+    await runAction({
+      action: "record_match_winner",
+      adminPin,
+      matchId: match.id,
+      winnerTeamId,
+    }, scheduledMatches.length
+      ? `„${winner.name}“ pergalė išsaugota. Kitos rungtynės paleistos automatiškai.`
+      : `„${winner.name}“ pergalė išsaugota. Turnyras baigtas.`);
+  }
 
   async function cancelPlayer(player: KvadratasPlayer) {
     if (!window.confirm(`Ar tikrai nori atšaukti ${playerName(player)} dalyvavimą ir nebežaisti?`)) return;
@@ -647,49 +712,132 @@ export default function KvadratasPage() {
         </div>
       </section>
 
-      <section className={`${styles.section} ${styles.tournamentSection}`}>
+      <section className={`${styles.section} ${styles.tournamentSection}`} id="turnyras">
         <div className={styles.sectionHeading}>
           <div><span className={styles.sectionNumber}>03</span><p className={styles.sectionEyebrow}>Turnyras gyvai</p></div>
-          <div><h2>Dabar žaidžia ir kas ruošiasi</h2><p>Tvarkaraštis ir rezultatai atsinaujina automatiškai kas kelias sekundes.</p></div>
+          <div><h2>Kiekviena komanda žaidžia su kiekviena</h2><p>Dalyvauja tik komandos su paskirtais kapitonais. Tvarkaraštis ir rezultatai visiems atsinaujina automatiškai.</p></div>
         </div>
+
+        <div className={styles.tournamentCommand}>
+          <header className={styles.tournamentCommandHeader}>
+            <div>
+              <span>Turnyro valdymas</span>
+              <h3>{liveMatch ? `Rungtynės ${currentMatchNumber} iš ${totalTournamentMatches}` : finishedMatches.length === totalTournamentMatches && totalTournamentMatches ? "Turnyras baigtas" : "Pasiruošę pradėti"}</h3>
+            </div>
+            <strong>{finishedMatches.length}<small> / {totalTournamentMatches || 0} sužaista</small></strong>
+          </header>
+          <div className={styles.tournamentProgress} aria-label={`Sužaista ${finishedMatches.length} iš ${totalTournamentMatches || 0} rungtynių`}>
+            <span style={{ width: `${tournamentProgress}%` }} />
+          </div>
+
+          {liveMatch ? (
+            <div className={styles.currentMatchControl}>
+              <div className={styles.currentMatchTeams}>
+                {[liveMatch.teamAId, liveMatch.teamBId].map((teamId, index) => {
+                  const team = teamsById.get(teamId);
+                  return (
+                    <div className={styles.currentMatchTeam} key={teamId}>
+                      <b>{team ? teamCode(team, teams.findIndex((item) => item.id === team.id)) : index + 1}</b>
+                      <span><strong>{team?.name ?? "Komanda"}</strong><small><CaptainIcon /> Kapitonas: {captainName(team)}</small></span>
+                    </div>
+                  );
+                })}
+                <i>PRIEŠ</i>
+              </div>
+              {adminUnlocked ? (
+                <div className={styles.winnerControls}>
+                  <span>Kas laimėjo?</span>
+                  <button type="button" disabled={saving} onClick={() => void recordMatchWinner(liveMatch, liveMatch.teamAId)}>{teamsById.get(liveMatch.teamAId)?.name ?? "Pirma komanda"}</button>
+                  <button type="button" disabled={saving} onClick={() => void recordMatchWinner(liveMatch, liveMatch.teamBId)}>{teamsById.get(liveMatch.teamBId)?.name ?? "Antra komanda"}</button>
+                </div>
+              ) : (
+                <form className={styles.tournamentUnlock} onSubmit={unlockAdmin}>
+                  <label><span>Organizatoriaus PIN</span><input type="password" value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN rezultatui žymėti" required /></label>
+                  <button type="submit" disabled={saving}>{saving ? "Tikrinama..." : "Atrakinti rezultatų valdymą"}</button>
+                </form>
+              )}
+            </div>
+          ) : finishedMatches.length === totalTournamentMatches && totalTournamentMatches > 0 ? (
+            <div className={styles.tournamentComplete}><b>Turnyras užbaigtas</b><span>Visi rezultatai išsaugoti, o galutinė vieta matoma turnyrinėje lentelėje.</span></div>
+          ) : (
+            <div className={styles.tournamentStartPanel}>
+              <div><b>{captainTeams.length} komandos</b><span>{previewPairings.length || scheduledMatches.length} rungtynės · kiekviena pora susitiks vieną kartą</span></div>
+              {adminUnlocked ? (
+                <button type="button" disabled={saving || captainTeams.length < 2} onClick={() => void startRoundRobin()}>{saving ? "Paleidžiama..." : matches.length ? "Tęsti turnyrą" : "Pradėti turnyrą"}</button>
+              ) : (
+                <form className={styles.tournamentUnlock} onSubmit={unlockAdmin}>
+                  <label><span>Organizatoriaus PIN</span><input type="password" value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN turnyrui pradėti" required /></label>
+                  <button type="submit" disabled={saving}>{saving ? "Tikrinama..." : "Atrakinti turnyro valdymą"}</button>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className={styles.gameStage}>
           <article className={`${styles.featuredGame} ${featuredMatch?.status === "live" ? styles.liveGame : ""}`}>
-            <span>{featuredMatch ? (featuredMatch.status === "live" ? "Vyksta dabar" : "Kitas žaidimas") : "Tvarkaraštis ruošiamas"}</span>
+            <span>{featuredMatch ? (featuredMatch.status === "live" ? "Vyksta dabar" : "Kitas žaidimas") : previewPairings.length ? "Pirmosios rungtynės" : "Tvarkaraštis ruošiamas"}</span>
             {featuredMatch ? (
               <>
-                <small>{formatMatchTime(featuredMatch.startsAt)} · {featuredMatch.court}</small>
+                <small>Rungtynės #{featuredMatchNumber} · {featuredMatch.court}</small>
                 <div>
                   <strong>{teamsById.get(featuredMatch.teamAId)?.name ?? "Komanda A1"}</strong>
                   <b>{featuredMatch.status === "scheduled" ? "VS" : `${featuredMatch.teamAScore} : ${featuredMatch.teamBScore}`}</b>
                   <strong>{teamsById.get(featuredMatch.teamBId)?.name ?? "Komanda B2"}</strong>
                 </div>
               </>
-            ) : <p>Organizatorius čia paskelbs rungtynių laikus ir komandas.</p>}
+            ) : previewPairings[0] ? (
+              <>
+                <small>Rungtynės #1 · Aikštelė 1</small>
+                <div><strong>{teamsById.get(previewPairings[0].teamAId)?.name}</strong><b>VS</b><strong>{teamsById.get(previewPairings[0].teamBId)?.name}</strong></div>
+              </>
+            ) : <p>Tvarkaraštis atsiras paskyrus bent du komandų kapitonus.</p>}
           </article>
           <article className={styles.nextGame}>
             <span>Ruošiasi</span>
             {nextMatch ? (
               <>
                 <strong>{teamsById.get(nextMatch.teamAId)?.name} <i>prieš</i> {teamsById.get(nextMatch.teamBId)?.name}</strong>
-                <small>{formatMatchTime(nextMatch.startsAt)} · {nextMatch.court}</small>
+                <small>Rungtynės #{nextMatchNumber} · {nextMatch.court}</small>
               </>
+            ) : previewPairings[1] ? (
+              <><strong>{teamsById.get(previewPairings[1].teamAId)?.name} <i>prieš</i> {teamsById.get(previewPairings[1].teamBId)?.name}</strong><small>Rungtynės #2 · Aikštelė 1</small></>
             ) : <p>Kitas žaidimas dar nepaskelbtas.</p>}
           </article>
         </div>
 
         <div className={styles.tournamentGrid}>
           <div>
-            <h3>Rungtynių tvarkaraštis</h3>
+            <h3>Visa turnyro eiga</h3>
             <div className={styles.scheduleList}>
-              {matches.map((match) => (
-                <article key={match.id}>
-                  <time>{formatMatchTime(match.startsAt)}</time>
-                  <div><strong>{teamsById.get(match.teamAId)?.name} – {teamsById.get(match.teamBId)?.name}</strong><small>{match.court}</small></div>
+              {orderedMatches.map((match, index) => {
+                const teamA = teamsById.get(match.teamAId);
+                const teamB = teamsById.get(match.teamBId);
+                return (
+                <article key={match.id} className={match.status === "live" ? styles.currentScheduleMatch : ""}>
+                  <time>#{index + 1}</time>
+                  <div>
+                    <strong>{teamA?.name} – {teamB?.name}</strong>
+                    <small>Kapitonai: {captainName(teamA)} · {captainName(teamB)}</small>
+                    <small>{match.court}</small>
+                  </div>
                   <b className={styles[match.status]}>{match.status === "scheduled" ? "VS" : `${match.teamAScore}:${match.teamBScore}`}</b>
                   <span>{matchStatusLabel(match.status)}</span>
                 </article>
-              ))}
-              {!matches.length ? <p className={styles.emptyControl}>Tvarkaraštis dar nepaskelbtas.</p> : null}
+              );})}
+              {!orderedMatches.length ? previewPairings.map((pairing, index) => {
+                const teamA = teamsById.get(pairing.teamAId);
+                const teamB = teamsById.get(pairing.teamBId);
+                return (
+                  <article key={`${pairing.teamAId}-${pairing.teamBId}`}>
+                    <time>#{index + 1}</time>
+                    <div><strong>{teamA?.name} – {teamB?.name}</strong><small>Kapitonai: {captainName(teamA)} · {captainName(teamB)}</small></div>
+                    <b>VS</b>
+                    <span>Laukia starto</span>
+                  </article>
+                );
+              }) : null}
+              {!orderedMatches.length && !previewPairings.length ? <p className={styles.emptyControl}>Tvarkaraštis atsiras paskyrus bent du komandų kapitonus.</p> : null}
             </div>
           </div>
           <div>

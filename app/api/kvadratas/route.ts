@@ -8,6 +8,8 @@ const MAX_TEAMS = 12;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SKILL_LEVELS = new Set(["A", "B", "C", "D"]);
 const MATCH_STATUSES = new Set(["scheduled", "live", "finished"]);
+const TOURNAMENT_START = "2026-09-12T18:30:00+03:00";
+const ROUND_ROBIN_GAME_MINUTES = 15;
 
 type KvadratasTeamRow = {
   id: string;
@@ -69,6 +71,34 @@ function cleanInteger(value: unknown, minimum: number, maximum: number) {
 function cleanMatchStatus(value: unknown) {
   const status = cleanText(value, 20);
   return MATCH_STATUSES.has(status) ? status as KvadratasMatchRow["status"] : null;
+}
+
+function buildRoundRobinPairings(teamIds: string[]) {
+  let remaining = teamIds.flatMap((teamAId, index) =>
+    teamIds.slice(index + 1).map((teamBId) => ({ teamAId, teamBId })),
+  );
+  const pairings: Array<{ teamAId: string; teamBId: string }> = [];
+
+  while (remaining.length > 0) {
+    const usedTeamIds = new Set<string>();
+    const nextRound: typeof remaining = [];
+    const deferred: typeof remaining = [];
+
+    for (const pairing of remaining) {
+      if (!usedTeamIds.has(pairing.teamAId) && !usedTeamIds.has(pairing.teamBId)) {
+        nextRound.push(pairing);
+        usedTeamIds.add(pairing.teamAId);
+        usedTeamIds.add(pairing.teamBId);
+      } else {
+        deferred.push(pairing);
+      }
+    }
+
+    pairings.push(...nextRound);
+    remaining = deferred;
+  }
+
+  return pairings;
 }
 
 function normalizeName(value: unknown) {
@@ -584,6 +614,118 @@ export async function POST(request: Request) {
       await clearCaptainForPlayer(playerId, now);
       const { error } = await supabase.from("kvadratas_players").delete().eq("id", playerId);
       if (error) throw error;
+      return await stateResponse();
+    }
+
+    if (action === "start_round_robin") {
+      const { data: existingMatches, error: existingMatchesError } = await supabase
+        .from("kvadratas_matches")
+        .select("id, status, sort_order")
+        .order("sort_order", { ascending: true });
+      if (existingMatchesError) throw existingMatchesError;
+
+      if ((existingMatches ?? []).some((match) => match.status === "live")) {
+        return await stateResponse();
+      }
+
+      const nextScheduled = (existingMatches ?? []).find((match) => match.status === "scheduled");
+      if (nextScheduled) {
+        const { error } = await supabase
+          .from("kvadratas_matches")
+          .update({ status: "live", updated_at: now })
+          .eq("id", nextScheduled.id)
+          .eq("status", "scheduled");
+        if (error) throw error;
+        return await stateResponse();
+      }
+
+      if ((existingMatches ?? []).length > 0) {
+        return NextResponse.json({ error: "Turnyras jau baigtas." }, { status: 409 });
+      }
+
+      const { data: activeTeams, error: teamsError } = await supabase
+        .from("kvadratas_teams")
+        .select("id, captain_player_id, sort_order")
+        .not("captain_player_id", "is", null)
+        .order("sort_order", { ascending: true });
+      if (teamsError) throw teamsError;
+      if ((activeTeams ?? []).length < 2) {
+        return NextResponse.json({ error: "Turnyrui reikia bent dviejų komandų su paskirtais kapitonais." }, { status: 409 });
+      }
+
+      const pairings = buildRoundRobinPairings((activeTeams ?? []).map((team) => team.id));
+      const tournamentStart = new Date(TOURNAMENT_START).getTime();
+      const rows = pairings.map((pairing, index) => ({
+        court: "Aikštelė 1",
+        starts_at: new Date(tournamentStart + index * ROUND_ROBIN_GAME_MINUTES * 60_000).toISOString(),
+        team_a_id: pairing.teamAId,
+        team_b_id: pairing.teamBId,
+        team_a_score: 0,
+        team_b_score: 0,
+        status: index === 0 ? "live" : "scheduled",
+        sort_order: (index + 1) * 10,
+      }));
+      const { error } = await supabase.from("kvadratas_matches").insert(rows);
+      if (error) throw error;
+      return await stateResponse(201);
+    }
+
+    if (action === "record_match_winner") {
+      const matchId = cleanId(body?.matchId);
+      const winnerTeamId = cleanId(body?.winnerTeamId);
+      if (!matchId || !winnerTeamId) {
+        return NextResponse.json({ error: "Nepasirinkta laimėjusi komanda." }, { status: 400 });
+      }
+
+      const { data: match, error: matchError } = await supabase
+        .from("kvadratas_matches")
+        .select("id, team_a_id, team_b_id, status")
+        .eq("id", matchId)
+        .maybeSingle();
+      if (matchError) throw matchError;
+      if (!match) return NextResponse.json({ error: "Rungtynės neberastos." }, { status: 404 });
+      if (match.status !== "live") {
+        return NextResponse.json({ error: "Šios rungtynės jau užbaigtos arba dar nepradėtos." }, { status: 409 });
+      }
+      if (winnerTeamId !== match.team_a_id && winnerTeamId !== match.team_b_id) {
+        return NextResponse.json({ error: "Pasirinkta komanda šiose rungtynėse nežaidžia." }, { status: 400 });
+      }
+
+      const teamAWon = winnerTeamId === match.team_a_id;
+      const { data: finishedMatch, error: finishError } = await supabase
+        .from("kvadratas_matches")
+        .update({
+          team_a_score: teamAWon ? 1 : 0,
+          team_b_score: teamAWon ? 0 : 1,
+          status: "finished",
+          updated_at: now,
+        })
+        .eq("id", matchId)
+        .eq("status", "live")
+        .select("id")
+        .maybeSingle();
+      if (finishError) throw finishError;
+      if (!finishedMatch) {
+        return NextResponse.json({ error: "Rezultatas jau buvo išsaugotas." }, { status: 409 });
+      }
+
+      const { data: nextMatch, error: nextMatchError } = await supabase
+        .from("kvadratas_matches")
+        .select("id")
+        .eq("status", "scheduled")
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (nextMatchError) throw nextMatchError;
+      if (nextMatch) {
+        const { error } = await supabase
+          .from("kvadratas_matches")
+          .update({ status: "live", updated_at: now })
+          .eq("id", nextMatch.id)
+          .eq("status", "scheduled");
+        if (error) throw error;
+      }
+
       return await stateResponse();
     }
 
