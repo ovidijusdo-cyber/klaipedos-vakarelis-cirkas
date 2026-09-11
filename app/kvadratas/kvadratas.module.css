@@ -1058,6 +1058,12 @@
 .tournamentComplete { display: grid; gap: 5px; padding: 15px 17px; border: 1px solid rgba(34, 197, 94, .4); border-radius: 16px; background: rgba(22, 163, 74, .12); }
 .tournamentComplete b { color: #86efac; font-size: 1.05rem; }
 .tournamentComplete span { color: #d1fae5; font-size: .78rem; }
+.tournamentComplete .tournamentUnlock { margin-top: 10px; }
+.tournamentResetRow { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .1); }
+.tournamentResetRow span { color: #94a3b8; font-size: .72rem; }
+.tournamentResetRow button { min-height: 40px; padding: 0 14px; border: 1px solid rgba(248, 113, 113, .45); border-radius: 12px; background: rgba(127, 29, 29, .24); color: #fecaca; font-size: .72rem; font-weight: 900; cursor: pointer; }
+.tournamentResetRow button:hover:not(:disabled) { border-color: #f87171; background: rgba(153, 27, 27, .38); }
+.tournamentResetRow button:disabled { opacity: .55; cursor: wait; }
 .gameStage { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr); gap: 14px; }
 .featuredGame,
 .nextGame {
@@ -1334,6 +1340,8 @@
   .tournamentUnlock,
   .tournamentStartPanel { grid-template-columns: 1fr; }
   .winnerControls > span { text-align: center; }
+  .tournamentResetRow { align-items: stretch; flex-direction: column; }
+  .tournamentResetRow button { min-height: 46px; }
   .scheduleList article { grid-template-columns: 68px minmax(0, 1fr) auto; }
   .scheduleList article > span { grid-column: 2 / -1; text-align: left; }
   .captainStat { margin-left: 0; text-align: left; }

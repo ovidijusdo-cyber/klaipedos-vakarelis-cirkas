@@ -482,6 +482,15 @@ export default function KvadratasPage() {
       : `„${winner.name}“ pergalė išsaugota. Turnyras baigtas.`);
   }
 
+  async function resetRoundRobin() {
+    if (!window.confirm("Ar tikrai pradėti turnyrą iš naujo? Bus ištrinta tik rungtynių eiga ir rezultatai. Visi žaidėjai, komandos bei kapitonai išliks.")) return;
+    await runAction({
+      action: "reset_round_robin",
+      adminPin,
+      confirmReset: true,
+    }, "Turnyro testiniai rezultatai išvalyti. Galima pradėti iš naujo.");
+  }
+
   async function cancelPlayer(player: KvadratasPlayer) {
     if (!window.confirm(`Ar tikrai nori atšaukti ${playerName(player)} dalyvavimą ir nebežaisti?`)) return;
     const success = await runAction({
@@ -758,7 +767,16 @@ export default function KvadratasPage() {
               )}
             </div>
           ) : finishedMatches.length === totalTournamentMatches && totalTournamentMatches > 0 ? (
-            <div className={styles.tournamentComplete}><b>Turnyras užbaigtas</b><span>Visi rezultatai išsaugoti, o galutinė vieta matoma turnyrinėje lentelėje.</span></div>
+            <div className={styles.tournamentComplete}>
+              <b>Turnyras užbaigtas</b>
+              <span>Visi rezultatai išsaugoti, o galutinė vieta matoma turnyrinėje lentelėje.</span>
+              {!adminUnlocked ? (
+                <form className={styles.tournamentUnlock} onSubmit={unlockAdmin}>
+                  <label><span>Organizatoriaus PIN</span><input type="password" value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN turnyro valdymui" required /></label>
+                  <button type="submit" disabled={saving}>{saving ? "Tikrinama..." : "Atrakinti turnyro valdymą"}</button>
+                </form>
+              ) : null}
+            </div>
           ) : (
             <div className={styles.tournamentStartPanel}>
               <div><b>{captainTeams.length} komandos</b><span>{previewPairings.length || scheduledMatches.length} rungtynės · kiekviena pora susitiks vieną kartą</span></div>
@@ -772,6 +790,12 @@ export default function KvadratasPage() {
               )}
             </div>
           )}
+          {adminUnlocked && matches.length ? (
+            <div className={styles.tournamentResetRow}>
+              <span>Testavai arba nori pradėti visą eigą iš naujo?</span>
+              <button type="button" disabled={saving} onClick={() => void resetRoundRobin()}>Pradėti turnyrą iš naujo</button>
+            </div>
+          ) : null}
         </div>
 
         <div className={styles.gameStage}>

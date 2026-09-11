@@ -729,6 +729,19 @@ export async function POST(request: Request) {
       return await stateResponse();
     }
 
+    if (action === "reset_round_robin") {
+      if (body?.confirmReset !== true) {
+        return NextResponse.json({ error: "Turnyro paleidimas iš naujo nepatvirtintas." }, { status: 400 });
+      }
+
+      const { error } = await supabase
+        .from("kvadratas_matches")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+      return await stateResponse();
+    }
+
     if (action === "create_match") {
       const teamAId = cleanId(body?.teamAId);
       const teamBId = cleanId(body?.teamBId);
