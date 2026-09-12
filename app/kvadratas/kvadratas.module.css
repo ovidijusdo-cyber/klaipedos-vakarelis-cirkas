@@ -1067,6 +1067,7 @@
 .winnerControls > span { color: #fef3c7; font-size: .75rem; font-weight: 950; }
 .winnerControls button,
 .tournamentStartPanel > button,
+.extraRoundActions button,
 .tournamentUnlock button {
   min-height: 50px;
   padding: 0 16px;
@@ -1080,9 +1081,11 @@
 }
 .winnerControls button:hover:not(:disabled),
 .tournamentStartPanel > button:hover:not(:disabled),
+.extraRoundActions button:hover:not(:disabled),
 .tournamentUnlock button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
 .winnerControls button:disabled,
 .tournamentStartPanel > button:disabled,
+.extraRoundActions button:disabled,
 .tournamentUnlock button:disabled { opacity: .55; cursor: wait; }
 .tournamentUnlock { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 10px; align-items: end; }
 .tournamentUnlock label { display: grid; gap: 6px; }
@@ -1093,6 +1096,13 @@
 .tournamentStartPanel > div { display: grid; gap: 5px; }
 .tournamentStartPanel > div b { font-size: 1.05rem; }
 .tournamentStartPanel > div span { color: #bac4d2; font-size: .78rem; }
+.extraRoundPanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(310px, .72fr); gap: 18px; align-items: center; padding: 17px; border: 1px solid rgba(250, 204, 21, .35); border-radius: 18px; background: rgba(250, 204, 21, .08); }
+.extraRoundPanel > div:first-child { display: grid; gap: 6px; }
+.extraRoundPanel > div:first-child > span { color: #fde68a; text-transform: uppercase; letter-spacing: .1em; font-size: .65rem; font-weight: 950; }
+.extraRoundPanel b { color: #ffffff; font-size: 1.05rem; }
+.extraRoundPanel p { margin: 0; color: #cbd5e1; font-size: .76rem; line-height: 1.55; }
+.extraRoundActions { display: grid; gap: 9px; }
+.extraRoundActions button:nth-child(2) { border: 1px solid rgba(255, 255, 255, .18); background: rgba(15, 23, 42, .7); box-shadow: none; }
 .tournamentComplete { display: grid; gap: 5px; padding: 15px 17px; border: 1px solid rgba(34, 197, 94, .4); border-radius: 16px; background: rgba(22, 163, 74, .12); }
 .tournamentComplete b { color: #86efac; font-size: 1.05rem; }
 .tournamentComplete span { color: #d1fae5; font-size: .78rem; }
@@ -1392,7 +1402,8 @@
   .currentMatchTeams > i { text-align: center; }
   .winnerControls,
   .tournamentUnlock,
-  .tournamentStartPanel { grid-template-columns: 1fr; }
+  .tournamentStartPanel,
+  .extraRoundPanel { grid-template-columns: 1fr; }
   .winnerControls > span { text-align: center; }
   .tournamentResetRow { align-items: stretch; flex-direction: column; }
   .tournamentResetRow button { min-height: 46px; }

@@ -471,6 +471,13 @@ export default function KvadratasPage() {
   const totalTournamentMatches = totalMainMatches + orderedLeagueMatches.length;
   const totalFinishedMatches = finishedMatches.length + finishedLeagueMatches.length;
   const tournamentProgress = totalTournamentMatches ? totalFinishedMatches / totalTournamentMatches * 100 : 0;
+  const mainStageComplete = orderedMatches.length > 0 && finishedMatches.length === orderedMatches.length;
+  const leagueFinalsNotStarted = orderedLeagueMatches.length > 0
+    && scheduledLeagueMatches.length === orderedLeagueMatches.length;
+  const awaitingNextStage = mainStageComplete && leagueFinalsNotStarted;
+  const baseRoundRobinMatchCount = tournamentTeams.length > 1
+    ? tournamentTeams.length * (tournamentTeams.length - 1) / 2
+    : previewPairings.length;
   const tournamentFinished = totalMainMatches > 0
     && finishedMatches.length === totalMainMatches
     && finishedLeagueMatches.length === orderedLeagueMatches.length;
@@ -551,7 +558,17 @@ export default function KvadratasPage() {
       winnerTeamId,
     }, scheduledMatches.length
       ? `„${winner.name}“ pergalė išsaugota. Kitos rungtynės paleistos automatiškai.`
-      : `„${winner.name}“ pergalė išsaugota. Pagrindinis etapas baigtas, dabar prasideda Moterų lyga.`);
+      : `„${winner.name}“ pergalė išsaugota. Pagrindinis etapas baigtas: gali pridėti papildomą kėlinį arba pradėti finalines lygas.`);
+  }
+
+  async function addFairExtraMatch() {
+    if (!window.confirm("Pridėti papildomą kėlinį? Sistema automatiškai parinks komandas pagal mažiausią sužaistų rungtynių skaičių ir poilsio eilę.")) return;
+    await runAction({ action: "add_fair_extra_match", adminPin }, "Papildomas kėlinys pridėtas. Sąžiningai parinktos komandos jau rodomos visiems.");
+  }
+
+  async function startLeagueFinals() {
+    if (!window.confirm("Baigti pagrindinį etapą ir pradėti Moterų bei Vyrų lygų finalines rungtynes?")) return;
+    await runAction({ action: "start_league_finals", adminPin }, "Finalinės lygos pradėtos. M1 prieš M2 jau rodoma visiems.");
   }
 
   async function recordLeagueWinner(match: KvadratasLeagueMatch, winnerGroupCode: LeagueCode) {
@@ -866,7 +883,7 @@ export default function KvadratasPage() {
           <header className={styles.tournamentCommandHeader}>
             <div>
               <span>Turnyro valdymas</span>
-              <h3>{liveMatch ? `Rungtynės ${currentMatchNumber} iš ${totalTournamentMatches}` : liveLeagueMatch ? `Rungtynės ${totalMainMatches + orderedLeagueMatches.findIndex((match) => match.id === liveLeagueMatch.id) + 1} iš ${totalTournamentMatches}` : tournamentFinished ? "Turnyras baigtas" : "Pasiruošę pradėti"}</h3>
+              <h3>{liveMatch ? `Rungtynės ${currentMatchNumber} iš ${totalTournamentMatches}` : liveLeagueMatch ? `Rungtynės ${totalMainMatches + orderedLeagueMatches.findIndex((match) => match.id === liveLeagueMatch.id) + 1} iš ${totalTournamentMatches}` : tournamentFinished ? "Turnyras baigtas" : awaitingNextStage ? "Pagrindinis etapas baigtas" : "Pasiruošę pradėti"}</h3>
             </div>
             <strong>{totalFinishedMatches}<small> / {totalTournamentMatches || 0} sužaista</small></strong>
           </header>
@@ -929,6 +946,25 @@ export default function KvadratasPage() {
                 </form>
               )}
             </div>
+          ) : awaitingNextStage ? (
+            <div className={styles.extraRoundPanel}>
+              <div>
+                <span>Yra dar laiko?</span>
+                <b>Pridėk sąžiningai parinktą papildomą kėlinį</b>
+                <p>Sistema pirmiausia rinksis mažiausiai žaidusias komandas. Jei jų rungtynių skaičius vienodas, pirmenybė teikiama ilgiau nežaidusioms komandoms ir rečiau kartotai porai.</p>
+              </div>
+              {adminUnlocked ? (
+                <div className={styles.extraRoundActions}>
+                  <button type="button" disabled={saving} onClick={() => void addFairExtraMatch()}>{saving ? "Parenkama..." : "Pridėti papildomą kėlinį"}</button>
+                  <button type="button" disabled={saving} onClick={() => void startLeagueFinals()}>Pradėti finalines lygas</button>
+                </div>
+              ) : (
+                <form className={styles.tournamentUnlock} onSubmit={unlockAdmin}>
+                  <label><span>Organizatoriaus PIN</span><input type="password" value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN turnyro valdymui" required /></label>
+                  <button type="submit" disabled={saving}>{saving ? "Tikrinama..." : "Atrakinti turnyro valdymą"}</button>
+                </form>
+              )}
+            </div>
           ) : tournamentFinished ? (
             <div className={styles.tournamentComplete}>
               <b>Turnyras užbaigtas</b>
@@ -963,7 +999,7 @@ export default function KvadratasPage() {
 
         <div className={styles.gameStage}>
           <article className={`${styles.featuredGame} ${featuredMatch?.status === "live" || liveLeagueMatch ? styles.liveGame : ""}`}>
-            <span>{liveLeagueMatch ? "Vyksta dabar" : featuredMatch ? (featuredMatch.status === "live" ? "Vyksta dabar" : "Kitas žaidimas") : previewPairings.length ? "Pirmosios rungtynės" : "Tvarkaraštis ruošiamas"}</span>
+            <span>{liveLeagueMatch ? "Vyksta dabar" : featuredMatch ? (featuredMatch.status === "live" ? "Vyksta dabar" : "Kitas žaidimas") : awaitingNextStage ? "Pagrindinis etapas baigtas" : previewPairings.length ? "Pirmosios rungtynės" : "Tvarkaraštis ruošiamas"}</span>
             {liveLeagueMatch ? (
               <>
                 <small>Rungtynės #{totalMainMatches + orderedLeagueMatches.findIndex((match) => match.id === liveLeagueMatch.id) + 1} · {liveLeagueMatch.division === "women" ? "Moterų lyga" : "Vyrų lyga"}</small>
@@ -978,6 +1014,8 @@ export default function KvadratasPage() {
                   <strong>{teamsById.get(featuredMatch.teamBId)?.name ?? "Komanda B2"}</strong>
                 </div>
               </>
+            ) : awaitingNextStage ? (
+              <p>Visos pagrindinio etapo rungtynės sužaistos. Organizatorius gali pridėti papildomą kėlinį arba pradėti finalines lygas.</p>
             ) : previewPairings[0] ? (
               <>
                 <small>Rungtynės #1 · Aikštelė 1</small>
@@ -987,7 +1025,9 @@ export default function KvadratasPage() {
           </article>
           <article className={styles.nextGame}>
             <span>Ruošiasi</span>
-            {liveLeagueMatch && scheduledLeagueMatches[0] ? (
+            {awaitingNextStage ? (
+              <><strong>Papildomas kėlinys <i>arba</i> finalinės lygos</strong><small>Sprendimą priims organizatorius</small></>
+            ) : liveLeagueMatch && scheduledLeagueMatches[0] ? (
               <><strong>{scheduledLeagueMatches[0].groupACode} <i>prieš</i> {scheduledLeagueMatches[0].groupBCode}</strong><small>{scheduledLeagueMatches[0].division === "women" ? "Moterų lyga" : "Vyrų lyga"}</small></>
             ) : nextMatch ? (
               <>
@@ -1015,7 +1055,7 @@ export default function KvadratasPage() {
                   <div>
                     <strong>{teamA?.name} – {teamB?.name}</strong>
                     <small>Kapitonai: {captainName(teamA)} · {captainName(teamB)}</small>
-                    <small>{match.court}</small>
+                    <small>{index >= baseRoundRobinMatchCount ? "Papildomas kėlinys" : match.court}</small>
                   </div>
                   <b className={styles[match.status]}>{match.status === "scheduled" ? "VS" : `${match.teamAScore}:${match.teamBScore}`}</b>
                   <span>{matchStatusLabel(match.status)}</span>

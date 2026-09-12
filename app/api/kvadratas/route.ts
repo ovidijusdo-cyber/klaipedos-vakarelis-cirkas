@@ -137,6 +137,49 @@ function buildRoundRobinPairings(teamIds: string[]) {
   return pairings;
 }
 
+function chooseFairExtraPair(teams: Array<{ id: string; sort_order: number }>, matches: KvadratasMatchRow[]) {
+  const orderedMatches = [...matches].sort((a, b) => a.sort_order - b.sort_order);
+  const stats = new Map(teams.map((team) => [team.id, { games: 0, lastAppearance: -1 }]));
+  const pairCounts = new Map<string, number>();
+
+  for (const [index, match] of orderedMatches.entries()) {
+    const teamA = stats.get(match.team_a_id);
+    const teamB = stats.get(match.team_b_id);
+    if (!teamA || !teamB) continue;
+    teamA.games += 1;
+    teamB.games += 1;
+    teamA.lastAppearance = index;
+    teamB.lastAppearance = index;
+    const pairKey = [match.team_a_id, match.team_b_id].sort().join(":");
+    pairCounts.set(pairKey, (pairCounts.get(pairKey) ?? 0) + 1);
+  }
+
+  return teams
+    .flatMap((teamA, index) => teams.slice(index + 1).map((teamB) => {
+      const statsA = stats.get(teamA.id)!;
+      const statsB = stats.get(teamB.id)!;
+      const pairKey = [teamA.id, teamB.id].sort().join(":");
+      return {
+        teamAId: teamA.id,
+        teamBId: teamB.id,
+        score: [
+          statsA.games + statsB.games,
+          Math.max(statsA.games, statsB.games),
+          pairCounts.get(pairKey) ?? 0,
+          Math.max(statsA.lastAppearance, statsB.lastAppearance),
+          statsA.lastAppearance + statsB.lastAppearance,
+          teamA.sort_order + teamB.sort_order,
+        ],
+      };
+    }))
+    .sort((a, b) => {
+      for (let index = 0; index < a.score.length; index += 1) {
+        if (a.score[index] !== b.score[index]) return a.score[index] - b.score[index];
+      }
+      return a.teamAId.localeCompare(b.teamAId) || a.teamBId.localeCompare(b.teamBId);
+    })[0] ?? null;
+}
+
 function normalizeName(value: unknown) {
   return cleanText(value).toLocaleLowerCase("lt");
 }
@@ -730,29 +773,7 @@ export async function POST(request: Request) {
       }
 
       if ((existingMatches ?? []).length > 0) {
-        const { count: liveLeagueCount, error: liveLeagueError } = await supabase
-          .from("kvadratas_league_matches")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "live");
-        if (liveLeagueError) throw liveLeagueError;
-        if ((liveLeagueCount ?? 0) > 0) return await stateResponse();
-
-        const { data: nextLeagueMatch, error: leagueMatchError } = await supabase
-          .from("kvadratas_league_matches")
-          .select("id")
-          .eq("status", "scheduled")
-          .order("sort_order", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        if (leagueMatchError) throw leagueMatchError;
-        if (!nextLeagueMatch) return NextResponse.json({ error: "Turnyras jau baigtas." }, { status: 409 });
-        const { error } = await supabase
-          .from("kvadratas_league_matches")
-          .update({ status: "live", updated_at: now })
-          .eq("id", nextLeagueMatch.id)
-          .eq("status", "scheduled");
-        if (error) throw error;
-        return await stateResponse();
+        return NextResponse.json({ error: "Pagrindinis etapas baigtas. Pasirink papildomą kėlinį arba pradėk finalines lygas." }, { status: 409 });
       }
 
       const { data: activeTeams, error: teamsError } = await supabase
@@ -836,25 +857,100 @@ export async function POST(request: Request) {
           .eq("id", nextMatch.id)
           .eq("status", "scheduled");
         if (error) throw error;
-      } else {
-        const { data: firstLeagueMatch, error: leagueMatchError } = await supabase
-          .from("kvadratas_league_matches")
-          .select("id")
-          .eq("status", "scheduled")
-          .order("sort_order", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        if (leagueMatchError) throw leagueMatchError;
-        if (firstLeagueMatch) {
-          const { error } = await supabase
-            .from("kvadratas_league_matches")
-            .update({ status: "live", updated_at: now })
-            .eq("id", firstLeagueMatch.id)
-            .eq("status", "scheduled");
-          if (error) throw error;
-        }
       }
 
+      return await stateResponse();
+    }
+
+    if (action === "add_fair_extra_match") {
+      const [{ data: existingMatches, error: matchesError }, { data: leagueMatches, error: leagueMatchesError }] = await Promise.all([
+        supabase
+          .from("kvadratas_matches")
+          .select("id, court, starts_at, team_a_id, team_b_id, team_a_score, team_b_score, status, sort_order, created_at, updated_at")
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("kvadratas_league_matches")
+          .select("id, status"),
+      ]);
+      if (matchesError) throw matchesError;
+      if (leagueMatchesError) throw leagueMatchesError;
+
+      const completedMatches = (existingMatches ?? []) as KvadratasMatchRow[];
+      if (!completedMatches.length || completedMatches.some((match) => match.status !== "finished")) {
+        return NextResponse.json({ error: "Papildomą kėlinį galima pridėti tik užbaigus visas pagrindines rungtynes." }, { status: 409 });
+      }
+      if ((leagueMatches ?? []).some((match) => match.status !== "scheduled")) {
+        return NextResponse.json({ error: "Finalinės lygos jau pradėtos, todėl papildomo kėlinio įterpti nebegalima." }, { status: 409 });
+      }
+
+      const participatingTeamIds = [...new Set(completedMatches.flatMap((match) => [match.team_a_id, match.team_b_id]))];
+      const { data: participatingTeams, error: teamsError } = await supabase
+        .from("kvadratas_teams")
+        .select("id, sort_order")
+        .in("id", participatingTeamIds)
+        .order("sort_order", { ascending: true });
+      if (teamsError) throw teamsError;
+      if ((participatingTeams ?? []).length < 2) {
+        return NextResponse.json({ error: "Papildomam kėliniui reikia bent dviejų turnyro komandų." }, { status: 409 });
+      }
+
+      const pairing = chooseFairExtraPair(participatingTeams ?? [], completedMatches);
+      if (!pairing) return NextResponse.json({ error: "Nepavyko parinkti komandų papildomam kėliniui." }, { status: 409 });
+
+      const latestStart = Math.max(
+        Date.now() - ROUND_ROBIN_GAME_MINUTES * 60_000,
+        ...completedMatches.map((match) => new Date(match.starts_at).getTime()).filter(Number.isFinite),
+      );
+      const startsAt = new Date(Math.max(Date.now(), latestStart + ROUND_ROBIN_GAME_MINUTES * 60_000)).toISOString();
+      const maxSortOrder = Math.max(0, ...completedMatches.map((match) => match.sort_order));
+      const { error } = await supabase.from("kvadratas_matches").insert({
+        court: "Aikštelė 1",
+        starts_at: startsAt,
+        team_a_id: pairing.teamAId,
+        team_b_id: pairing.teamBId,
+        team_a_score: 0,
+        team_b_score: 0,
+        status: "live",
+        sort_order: maxSortOrder + 10,
+      });
+      if (error) throw error;
+      return await stateResponse(201);
+    }
+
+    if (action === "start_league_finals") {
+      const [{ data: mainMatches, error: mainError }, { data: liveLeague, error: liveLeagueError }] = await Promise.all([
+        supabase.from("kvadratas_matches").select("id, status"),
+        supabase.from("kvadratas_league_matches").select("id").eq("status", "live").limit(1),
+      ]);
+      if (mainError) throw mainError;
+      if (liveLeagueError) throw liveLeagueError;
+      if (!(mainMatches ?? []).length) {
+        return NextResponse.json({ error: "Pirmiausia pradėk pagrindinį turnyro etapą." }, { status: 409 });
+      }
+      if ((mainMatches ?? []).some((match) => match.status !== "finished")) {
+        return NextResponse.json({ error: "Pirmiausia užbaik visas pagrindines rungtynes." }, { status: 409 });
+      }
+      if ((liveLeague ?? []).length > 0) return await stateResponse();
+
+      const { data: firstLeagueMatch, error: leagueMatchError } = await supabase
+        .from("kvadratas_league_matches")
+        .select("id")
+        .eq("status", "scheduled")
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (leagueMatchError) throw leagueMatchError;
+      if (!firstLeagueMatch) return NextResponse.json({ error: "Finalinės lygos jau sužaistos arba dar nesukurtos." }, { status: 409 });
+
+      const { data: startedMatch, error } = await supabase
+        .from("kvadratas_league_matches")
+        .update({ status: "live", updated_at: now })
+        .eq("id", firstLeagueMatch.id)
+        .eq("status", "scheduled")
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!startedMatch) return NextResponse.json({ error: "Finalinės rungtynės jau buvo pradėtos." }, { status: 409 });
       return await stateResponse();
     }
 
