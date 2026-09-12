@@ -40,10 +40,45 @@ type KvadratasMatch = {
   updatedAt: string;
 };
 
+type LeagueCode = "M1" | "M2" | "V1" | "V2";
+
+type KvadratasLeagueGroup = {
+  code: LeagueCode;
+  division: "women" | "men";
+  name: string;
+  sortOrder: number;
+  captainPlayerId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type KvadratasLeagueRoster = {
+  playerId: string;
+  groupCode: LeagueCode;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type KvadratasLeagueMatch = {
+  id: string;
+  division: "women" | "men";
+  groupACode: LeagueCode;
+  groupBCode: LeagueCode;
+  teamAScore: number;
+  teamBScore: number;
+  status: "scheduled" | "live" | "finished";
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type KvadratasState = {
   teams: KvadratasTeam[];
   players: KvadratasPlayer[];
   matches: KvadratasMatch[];
+  leagueGroups: KvadratasLeagueGroup[];
+  leagueRoster: KvadratasLeagueRoster[];
+  leagueMatches: KvadratasLeagueMatch[];
   serverTime?: string;
 };
 
@@ -120,6 +155,9 @@ export default function KvadratasPage() {
   const [teams, setTeams] = useState<KvadratasTeam[]>([]);
   const [players, setPlayers] = useState<KvadratasPlayer[]>([]);
   const [matches, setMatches] = useState<KvadratasMatch[]>([]);
+  const [leagueGroups, setLeagueGroups] = useState<KvadratasLeagueGroup[]>([]);
+  const [leagueRoster, setLeagueRoster] = useState<KvadratasLeagueRoster[]>([]);
+  const [leagueMatches, setLeagueMatches] = useState<KvadratasLeagueMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
@@ -141,6 +179,7 @@ export default function KvadratasPage() {
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
   const [teamCapacities, setTeamCapacities] = useState<Record<string, number>>({});
   const [captainSelections, setCaptainSelections] = useState<Record<string, string>>({});
+  const [leagueCaptainSelections, setLeagueCaptainSelections] = useState<Record<string, string>>({});
   const [captainCodes, setCaptainCodes] = useState<Record<string, string>>({});
   const [captainNotices, setCaptainNotices] = useState<Record<string, Notice>>({});
   const [matchTeamA, setMatchTeamA] = useState("");
@@ -153,6 +192,9 @@ export default function KvadratasPage() {
     setTeams(Array.isArray(data.teams) ? data.teams : []);
     setPlayers(Array.isArray(data.players) ? data.players : []);
     setMatches(Array.isArray(data.matches) ? data.matches : []);
+    setLeagueGroups(Array.isArray(data.leagueGroups) ? data.leagueGroups : []);
+    setLeagueRoster(Array.isArray(data.leagueRoster) ? data.leagueRoster : []);
+    setLeagueMatches(Array.isArray(data.leagueMatches) ? data.leagueMatches : []);
     setLastSyncedAt(new Date());
   }
 
@@ -185,6 +227,12 @@ export default function KvadratasPage() {
     setTeamCapacities((current) => Object.fromEntries(teams.map((team) => [team.id, current[team.id] ?? team.maxPlayers])));
     setCaptainSelections((current) => Object.fromEntries(teams.map((team) => [team.id, current[team.id] ?? team.captainPlayerId ?? ""])));
   }, [teams]);
+
+  useEffect(() => {
+    setLeagueCaptainSelections((current) => Object.fromEntries(
+      leagueGroups.map((group) => [group.code, current[group.code] ?? group.captainPlayerId ?? ""]),
+    ));
+  }, [leagueGroups]);
 
   useEffect(() => {
     setMatchDrafts((current) => Object.fromEntries(matches.map((match) => [
@@ -362,6 +410,8 @@ export default function KvadratasPage() {
 
   const playersById = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
   const teamsById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
+  const leagueGroupsByCode = useMemo(() => new Map(leagueGroups.map((group) => [group.code, group])), [leagueGroups]);
+  const leagueRosterByPlayer = useMemo(() => new Map(leagueRoster.map((entry) => [entry.playerId, entry.groupCode])), [leagueRoster]);
   const assignedCount = players.filter((player) => player.assignedTeamId).length;
   const arrivedCount = players.filter((player) => player.arrived).length;
   const unassignedPlayers = players.filter((player) => !player.assignedTeamId);
@@ -396,6 +446,7 @@ export default function KvadratasPage() {
   const safePage = Math.min(directoryPage, pageCount);
   const visiblePlayers = filteredPlayers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const orderedMatches = useMemo(() => [...matches].sort((a, b) => a.sortOrder - b.sortOrder), [matches]);
+  const orderedLeagueMatches = useMemo(() => [...leagueMatches].sort((a, b) => a.sortOrder - b.sortOrder), [leagueMatches]);
   const previewPairings = useMemo(
     () => buildRoundRobinPairings(teams.filter((team) => team.captainPlayerId).map((team) => team.id)),
     [teams],
@@ -408,17 +459,38 @@ export default function KvadratasPage() {
   const liveMatch = orderedMatches.find((match) => match.status === "live") ?? null;
   const scheduledMatches = orderedMatches.filter((match) => match.status === "scheduled");
   const finishedMatches = orderedMatches.filter((match) => match.status === "finished");
+  const liveLeagueMatch = orderedLeagueMatches.find((match) => match.status === "live") ?? null;
+  const scheduledLeagueMatches = orderedLeagueMatches.filter((match) => match.status === "scheduled");
+  const finishedLeagueMatches = orderedLeagueMatches.filter((match) => match.status === "finished");
   const featuredMatch = liveMatch ?? scheduledMatches[0] ?? null;
   const nextMatch = liveMatch ? scheduledMatches[0] ?? null : scheduledMatches[1] ?? null;
   const currentMatchNumber = liveMatch ? orderedMatches.findIndex((match) => match.id === liveMatch.id) + 1 : 0;
   const featuredMatchNumber = featuredMatch ? orderedMatches.findIndex((match) => match.id === featuredMatch.id) + 1 : 0;
   const nextMatchNumber = nextMatch ? orderedMatches.findIndex((match) => match.id === nextMatch.id) + 1 : 0;
-  const totalTournamentMatches = orderedMatches.length || previewPairings.length;
-  const tournamentProgress = totalTournamentMatches ? finishedMatches.length / totalTournamentMatches * 100 : 0;
+  const totalMainMatches = orderedMatches.length || previewPairings.length;
+  const totalTournamentMatches = totalMainMatches + orderedLeagueMatches.length;
+  const totalFinishedMatches = finishedMatches.length + finishedLeagueMatches.length;
+  const tournamentProgress = totalTournamentMatches ? totalFinishedMatches / totalTournamentMatches * 100 : 0;
+  const tournamentFinished = totalMainMatches > 0
+    && finishedMatches.length === totalMainMatches
+    && finishedLeagueMatches.length === orderedLeagueMatches.length;
 
   function captainName(team?: KvadratasTeam) {
     if (!team?.captainPlayerId) return "Kapitonas nepaskirtas";
     return playerName(playersById.get(team.captainPlayerId)) || "Kapitonas nepaskirtas";
+  }
+
+  function leagueCaptainName(group?: KvadratasLeagueGroup) {
+    if (!group?.captainPlayerId) return "Kapitonas nepaskirtas";
+    return playerName(playersById.get(group.captainPlayerId)) || "Kapitonas nepaskirtas";
+  }
+
+  function leagueMembers(groupCode: LeagueCode) {
+    return leagueRoster
+      .filter((entry) => entry.groupCode === groupCode)
+      .map((entry) => playersById.get(entry.playerId))
+      .filter((player): player is KvadratasPlayer => Boolean(player))
+      .sort((a, b) => playerName(a).localeCompare(playerName(b), "lt"));
   }
 
   const standings = useMemo(() => {
@@ -465,7 +537,7 @@ export default function KvadratasPage() {
   }, [matches, tournamentTeams]);
 
   async function startRoundRobin() {
-    if (!matches.length && !window.confirm(`Pradėti turnyrą su ${captainTeams.length} komandomis ir ${previewPairings.length} rungtynėmis?`)) return;
+    if (!matches.length && !window.confirm(`Pradėti turnyrą su ${captainTeams.length} pagrindinėmis komandomis? Bus ${previewPairings.length} pagrindinės ir 2 finalinių lygų rungtynės.`)) return;
     await runAction({ action: "start_round_robin", adminPin }, matches.length ? "Turnyras tęsiamas." : "Turnyras pradėtas. Pirmosios rungtynės jau rodomos visiems.");
   }
 
@@ -479,7 +551,30 @@ export default function KvadratasPage() {
       winnerTeamId,
     }, scheduledMatches.length
       ? `„${winner.name}“ pergalė išsaugota. Kitos rungtynės paleistos automatiškai.`
-      : `„${winner.name}“ pergalė išsaugota. Turnyras baigtas.`);
+      : `„${winner.name}“ pergalė išsaugota. Pagrindinis etapas baigtas, dabar prasideda Moterų lyga.`);
+  }
+
+  async function recordLeagueWinner(match: KvadratasLeagueMatch, winnerGroupCode: LeagueCode) {
+    const winner = leagueGroupsByCode.get(winnerGroupCode);
+    if (!winner || !window.confirm(`Patvirtinti, kad „${winner.code}“ laimėjo šias rungtynes?`)) return;
+    await runAction({
+      action: "record_league_winner",
+      adminPin,
+      matchId: match.id,
+      winnerGroupCode,
+    }, scheduledLeagueMatches.length
+      ? `„${winner.code}“ pergalė išsaugota. Vyrų lygos rungtynės paleistos automatiškai.`
+      : `„${winner.code}“ pergalė išsaugota. Visa turnyro eiga baigta.`);
+  }
+
+  async function assignLeagueCaptain(group: KvadratasLeagueGroup) {
+    const playerId = leagueCaptainSelections[group.code] || null;
+    await runAction({
+      action: "assign_league_captain",
+      adminPin,
+      groupCode: group.code,
+      playerId,
+    }, playerId ? `${group.code} kapitonas paskirtas.` : `${group.code} kapitonas pašalintas.`);
   }
 
   async function resetRoundRobin() {
@@ -721,21 +816,61 @@ export default function KvadratasPage() {
         </div>
       </section>
 
+      <section className={`${styles.section} ${styles.leagueSection}`}>
+        <div className={styles.sectionHeading}>
+          <div><span className={styles.sectionNumber}>03</span><p className={styles.sectionEyebrow}>Finalinės lygos</p></div>
+          <div><h2>Moterų ir vyrų dvikovos</h2><p>Visi registruoti žaidėjai automatiškai padalyti į keturias lygias grupes. M1 prieš M2 ir V1 prieš V2 žais pasibaigus pagrindiniam turnyrui.</p></div>
+        </div>
+        <div className={styles.leagueDivisionGrid}>
+          {(["women", "men"] as const).map((division) => {
+            const groups = leagueGroups.filter((group) => group.division === division).sort((a, b) => a.sortOrder - b.sortOrder);
+            const leagueMatch = orderedLeagueMatches.find((match) => match.division === division);
+            return (
+              <article className={`${styles.leagueDivision} ${division === "women" ? styles.womenLeague : styles.menLeague}`} key={division}>
+                <header className={styles.leagueDivisionHeader}>
+                  <div><span>{division === "women" ? "Moterų lyga" : "Vyrų lyga"}</span><h3>{groups[0]?.code ?? "–"} <i>prieš</i> {groups[1]?.code ?? "–"}</h3></div>
+                  <b className={leagueMatch ? styles[leagueMatch.status] : ""}>{leagueMatch ? matchStatusLabel(leagueMatch.status) : "Ruošiama"}</b>
+                </header>
+                <div className={styles.leagueRosterGrid}>
+                  {groups.map((group) => {
+                    const members = leagueMembers(group.code);
+                    return (
+                      <section className={styles.leagueRosterCard} key={group.code}>
+                        <header>
+                          <b>{group.code}</b>
+                          <span><small><CaptainIcon /> Kapitonas</small><strong>{leagueCaptainName(group)}</strong></span>
+                          <i>{members.length}</i>
+                        </header>
+                        <ol>
+                          {members.map((player) => <li key={player.id} className={player.id === group.captainPlayerId ? styles.leagueCaptainMember : ""}><span>{playerName(player)}</span>{player.id === group.captainPlayerId ? <small>C</small> : null}</li>)}
+                          {!members.length ? <li className={styles.emptyRow}>Žaidėjų dar nėra</li> : null}
+                        </ol>
+                      </section>
+                    );
+                  })}
+                </div>
+                {leagueMatch?.status === "finished" ? <p className={styles.leagueResult}>Rezultatas: <strong>{leagueMatch.groupACode} {leagueMatch.teamAScore}:{leagueMatch.teamBScore} {leagueMatch.groupBCode}</strong></p> : <p className={styles.leagueResult}>Šios rungtynės į bendrą eilę įtrauktos po pagrindinių komandų žaidimų.</p>}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
       <section className={`${styles.section} ${styles.tournamentSection}`} id="turnyras">
         <div className={styles.sectionHeading}>
-          <div><span className={styles.sectionNumber}>03</span><p className={styles.sectionEyebrow}>Turnyras gyvai</p></div>
-          <div><h2>Kiekviena komanda žaidžia su kiekviena</h2><p>Dalyvauja tik komandos su paskirtais kapitonais. Tvarkaraštis ir rezultatai visiems atsinaujina automatiškai.</p></div>
+          <div><span className={styles.sectionNumber}>04</span><p className={styles.sectionEyebrow}>Turnyras gyvai</p></div>
+          <div><h2>Visa žaidimų eiga vienoje eilėje</h2><p>Pirmiausia kiekviena pagrindinė komanda žaidžia su kiekviena, tada vyksta M1 prieš M2 ir V1 prieš V2. Rezultatai visiems atsinaujina automatiškai.</p></div>
         </div>
 
         <div className={styles.tournamentCommand}>
           <header className={styles.tournamentCommandHeader}>
             <div>
               <span>Turnyro valdymas</span>
-              <h3>{liveMatch ? `Rungtynės ${currentMatchNumber} iš ${totalTournamentMatches}` : finishedMatches.length === totalTournamentMatches && totalTournamentMatches ? "Turnyras baigtas" : "Pasiruošę pradėti"}</h3>
+              <h3>{liveMatch ? `Rungtynės ${currentMatchNumber} iš ${totalTournamentMatches}` : liveLeagueMatch ? `Rungtynės ${totalMainMatches + orderedLeagueMatches.findIndex((match) => match.id === liveLeagueMatch.id) + 1} iš ${totalTournamentMatches}` : tournamentFinished ? "Turnyras baigtas" : "Pasiruošę pradėti"}</h3>
             </div>
-            <strong>{finishedMatches.length}<small> / {totalTournamentMatches || 0} sužaista</small></strong>
+            <strong>{totalFinishedMatches}<small> / {totalTournamentMatches || 0} sužaista</small></strong>
           </header>
-          <div className={styles.tournamentProgress} aria-label={`Sužaista ${finishedMatches.length} iš ${totalTournamentMatches || 0} rungtynių`}>
+          <div className={styles.tournamentProgress} aria-label={`Sužaista ${totalFinishedMatches} iš ${totalTournamentMatches || 0} rungtynių`}>
             <span style={{ width: `${tournamentProgress}%` }} />
           </div>
 
@@ -766,7 +901,35 @@ export default function KvadratasPage() {
                 </form>
               )}
             </div>
-          ) : finishedMatches.length === totalTournamentMatches && totalTournamentMatches > 0 ? (
+          ) : liveLeagueMatch ? (
+            <div className={`${styles.currentMatchControl} ${styles.leagueMatchControl}`}>
+              <div className={styles.currentMatchTeams}>
+                {([liveLeagueMatch.groupACode, liveLeagueMatch.groupBCode] as LeagueCode[]).map((groupCode) => {
+                  const group = leagueGroupsByCode.get(groupCode);
+                  return (
+                    <div className={styles.currentMatchTeam} key={groupCode}>
+                      <b>{groupCode}</b>
+                      <span><strong>{group?.name ?? groupCode}</strong><small><CaptainIcon /> Kapitonas: {leagueCaptainName(group)}</small></span>
+                    </div>
+                  );
+                })}
+                <i>PRIEŠ</i>
+              </div>
+              <p className={styles.leagueStageLabel}>{liveLeagueMatch.division === "women" ? "Moterų lygos finalas" : "Vyrų lygos finalas"}</p>
+              {adminUnlocked ? (
+                <div className={styles.winnerControls}>
+                  <span>Kas laimėjo?</span>
+                  <button type="button" disabled={saving} onClick={() => void recordLeagueWinner(liveLeagueMatch, liveLeagueMatch.groupACode)}>{liveLeagueMatch.groupACode}</button>
+                  <button type="button" disabled={saving} onClick={() => void recordLeagueWinner(liveLeagueMatch, liveLeagueMatch.groupBCode)}>{liveLeagueMatch.groupBCode}</button>
+                </div>
+              ) : (
+                <form className={styles.tournamentUnlock} onSubmit={unlockAdmin}>
+                  <label><span>Organizatoriaus PIN</span><input type="password" value={adminPin} onChange={(event) => setAdminPin(event.target.value)} placeholder="Įvesk PIN rezultatui žymėti" required /></label>
+                  <button type="submit" disabled={saving}>{saving ? "Tikrinama..." : "Atrakinti rezultatų valdymą"}</button>
+                </form>
+              )}
+            </div>
+          ) : tournamentFinished ? (
             <div className={styles.tournamentComplete}>
               <b>Turnyras užbaigtas</b>
               <span>Visi rezultatai išsaugoti, o galutinė vieta matoma turnyrinėje lentelėje.</span>
@@ -779,7 +942,7 @@ export default function KvadratasPage() {
             </div>
           ) : (
             <div className={styles.tournamentStartPanel}>
-              <div><b>{captainTeams.length} komandos</b><span>{previewPairings.length || scheduledMatches.length} rungtynės · kiekviena pora susitiks vieną kartą</span></div>
+              <div><b>{captainTeams.length} pagrindinės komandos</b><span>{previewPairings.length || scheduledMatches.length} pagrindinės + 2 lygų rungtynės</span></div>
               {adminUnlocked ? (
                 <button type="button" disabled={saving || captainTeams.length < 2} onClick={() => void startRoundRobin()}>{saving ? "Paleidžiama..." : matches.length ? "Tęsti turnyrą" : "Pradėti turnyrą"}</button>
               ) : (
@@ -790,7 +953,7 @@ export default function KvadratasPage() {
               )}
             </div>
           )}
-          {adminUnlocked && matches.length ? (
+          {adminUnlocked && (matches.length || finishedLeagueMatches.length > 0 || liveLeagueMatch) ? (
             <div className={styles.tournamentResetRow}>
               <span>Testavai arba nori pradėti visą eigą iš naujo?</span>
               <button type="button" disabled={saving} onClick={() => void resetRoundRobin()}>Pradėti turnyrą iš naujo</button>
@@ -799,9 +962,14 @@ export default function KvadratasPage() {
         </div>
 
         <div className={styles.gameStage}>
-          <article className={`${styles.featuredGame} ${featuredMatch?.status === "live" ? styles.liveGame : ""}`}>
-            <span>{featuredMatch ? (featuredMatch.status === "live" ? "Vyksta dabar" : "Kitas žaidimas") : previewPairings.length ? "Pirmosios rungtynės" : "Tvarkaraštis ruošiamas"}</span>
-            {featuredMatch ? (
+          <article className={`${styles.featuredGame} ${featuredMatch?.status === "live" || liveLeagueMatch ? styles.liveGame : ""}`}>
+            <span>{liveLeagueMatch ? "Vyksta dabar" : featuredMatch ? (featuredMatch.status === "live" ? "Vyksta dabar" : "Kitas žaidimas") : previewPairings.length ? "Pirmosios rungtynės" : "Tvarkaraštis ruošiamas"}</span>
+            {liveLeagueMatch ? (
+              <>
+                <small>Rungtynės #{totalMainMatches + orderedLeagueMatches.findIndex((match) => match.id === liveLeagueMatch.id) + 1} · {liveLeagueMatch.division === "women" ? "Moterų lyga" : "Vyrų lyga"}</small>
+                <div><strong>{liveLeagueMatch.groupACode}</strong><b>{liveLeagueMatch.teamAScore} : {liveLeagueMatch.teamBScore}</b><strong>{liveLeagueMatch.groupBCode}</strong></div>
+              </>
+            ) : featuredMatch ? (
               <>
                 <small>Rungtynės #{featuredMatchNumber} · {featuredMatch.court}</small>
                 <div>
@@ -819,11 +987,15 @@ export default function KvadratasPage() {
           </article>
           <article className={styles.nextGame}>
             <span>Ruošiasi</span>
-            {nextMatch ? (
+            {liveLeagueMatch && scheduledLeagueMatches[0] ? (
+              <><strong>{scheduledLeagueMatches[0].groupACode} <i>prieš</i> {scheduledLeagueMatches[0].groupBCode}</strong><small>{scheduledLeagueMatches[0].division === "women" ? "Moterų lyga" : "Vyrų lyga"}</small></>
+            ) : nextMatch ? (
               <>
                 <strong>{teamsById.get(nextMatch.teamAId)?.name} <i>prieš</i> {teamsById.get(nextMatch.teamBId)?.name}</strong>
                 <small>Rungtynės #{nextMatchNumber} · {nextMatch.court}</small>
               </>
+            ) : liveMatch && orderedLeagueMatches[0] ? (
+              <><strong>{orderedLeagueMatches[0].groupACode} <i>prieš</i> {orderedLeagueMatches[0].groupBCode}</strong><small>Po pagrindinio etapo · Moterų lyga</small></>
             ) : previewPairings[1] ? (
               <><strong>{teamsById.get(previewPairings[1].teamAId)?.name} <i>prieš</i> {teamsById.get(previewPairings[1].teamBId)?.name}</strong><small>Rungtynės #2 · Aikštelė 1</small></>
             ) : <p>Kitas žaidimas dar nepaskelbtas.</p>}
@@ -861,6 +1033,22 @@ export default function KvadratasPage() {
                   </article>
                 );
               }) : null}
+              {orderedLeagueMatches.map((match, index) => {
+                const groupA = leagueGroupsByCode.get(match.groupACode);
+                const groupB = leagueGroupsByCode.get(match.groupBCode);
+                return (
+                  <article key={match.id} className={`${styles.leagueScheduleMatch} ${match.status === "live" ? styles.currentScheduleMatch : ""}`}>
+                    <time>#{totalMainMatches + index + 1}</time>
+                    <div>
+                      <strong>{match.groupACode} – {match.groupBCode}</strong>
+                      <small>{match.division === "women" ? "Moterų lyga" : "Vyrų lyga"} · Kapitonai: {leagueCaptainName(groupA)} · {leagueCaptainName(groupB)}</small>
+                      <small>Po pagrindinio turnyro</small>
+                    </div>
+                    <b className={styles[match.status]}>{match.status === "scheduled" ? "VS" : `${match.teamAScore}:${match.teamBScore}`}</b>
+                    <span>{matchStatusLabel(match.status)}</span>
+                  </article>
+                );
+              })}
               {!orderedMatches.length && !previewPairings.length ? <p className={styles.emptyControl}>Tvarkaraštis atsiras paskyrus bent du komandų kapitonus.</p> : null}
             </div>
           </div>
@@ -889,7 +1077,7 @@ export default function KvadratasPage() {
 
       <section className={styles.section}>
         <div className={styles.sectionHeading}>
-          <div><span className={styles.sectionNumber}>04</span><p className={styles.sectionEyebrow}>Viešas sąrašas</p></div>
+          <div><span className={styles.sectionNumber}>05</span><p className={styles.sectionEyebrow}>Viešas sąrašas</p></div>
           <div><h2>Visi užsiregistravę žaidėjai</h2><p>Greitai rask vardą ir pamatyk pajėgumo lygį, pageidavimą bei patvirtintą komandą.</p></div>
         </div>
         <div className={styles.directoryToolbar}>
@@ -946,7 +1134,7 @@ export default function KvadratasPage() {
 
       <section id="kapitonams" className={`${styles.section} ${styles.controlSection}`}>
         <div className={styles.sectionHeading}>
-          <div><span className={styles.sectionNumber}>05</span><p className={styles.sectionEyebrow}>Kapitonams</p></div>
+          <div><span className={styles.sectionNumber}>06</span><p className={styles.sectionEyebrow}>Kapitonams</p></div>
           <div><h2>Formuok ir sužymėk savo komandą</h2><p>Patvirtink arba atmesk pageidavimus, grąžink žaidėją į bendrą sąrašą ir renginio dieną pažymėk atvykusius.</p></div>
         </div>
         {!captainUnlockedTeamId ? (
@@ -1002,7 +1190,7 @@ export default function KvadratasPage() {
 
       <section className={`${styles.section} ${styles.adminSection}`}>
         <div className={styles.sectionHeading}>
-          <div><span className={styles.sectionNumber}>06</span><p className={styles.sectionEyebrow}>Organizatoriui</p></div>
+          <div><span className={styles.sectionNumber}>07</span><p className={styles.sectionEyebrow}>Organizatoriui</p></div>
           <div><h2>Komandos ir turnyras vienoje vietoje</h2><p>Administruok sudėtis, subalansuok pajėgumus, kurk rungtynes ir telefone gyvai keisk rezultatą.</p></div>
         </div>
         {!adminUnlocked ? (
@@ -1015,6 +1203,24 @@ export default function KvadratasPage() {
             <div className={styles.balancePanel}>
               <div><span>Automatinis komandų balansavimas</span><strong>Paskirsto žaidėjus pagal A–D lygį ir komandų talpą</strong><small>Kapitonai lieka savo komandose. Kitų žaidėjų komandos bus perskirstytos.</small></div>
               <button type="button" disabled={saving || !players.length} onClick={() => { if (window.confirm("Ar tikrai automatiškai perskirstyti žaidėjus į kuo lygesnes komandas?")) void runAction({ action: "balance_teams", adminPin }, "Komandos automatiškai subalansuotos."); }}>Subalansuoti komandas</button>
+            </div>
+
+            <div className={styles.leagueAdmin}>
+              <header><span>Moterų ir vyrų lygos</span><h3>Parink lygų kapitonus</h3><p>Kapitoną galima rinktis tik iš tos grupės žaidėjų. Grupės sudėtį gali pataisyti žaidėjų sąraše žemiau.</p></header>
+              <div className={styles.leagueCaptainAdminGrid}>
+                {leagueGroups.map((group) => (
+                  <article key={group.code}>
+                    <b>{group.code}</b>
+                    <label><span>{group.division === "women" ? "Moterų lygos" : "Vyrų lygos"} kapitonas</span>
+                      <select value={leagueCaptainSelections[group.code] ?? ""} onChange={(event) => setLeagueCaptainSelections((current) => ({ ...current, [group.code]: event.target.value }))} disabled={saving}>
+                        <option value="">Nepaskirtas</option>
+                        {leagueMembers(group.code).map((player) => <option value={player.id} key={player.id}>{playerName(player)}</option>)}
+                      </select>
+                    </label>
+                    <button type="button" disabled={saving} onClick={() => void assignLeagueCaptain(group)}>{saving ? "Saugoma..." : "Išsaugoti kapitoną"}</button>
+                  </article>
+                ))}
+              </div>
             </div>
 
             <form className={styles.newTeamForm} onSubmit={(event) => { event.preventDefault(); void runAction({ action: "create_team", adminPin, name: newTeamName }, "Komanda sukurta.").then((success) => { if (success) setNewTeamName(""); }); }}>
@@ -1051,6 +1257,10 @@ export default function KvadratasPage() {
                   <select value={player.assignedTeamId ?? ""} onChange={(event) => void runAction({ action: "assign_player", adminPin, playerId: player.id, teamId: event.target.value || null }, "Žaidėjo komanda atnaujinta.")} disabled={saving}>
                     <option value="">Dar nepriskirtas</option>
                     {teams.map((team) => <option value={team.id} key={team.id}>{team.name}</option>)}
+                  </select>
+                  <select value={leagueRosterByPlayer.get(player.id) ?? ""} onChange={(event) => void runAction({ action: "assign_league_player", adminPin, playerId: player.id, groupCode: event.target.value }, "Žaidėjo lygos grupė atnaujinta.")} disabled={saving} aria-label={`${playerName(player)} lygos grupė`}>
+                    <option value="" disabled>Lygos grupė</option>
+                    {leagueGroups.map((group) => <option value={group.code} key={group.code}>{group.code} · {group.division === "women" ? "Moterų" : "Vyrų"}</option>)}
                   </select>
                   <button className={styles.dangerButton} type="button" disabled={saving} onClick={() => { if (window.confirm(`Ar tikrai pašalinti ${playerName(player)} iš kvadrato registracijos?`)) void runAction({ action: "delete_player", adminPin, playerId: player.id }, "Žaidėjas pašalintas."); }}>Pašalinti</button>
                 </div>

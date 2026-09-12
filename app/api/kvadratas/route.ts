@@ -8,6 +8,7 @@ const MAX_TEAMS = 12;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SKILL_LEVELS = new Set(["A", "B", "C", "D"]);
 const MATCH_STATUSES = new Set(["scheduled", "live", "finished"]);
+const LEAGUE_CODES = new Set(["M1", "M2", "V1", "V2"]);
 const TOURNAMENT_START = "2026-09-12T18:30:00+03:00";
 const ROUND_ROBIN_GAME_MINUTES = 15;
 
@@ -48,6 +49,36 @@ type KvadratasMatchRow = {
   updated_at: string;
 };
 
+type KvadratasLeagueGroupRow = {
+  code: "M1" | "M2" | "V1" | "V2";
+  division: "women" | "men";
+  name: string;
+  sort_order: number;
+  captain_player_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type KvadratasLeagueRosterRow = {
+  player_id: string;
+  group_code: KvadratasLeagueGroupRow["code"];
+  created_at: string;
+  updated_at: string;
+};
+
+type KvadratasLeagueMatchRow = {
+  id: string;
+  division: KvadratasLeagueGroupRow["division"];
+  group_a_code: KvadratasLeagueGroupRow["code"];
+  group_b_code: KvadratasLeagueGroupRow["code"];
+  team_a_score: number;
+  team_b_score: number;
+  status: KvadratasMatchRow["status"];
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 function cleanText(value: unknown, maxLength = 80) {
   return String(value ?? "").trim().replace(/\s+/g, " ").slice(0, maxLength);
 }
@@ -71,6 +102,11 @@ function cleanInteger(value: unknown, minimum: number, maximum: number) {
 function cleanMatchStatus(value: unknown) {
   const status = cleanText(value, 20);
   return MATCH_STATUSES.has(status) ? status as KvadratasMatchRow["status"] : null;
+}
+
+function cleanLeagueCode(value: unknown) {
+  const code = cleanText(value, 2).toUpperCase();
+  return LEAGUE_CODES.has(code) ? code as KvadratasLeagueGroupRow["code"] : null;
 }
 
 function buildRoundRobinPairings(teamIds: string[]) {
@@ -166,9 +202,45 @@ function publicMatch(row: KvadratasMatchRow) {
   };
 }
 
+function publicLeagueGroup(row: KvadratasLeagueGroupRow) {
+  return {
+    code: row.code,
+    division: row.division,
+    name: row.name,
+    sortOrder: row.sort_order,
+    captainPlayerId: row.captain_player_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function publicLeagueRoster(row: KvadratasLeagueRosterRow) {
+  return {
+    playerId: row.player_id,
+    groupCode: row.group_code,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function publicLeagueMatch(row: KvadratasLeagueMatchRow) {
+  return {
+    id: row.id,
+    division: row.division,
+    groupACode: row.group_a_code,
+    groupBCode: row.group_b_code,
+    teamAScore: row.team_a_score,
+    teamBScore: row.team_b_score,
+    status: row.status,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 async function loadPublicState() {
   const supabase = createSupabaseServerClient();
-  const [teamsResult, playersResult, matchesResult] = await Promise.all([
+  const [teamsResult, playersResult, matchesResult, leagueGroupsResult, leagueRosterResult, leagueMatchesResult] = await Promise.all([
     supabase
       .from("kvadratas_teams")
       .select("id, name, sort_order, captain_player_id, max_players, created_at, updated_at")
@@ -183,16 +255,34 @@ async function loadPublicState() {
       .select("id, court, starts_at, team_a_id, team_b_id, team_a_score, team_b_score, status, sort_order, created_at, updated_at")
       .order("starts_at", { ascending: true })
       .order("sort_order", { ascending: true }),
+    supabase
+      .from("kvadratas_league_groups")
+      .select("code, division, name, sort_order, captain_player_id, created_at, updated_at")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("kvadratas_league_roster")
+      .select("player_id, group_code, created_at, updated_at")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("kvadratas_league_matches")
+      .select("id, division, group_a_code, group_b_code, team_a_score, team_b_score, status, sort_order, created_at, updated_at")
+      .order("sort_order", { ascending: true }),
   ]);
 
   if (teamsResult.error) throw teamsResult.error;
   if (playersResult.error) throw playersResult.error;
   if (matchesResult.error) throw matchesResult.error;
+  if (leagueGroupsResult.error) throw leagueGroupsResult.error;
+  if (leagueRosterResult.error) throw leagueRosterResult.error;
+  if (leagueMatchesResult.error) throw leagueMatchesResult.error;
 
   return {
     teams: ((teamsResult.data ?? []) as KvadratasTeamRow[]).map(publicTeam),
     players: ((playersResult.data ?? []) as KvadratasPlayerRow[]).map(publicPlayer),
     matches: ((matchesResult.data ?? []) as KvadratasMatchRow[]).map(publicMatch),
+    leagueGroups: ((leagueGroupsResult.data ?? []) as KvadratasLeagueGroupRow[]).map(publicLeagueGroup),
+    leagueRoster: ((leagueRosterResult.data ?? []) as KvadratasLeagueRosterRow[]).map(publicLeagueRoster),
+    leagueMatches: ((leagueMatchesResult.data ?? []) as KvadratasLeagueMatchRow[]).map(publicLeagueMatch),
     serverTime: new Date().toISOString(),
   };
 }
@@ -640,7 +730,29 @@ export async function POST(request: Request) {
       }
 
       if ((existingMatches ?? []).length > 0) {
-        return NextResponse.json({ error: "Turnyras jau baigtas." }, { status: 409 });
+        const { count: liveLeagueCount, error: liveLeagueError } = await supabase
+          .from("kvadratas_league_matches")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "live");
+        if (liveLeagueError) throw liveLeagueError;
+        if ((liveLeagueCount ?? 0) > 0) return await stateResponse();
+
+        const { data: nextLeagueMatch, error: leagueMatchError } = await supabase
+          .from("kvadratas_league_matches")
+          .select("id")
+          .eq("status", "scheduled")
+          .order("sort_order", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (leagueMatchError) throw leagueMatchError;
+        if (!nextLeagueMatch) return NextResponse.json({ error: "Turnyras jau baigtas." }, { status: 409 });
+        const { error } = await supabase
+          .from("kvadratas_league_matches")
+          .update({ status: "live", updated_at: now })
+          .eq("id", nextLeagueMatch.id)
+          .eq("status", "scheduled");
+        if (error) throw error;
+        return await stateResponse();
       }
 
       const { data: activeTeams, error: teamsError } = await supabase
@@ -724,8 +836,123 @@ export async function POST(request: Request) {
           .eq("id", nextMatch.id)
           .eq("status", "scheduled");
         if (error) throw error;
+      } else {
+        const { data: firstLeagueMatch, error: leagueMatchError } = await supabase
+          .from("kvadratas_league_matches")
+          .select("id")
+          .eq("status", "scheduled")
+          .order("sort_order", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (leagueMatchError) throw leagueMatchError;
+        if (firstLeagueMatch) {
+          const { error } = await supabase
+            .from("kvadratas_league_matches")
+            .update({ status: "live", updated_at: now })
+            .eq("id", firstLeagueMatch.id)
+            .eq("status", "scheduled");
+          if (error) throw error;
+        }
       }
 
+      return await stateResponse();
+    }
+
+    if (action === "record_league_winner") {
+      const matchId = cleanId(body?.matchId);
+      const winnerGroupCode = cleanLeagueCode(body?.winnerGroupCode);
+      if (!matchId || !winnerGroupCode) {
+        return NextResponse.json({ error: "Nepasirinkta laimėjusi lygos komanda." }, { status: 400 });
+      }
+
+      const { data: match, error: matchError } = await supabase
+        .from("kvadratas_league_matches")
+        .select("id, group_a_code, group_b_code, status")
+        .eq("id", matchId)
+        .maybeSingle();
+      if (matchError) throw matchError;
+      if (!match) return NextResponse.json({ error: "Lygos rungtynės neberastos." }, { status: 404 });
+      if (match.status !== "live") {
+        return NextResponse.json({ error: "Šios lygos rungtynės dabar nevyksta." }, { status: 409 });
+      }
+      if (winnerGroupCode !== match.group_a_code && winnerGroupCode !== match.group_b_code) {
+        return NextResponse.json({ error: "Pasirinkta grupė šiose rungtynėse nežaidžia." }, { status: 400 });
+      }
+
+      const teamAWon = winnerGroupCode === match.group_a_code;
+      const { data: finishedMatch, error: finishError } = await supabase
+        .from("kvadratas_league_matches")
+        .update({
+          team_a_score: teamAWon ? 1 : 0,
+          team_b_score: teamAWon ? 0 : 1,
+          status: "finished",
+          updated_at: now,
+        })
+        .eq("id", matchId)
+        .eq("status", "live")
+        .select("id")
+        .maybeSingle();
+      if (finishError) throw finishError;
+      if (!finishedMatch) return NextResponse.json({ error: "Rezultatas jau buvo išsaugotas." }, { status: 409 });
+
+      const { data: nextLeagueMatch, error: nextMatchError } = await supabase
+        .from("kvadratas_league_matches")
+        .select("id")
+        .eq("status", "scheduled")
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (nextMatchError) throw nextMatchError;
+      if (nextLeagueMatch) {
+        const { error } = await supabase
+          .from("kvadratas_league_matches")
+          .update({ status: "live", updated_at: now })
+          .eq("id", nextLeagueMatch.id)
+          .eq("status", "scheduled");
+        if (error) throw error;
+      }
+
+      return await stateResponse();
+    }
+
+    if (action === "assign_league_captain") {
+      const groupCode = cleanLeagueCode(body?.groupCode);
+      const playerId = cleanId(body?.playerId) || null;
+      if (!groupCode) return NextResponse.json({ error: "Lygos grupė nepasirinkta." }, { status: 400 });
+      if (playerId) {
+        const { data: roster, error: rosterError } = await supabase
+          .from("kvadratas_league_roster")
+          .select("player_id")
+          .eq("player_id", playerId)
+          .eq("group_code", groupCode)
+          .maybeSingle();
+        if (rosterError) throw rosterError;
+        if (!roster) return NextResponse.json({ error: "Kapitonas turi būti šios grupės žaidėjas." }, { status: 409 });
+      }
+      const { error } = await supabase
+        .from("kvadratas_league_groups")
+        .update({ captain_player_id: playerId, updated_at: now })
+        .eq("code", groupCode);
+      if (error?.code === "23505") return NextResponse.json({ error: "Šis žaidėjas jau yra kitos lygos grupės kapitonas." }, { status: 409 });
+      if (error) throw error;
+      return await stateResponse();
+    }
+
+    if (action === "assign_league_player") {
+      const groupCode = cleanLeagueCode(body?.groupCode);
+      const playerId = cleanId(body?.playerId);
+      if (!groupCode || !playerId) return NextResponse.json({ error: "Patikrink žaidėją ir lygos grupę." }, { status: 400 });
+
+      const { error: captainError } = await supabase
+        .from("kvadratas_league_groups")
+        .update({ captain_player_id: null, updated_at: now })
+        .eq("captain_player_id", playerId)
+        .neq("code", groupCode);
+      if (captainError) throw captainError;
+      const { error } = await supabase
+        .from("kvadratas_league_roster")
+        .upsert({ player_id: playerId, group_code: groupCode, updated_at: now }, { onConflict: "player_id" });
+      if (error) throw error;
       return await stateResponse();
     }
 
@@ -739,6 +966,11 @@ export async function POST(request: Request) {
         .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000");
       if (error) throw error;
+      const { error: leagueError } = await supabase
+        .from("kvadratas_league_matches")
+        .update({ team_a_score: 0, team_b_score: 0, status: "scheduled", updated_at: now })
+        .in("division", ["women", "men"]);
+      if (leagueError) throw leagueError;
       return await stateResponse();
     }
 
