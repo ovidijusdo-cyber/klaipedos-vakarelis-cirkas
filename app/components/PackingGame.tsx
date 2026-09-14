@@ -225,6 +225,7 @@ export default function PackingGame({
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const scoreHandlerRef = useRef(onSaveScore);
   const scoreAttemptRef = useRef<string | null>(null);
+  const stabilityLevelRef = useRef(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const [celebration, setCelebration] = useState<{ id: number; title: string; detail: string } | null>(null);
@@ -233,6 +234,8 @@ export default function PackingGame({
   const [savedScore, setSavedScore] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [stabilitySeconds, setStabilitySeconds] = useState(0);
+  const [stabilityUntil, setStabilityUntil] = useState(0);
   const [startError, setStartError] = useState("");
 
   const topScores = useMemo(
@@ -243,6 +246,10 @@ export default function PackingGame({
   const regionIndex = Math.min(REGIONS.length - 1, Math.max(0, state.level - 1));
   const region = REGIONS[regionIndex];
   const regionClass = styles[`region${region.id}`];
+  const regularDropDelay = Math.max(135, 820 - (state.level - 1) * 55);
+  const previousLevelDropDelay = Math.max(135, 820 - Math.max(0, state.level - 2) * 55);
+  const dropDelay = stabilitySeconds > 0 ? previousLevelDropDelay : regularDropDelay;
+  const speedMultiplier = (820 / dropDelay).toFixed(1).replace(".", ",");
   const missions = [
     { id: "lines", title: "Maršruto pradžia", detail: "Pašalink 3 eilutes", progress: `${Math.min(state.lines, 3)}/3`, done: state.lines >= 3 },
     { id: "score", title: "Pilnas bilietas", detail: "Surink 1 000 taškų", progress: `${Math.min(state.score, 1000)}/1000`, done: state.score >= 1000 },
@@ -269,10 +276,9 @@ export default function PackingGame({
 
   useEffect(() => {
     if (!state.running) return;
-    const speed = Math.max(130, 820 - (state.level - 1) * 72);
-    const timer = window.setInterval(() => dispatch({ type: "tick" }), speed);
+    const timer = window.setInterval(() => dispatch({ type: "tick" }), dropDelay);
     return () => window.clearInterval(timer);
-  }, [state.level, state.running]);
+  }, [dropDelay, state.running]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -315,6 +321,32 @@ export default function PackingGame({
   }, [region, state.combo, state.effectId, state.lastClear, state.level, state.leveledUp]);
 
   useEffect(() => {
+    const isBonusLevel = state.level >= 5 && (state.level - 5) % 3 === 0;
+    if (!state.running || !isBonusLevel || stabilityLevelRef.current === state.level) return;
+    stabilityLevelRef.current = state.level;
+    const until = Date.now() + 15_000;
+    setStabilityUntil(until);
+    setStabilitySeconds(15);
+    setCelebration({
+      id: Date.now(),
+      title: "Ramus skrydis",
+      detail: "Greitis stabilus 15 sekundžių",
+    });
+  }, [state.level, state.running]);
+
+  useEffect(() => {
+    if (!stabilityUntil) return;
+    function updateCountdown() {
+      const remaining = Math.max(0, Math.ceil((stabilityUntil - Date.now()) / 1000));
+      setStabilitySeconds(remaining);
+      if (!remaining) setStabilityUntil(0);
+    }
+    updateCountdown();
+    const timer = window.setInterval(updateCountdown, 250);
+    return () => window.clearInterval(timer);
+  }, [stabilityUntil]);
+
+  useEffect(() => {
     const name = playerName.trim();
     const key = `${name}:${state.score}`;
     if (!state.gameOver || !name || !qualifiesForTopFive || savedScore === state.score || scoreAttemptRef.current === key) return;
@@ -344,7 +376,10 @@ export default function PackingGame({
     }
     setSavedScore(null);
     scoreAttemptRef.current = null;
+    stabilityLevelRef.current = 0;
     setSaveError("");
+    setStabilitySeconds(0);
+    setStabilityUntil(0);
     setStartError("");
     dispatch({ type: "start" });
   }
@@ -421,7 +456,10 @@ export default function PackingGame({
             <small>{state.level} lygio kryptis</small>
             <strong>{region.name}</strong>
           </div>
-          <b>{region.note}</b>
+          <b>
+            <span>{region.note}</span>
+            <small>Greitis x{speedMultiplier}</small>
+          </b>
         </div>
 
         <div className={styles.stats} aria-label="Žaidimo statistika">
@@ -430,6 +468,13 @@ export default function PackingGame({
           <div><span>Lygis</span><strong>{state.level}</strong></div>
           <div className={state.combo > 1 ? styles.comboStat : ""}><span>Kombo</span><strong>{state.combo > 1 ? `x${state.combo}` : "–"}</strong></div>
         </div>
+
+        {stabilitySeconds > 0 ? (
+          <div className={styles.stabilityBanner} aria-live="polite">
+            <strong>Ramus skrydis</strong>
+            <span>Greitis stabilus dar {stabilitySeconds} sek.</span>
+          </div>
+        ) : null}
 
         <div
           className={styles.boardFrame}
@@ -568,6 +613,7 @@ export default function PackingGame({
               </div>
             ))}
           </div>
+          <p className={styles.bonusRule}>Nuo 5 lygio kas tris lygius gausi „Ramaus skrydžio“ bonusą: 15 sekundžių be naujo pagreitėjimo.</p>
         </div>
 
         <div className={styles.sideCard}>
