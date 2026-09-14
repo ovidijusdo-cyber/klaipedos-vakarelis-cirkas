@@ -299,10 +299,11 @@ const MOVIE_GALLERY_IMAGES = [
   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdHtcWzVyrt1G35UB-L8KNgEKDJ1kKgsRmBSJKse5IZBhE3FIPVTx4iGpa&s=10",
   "https://cms-imgp.jw-cdn.org/img/p/1102016443/univ/art/1102016443_univ_lss_lg.jpg",
 ];
-const EVENT_NAME = "2026 m. Klaipėdos vakarėlis „CIRKAS”";
-const EVENT_DATE = "2026 m. gegužės 30 d., 17:00–23:00";
-const EVENT_START_ISO = "2026-05-30T17:00:00+03:00";
+const EVENT_NAME = "Tautos. Aplink pasaulį per 360 minučių";
+const EVENT_DATE = "2026 m. lapkričio 7 d., 17:00–23:00";
+const EVENT_START_ISO = "2026-11-07T17:00:00+02:00";
 const EVENT_PLACE = "Priekulės kultūros centras";
+const EVENT_DURATION = "360 minučių";
 const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Priekul%C4%97s+kult%C5%ABros+centras";
 const WAZE_URL = "https://waze.com/ul?q=Priekul%C4%97s%20kult%C5%ABros%20centras";
 const ADULT_PRICE = 8;
@@ -675,11 +676,12 @@ const COMMON_SONG_LANGUAGE_OPTIONS = Object.entries(COMMON_SONGS).map(([id, song
 }));
 
 const PROGRAM_ITEMS = [
-  { day: "Penktadienis, 29 d.", time: "19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, dekoracijos ir vakaro erdvė." },
+  { day: "Penktadienis, 6 d.", time: "19:00", title: "Savanoriai padeda puošti salę", note: "Ruošiama salė, pasaulio stotelės ir vakaro erdvė." },
   { day: "Šeštadienis", time: "16:00", title: "Atvyksta komanda", note: "Atvyksta kontrolieriai, pasirodantieji, organizatorius ir kiti savanoriai." },
+  { day: "Šeštadienis", time: "17:00", title: "Kelionės pradžia", note: "Atsiveria durys į šešių valandų kelionę aplink pasaulį." },
   { day: "Šeštadienis", time: "17:10", title: "Įžanginiai žodžiai ir malda", note: "Trumpa vakaro pradžia prieš pagrindinę programą." },
-  { day: "Šeštadienis", time: "17:15", title: "Vedėjų laikas", note: "Vakaro vedėjai perima programą ir pradeda veiklas." },
-  { day: "Ruošiama", time: "TBA", title: "Kita informacija ruošiama", note: "Papildoma programa bus patikslinta vėliau." },
+  { day: "Šeštadienis", time: "17:15", title: "Pirmoji pasaulio stotelė", note: "Vakaro vedėjai pradeda kultūrų, muzikos ir žaidimų programą." },
+  { day: "Ruošiama", time: "TBA", title: "Kelionės programa ruošiama", note: "Kitos pasaulio stotelės bus paskelbtos vėliau." },
 ];
 
 const IMPORTANT_REMINDERS = [
@@ -702,7 +704,7 @@ const IMPORTANT_REMINDERS = [
   "Prašome atsinešti gaiviųjų gėrimų ir savo pagamintų patiekalų, bus bendras švediškas stalas. Kviečiame kiekvieną svečią šiek tiek pasiruošti ir atsinešti savo gamybos patiekalą ar užkandį, kad stalas būtų kūrybingas ir įvairus, venkime vien tik traškučių, guminukų ar kitų saldumynų. Laukiami vaisiai, naminiai pyragai, tortai, įdomūs užkandžiai ar kažkas, kuo nustebintumėt kitus. Norime turėti gerą energiją šokiams, o tai bus tik su geru maistu.",
   "Vakarėlio metu vyks konkursai, žaidimai, tad raginame būti aktyviems.",
   "Vakarėlio metu organizatoriai bei paskirti budėtojai padės užtikrinti, kad nuotaika išliktų gera, o aplinka saugi ir jauki visiems.",
-  "Apranga cirko tema. Tai gan laisva tema, nes viskas tinka. Kviečiame rinktis klounų, gyvūnų, akrobatų ar cirko vedėjų įvaizdžius arba bent vieną ryškų cirko akcentą. Viskas paliekama Jūsų fantazijai.",
+  "Aprangos tema – pasaulio tautos ir kultūros. Galima rinktis šalį, regioną, spalvas, raštus ar kelionių akcentus. Prašome vengti pašaipos, stereotipų ir nepagarbaus tautinių ar religinių simbolių naudojimo; apranga turi būti padori ir tinkama krikščioniui.",
   "Prašome susipažinti su viskuo, kas yra šiame internetiniame puslapyje.",
   "Paruošime žaidimų ir veiklų, kviečiame aktyviai dalyvauti.",
   "Kiekvienas svečias atsakingas už savo tvarką.",
@@ -713,13 +715,13 @@ const IMPORTANT_REMINDERS = [
 const WHEEL_PRIZES = [
   "Pakviesk vieną žmogų trumpam šokiui.",
   "Pasakyk komplimentą žmogui su ryškiausiu akcentu.",
-  "Pasidaryk nuotrauką prie cirko dekoracijos.",
+  "Pasidaryk nuotrauką prie pasaulio žemėlapio ar pasirinktos kultūros dekoracijos.",
   "Užkalbink žmogų iš kito miesto.",
   "Palinkėk gero vakaro trims žmonėms.",
   "Pakviesk žmogų kartu prie švediško stalo.",
   "Pasakyk ačiū vienam organizatoriui.",
   "Surask žmogų, kurio dar nepažįsti, ir prisistatyk.",
-  "Sugalvok sau cirko pravardę vakarui.",
+  "Sugalvok sau keliautojo pravardę vakarui.",
   "Pakviesk du žmones grupinei nuotraukai.",
   "Pagirk kieno nors aprangos detalę.",
   "Paklausk žmogaus, kokia jo mėgstamiausia daina.",
@@ -745,10 +747,10 @@ const WHEEL_PRIZES = [
   "Surask žmogų, kuris atvyko toliausiai.",
   "Pasakyk komplimentą žmogaus šypsenai.",
   "Pakviesk vieną žmogų pažaisti kitą žaidimą.",
-  "Sugalvok trumpą cirko stiliaus pasisveikinimą.",
+  "Išmok ir pasakyk trumpą pasisveikinimą kita kalba.",
   "Pasveikink naują pažįstamą vardu.",
   "Pakviesk žmogų kartu pažiūrėti programos.",
-  "Pasidaryk „rimto cirko direktoriaus“ pozą.",
+  "Pasidaryk rimto pasaulio keliautojo pozą.",
   "Padaryk vieną gražią nuotrauką kitam žmogui.",
   "Paklausk žmogaus, kokio miesto kompanija šiandien linksmiausia.",
   "Pagirk žmogų, kuris padeda vakaro metu.",
@@ -757,11 +759,11 @@ const WHEEL_PRIZES = [
   "Pasakyk komplimentą žmogui, kurio apranga kūrybiškiausia.",
   "Surask tris žmones iš skirtingų miestų.",
   "Pakviesk žmogų kartu nusifotografuoti su dekoracija.",
-  "Padaryk „cirko žvaigždės“ eiseną 5 sekundes.",
+  "Padaryk pasaulio keliautojo eiseną 5 sekundes.",
   "Pasakyk žmogui, kad smagu jį matyti.",
   "Paklausk žmogaus, kokį desertą rekomenduotų.",
   "Pakviesk žmogų kartu paploti grojančiai dainai.",
-  "Sugalvok juokingą, bet draugišką cirko komplimentą.",
+  "Pasakyk draugišką komplimentą apie žmogaus kultūros akcentą.",
   "Surask žmogų, kuris pirmą kartą dalyvauja tokiame vakare.",
   "Pasakyk ačiū žmogui, kuris atnešė patiekalą.",
   "Pakviesk žmogų prie bendros veiklos.",
@@ -783,13 +785,13 @@ const WHEEL_PRIZES = [
   "Padėkok vienam savanoriui.",
   "Paklausk žmogaus, kas jam šiandien buvo smagiausia.",
   "Pakviesk žmogų prisijungti prie pokalbio.",
-  "Pasidaryk „akrobato be akrobatikos“ pozą.",
+  "Pasidaryk nuotykių ieškotojo pozą.",
   "Pagirk žmogų, kuris drąsiai šoka.",
   "Surask žmogų su gražiausia šypsena.",
   "Pakviesk žmogų kartu sugalvoti nuotraukos pavadinimą.",
   "Pasakyk draugišką komplimentą žmogui prie stalo.",
   "Pasiūlyk kam nors padėti nusinešti lėkštę ar puodelį.",
-  "Paklausk žmogaus, kokį cirko personažą jis pasirinko.",
+  "Paklausk žmogaus, kokią šalį ar kultūrą jis pasirinko.",
   "Sugalvok 3 žodžius, apibūdinančius vakarą.",
   "Pakviesk žmogų trumpai pasivaikščioti po salę.",
   "Pasakyk komplimentą žmogui, kurio dar nekalbinai.",
@@ -798,7 +800,7 @@ const WHEEL_PRIZES = [
   "Pakviesk žmogų pasidalyti mėgstamiausiu vakaro momentu.",
   "Pasakyk „ačiū, kad esi čia“ vienam žmogui.",
   "Pakviesk žmogų prie bendros dainos ar šokio.",
-  "Sugalvok padorų cirko šūkį savo stalui.",
+  "Sugalvok draugišką pasaulio keliautojų šūkį savo stalui.",
   "Surask žmogų, kuris turi įdomiausią istoriją apie atvykimą.",
   "Pakviesk žmogų nusifotografuoti su „rimtu veidu“.",
   "Pagirk žmogaus pastangas dėl aprangos temos.",
@@ -814,8 +816,8 @@ const WHEEL_PRIZES = [
 ];
 
 const VOTING_CATEGORIES: VotingCategory[] = [
-  { id: "most_creative_costume", label: "Kūrybiškiausias kostiumas" },
-  { id: "funniest_costume", label: "Juokingiausias kostiumas" },
+  { id: "most_creative_costume", label: "Kūrybiškiausias tautų įvaizdis" },
+  { id: "funniest_costume", label: "Stilingiausias kultūros akcentas" },
   { id: "best_energy", label: "Geriausia vakaro energija" },
   { id: "best_surprise", label: "Netikėčiausias vakaro akcentas" },
   { id: "biggest_smile", label: "Plačiausia šypsena" },
@@ -835,7 +837,7 @@ const initialResponsiblePeople: ResponsiblePerson[] = [
   { id: 7, role: "Šokių mokytojai", names: "" },
   { id: 8, role: "Žaidimų vedėjas", names: "" },
   { id: 9, role: "Savanoriai", names: "" },
-  { id: 10, role: "Vakaro mimas", names: "" },
+  { id: 10, role: "Kultūrų ambasadorius", names: "" },
   { id: 11, role: "Kampo čempionas", names: "" },
 ];
 
@@ -850,7 +852,7 @@ const DEMO_RESERVATION_EMAILS = new Set(["jonas@example.com"]);
 const DEMO_RESERVATION_CODES = new Set(["CIRKAS-0001"]);
 const DEMO_GAME_SCORES = new Set(["Jonas:18", "AustÄ—ja:14", "Austėja:14", "Lukas:9"]);
 const DEMO_SONG_TITLES = new Set(["Pavyzdys: šokių hitas", "Pavyzdys: linksma daina"]);
-const DEMO_EVENT_IDEAS = new Set(["Pavyzdys: cirko tematikos žaidimas su prizais."]);
+const DEMO_EVENT_IDEAS = new Set(["Pavyzdys: cirko tematikos žaidimas su prizais.", "Pavyzdys: pasaulio kultūrų žaidimas su prizais."]);
 
 function normalizeReservations(items: Reservation[]) {
   return items
@@ -1027,7 +1029,7 @@ function responsibleIcon(role: string) {
   if (normalizedRole.includes("šoki")) return "◆";
   if (normalizedRole.includes("žaid")) return "✦";
   if (normalizedRole.includes("savanor")) return "✚";
-  if (normalizedRole.includes("mim")) return "◐";
+  if (normalizedRole.includes("ambasador") || normalizedRole.includes("mim")) return "◎";
   return "●";
 }
 
@@ -1058,7 +1060,7 @@ function registrationStatus(reservation: Reservation) {
 }
 
 function qrFromId(id: number) {
-  return `CIRKAS-${String(id).slice(-4).padStart(4, "0")}`;
+  return `TAUTOS-${String(id).slice(-4).padStart(4, "0")}`;
 }
 
 function qrPayload(reservation: Reservation) {
@@ -1097,7 +1099,7 @@ function extractQrCode(value: string) {
       // Fall through to text pattern matching below.
     }
 
-    const directMatch = trimmed.match(/CIRKAS\s*[-–—]\s*\d{1,8}/i);
+    const directMatch = trimmed.match(/(?:TAUTOS|CIRKAS)\s*[-–—]\s*\d{1,8}/i);
     if (directMatch) {
       return directMatch[0].replace(/\s+/g, "").replace(/[–—]/g, "-").toUpperCase();
     }
@@ -1469,14 +1471,26 @@ function PaymentInformation({ reservation }: { reservation?: Reservation | null 
   );
 }
 
-function CircusLights() {
-  const colors = ["red", "amber", "orange", "green", "pink"];
-
+function WorldJourneyVisual() {
   return (
-    <div className="circus-lights" aria-hidden="true">
-      {Array.from({ length: 18 }).map((_, index) => (
-        <span className={`light-dot ${colors[index % colors.length]}`} key={index} />
-      ))}
+    <div className="world-journey-visual" aria-hidden="true">
+      <div className="world-route-copy">
+        <span>Vakaro maršrutas</span>
+        <strong>Priekulė · aplink pasaulį · Priekulė</strong>
+      </div>
+      <div className="world-globe">
+        <span className="world-globe-line longitude-one" />
+        <span className="world-globe-line longitude-two" />
+        <span className="world-globe-line latitude-one" />
+        <span className="world-globe-line latitude-two" />
+        <span className="world-land land-one" />
+        <span className="world-land land-two" />
+        <span className="world-land land-three" />
+      </div>
+      <div className="world-stamps">
+        <span>07 NOV</span>
+        <span>360 MIN</span>
+      </div>
     </div>
   );
 }
@@ -1569,7 +1583,7 @@ function CarIcon({ className = "button-icon" }: { className?: string }) {
   );
 }
 
-function ClownJumpGame({
+function WorldJourneyGame({
   scores,
   onSaveScore,
 }: {
@@ -2076,7 +2090,7 @@ function ClownJumpGame({
             {
               id: nextBonusIdRef.current++,
               x: 100,
-              label: bonusType === "coin" ? "★" : bonusType === "balloon" ? "🎈" : bonusType === "mushroom" ? "🍄" : "⬤",
+              label: bonusType === "coin" ? "★" : bonusType === "balloon" ? "🧭" : bonusType === "mushroom" ? "🗺" : "✈",
               type: bonusType,
               y:
                 bonusType === "coin"
@@ -2232,7 +2246,7 @@ function ClownJumpGame({
 
   return (
     <>
-    <SectionCard title="Klouno šuolis" description="Mini žaidimukas apačioje: kompiuteryje šok su Space, telefone spausk mygtuką ir rink taškus.">
+    <SectionCard title="Kelionė aplink pasaulį" description="Mini žaidimas: kompiuteryje šok su Space, telefone spausk mygtuką ir keliauk per vis naujas pasaulio stoteles.">
         <div className={`game-shell${isFullscreen ? " fullscreen" : ""}`} ref={fullscreenRef}>
         <div className="game-stage-card">
           <div className="game-stage-head">
@@ -2243,7 +2257,7 @@ function ClownJumpGame({
             <div className="game-chip">Top: {bestScore}</div>
           </div>
 
-            <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Klouno šuolio mini žaidimas">
+            <div className={`game-stage stage-theme-${themeLevel}${duelLevel !== null ? " duel-active" : ""}${hitFlash ? " hit-flash" : ""}`} role="img" aria-label="Pasaulio keliautojo mini žaidimas">
               <button aria-label={isFullscreen ? "Išeiti iš pilno ekrano" : "Rodyti per visą ekraną"} className="game-fullscreen-toggle" type="button" onClick={toggleFullscreen}>
                 {isFullscreen ? "⤢" : "⛶"}
               </button>
@@ -2259,11 +2273,11 @@ function ClownJumpGame({
             </div>
             <div className="game-distance-badge">{Math.floor(distance)} m</div>
             <div className="game-coins-badge">Bonusai: {coins}</div>
-            {slowdownActive ? <div className="game-power-badge slowdown">🎈 Lėčiau</div> : null}
-            {giantMode ? <div className="game-power-badge giant">🍄 Mega</div> : null}
-            {shrinkMode ? <div className="game-power-badge shadow">⬤ Mini</div> : null}
+            {slowdownActive ? <div className="game-power-badge slowdown">🧭 Lėčiau</div> : null}
+            {giantMode ? <div className="game-power-badge giant">🗺 Mega</div> : null}
+            {shrinkMode ? <div className="game-power-badge shadow">✈ Mini</div> : null}
             <div className={`${playerY > 4 ? "clown-runner jumping" : "clown-runner"}${giantMode ? " giant" : ""}${shrinkMode ? " tiny" : ""}${doubleJumpFlash ? " double-jump" : ""}`} style={{ transform: `translateY(${-playerY}px)` }}>
-              <span className="clown-face">🤡</span>
+              <span className="clown-face">🌍</span>
               <span aria-hidden="true" className="clown-legs">
                 <span className="left-leg" />
                 <span className="right-leg" />
@@ -2383,8 +2397,8 @@ function ClownJumpGame({
               </p>
               <p>
                 Bonusai taip pat prisideda prie bendro rezultato: geltoni bonusai kelia taškus,
-                balionas kuriam laikui sulėtina tempą, grybukas padidina klouną, o juodas bonusas
-                kelioms sekundėms labai sumažina klouną.
+                kompasas kuriam laikui sulėtina tempą, žemėlapis padidina keliautoją, o naktinio
+                skrydžio bonusas kelioms sekundėms jį labai sumažina.
               </p>
             </div>
 
@@ -2483,7 +2497,11 @@ export default function Page() {
   const [movieSettings, setMovieSettings] = useState<MovieSettings>(DEFAULT_MOVIE_SETTINGS);
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
 
-  const [appMode, setAppMode] = useState<AppMode>(() => pathname === "/kino-filmas" ? "movie" : "home");
+  const [appMode, setAppMode] = useState<AppMode>(() => {
+    if (pathname === "/kino-filmas") return "movie";
+    if (pathname === "/vakarelis") return "party";
+    return "home";
+  });
   const [registerOpen, setRegisterOpen] = useState(false);
   const [myTicketOpen, setMyTicketOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -2654,7 +2672,9 @@ export default function Page() {
         const nextVotes = parsed.votes ?? [];
         const nextSongSuggestions = normalizeSongSuggestions(rawSongSuggestions);
         const nextEventIdeas = normalizeEventIdeas(rawEventIdeas);
-        const nextResponsiblePeople = rawResponsiblePeople;
+        const nextResponsiblePeople = rawResponsiblePeople.map((item) =>
+          item.role === "Vakaro mimas" ? { ...item, role: "Kultūrų ambasadorius" } : item,
+        );
         const nextGameScores = normalizeGameScores(rawGameScores);
         const nextChampionMatches = rawChampionMatches;
         const nextMovieSeatReservations = normalizeMovieSeatReservations(rawMovieSeatReservations);
@@ -2707,8 +2727,10 @@ export default function Page() {
   useEffect(() => {
     if (pathname === "/kino-filmas") {
       setAppMode("movie");
+    } else if (pathname === "/vakarelis") {
+      setAppMode("party");
     } else if (pathname === "/") {
-      setAppMode((current) => current === "movie" ? "home" : current);
+      setAppMode("home");
     }
   }, [pathname]);
 
@@ -4073,7 +4095,7 @@ export default function Page() {
         ].join(";"),
       ),
     ];
-    downloadFile("cirkas-rezervacijos.csv", rows.join("\n"), "text/csv;charset=utf-8");
+    downloadFile("tautos-rezervacijos.csv", rows.join("\n"), "text/csv;charset=utf-8");
   }
 
   async function unlockAdmin() {
@@ -4819,7 +4841,7 @@ export default function Page() {
 
   function openAppMode(mode: AppMode) {
     setAppMode(mode);
-    const targetPath = mode === "movie" ? "/kino-filmas" : "/";
+    const targetPath = mode === "movie" ? "/kino-filmas" : mode === "party" ? "/vakarelis" : "/";
     if (pathname !== targetPath) router.push(targetPath);
   }
 
@@ -4917,7 +4939,7 @@ export default function Page() {
             <div className="eyebrow">klaipedosvakaras.fun</div>
             <h1>Pasirink, kur nori keliauti</h1>
             <p>
-              Viena nuoroda, atskiros veiklos: kino filmo peržiūra, kvadrato žaidimas ir Klaipėdos vakarėlio naujienos.
+              Viena nuoroda, atskiros veiklos: kino filmo peržiūra, kvadrato žaidimas ir teminis Klaipėdos vakarėlis.
             </p>
           </div>
 
@@ -4934,13 +4956,13 @@ export default function Page() {
               <p>Įrašyk savo vardą, pasirink norimą komandą ir stebėk viešai formuojamas sudėtis.</p>
             </button>
 
-            <button className="hub-choice-card party locked" type="button" disabled aria-disabled="true">
+            <button className="hub-choice-card party" type="button" onClick={() => openAppMode("party")}>
               <div className="hub-choice-topline">
                 <span>Klaipėdos vakarėlis</span>
-                <span className="hub-lock-badge"><i aria-hidden="true" /> Užrakinta</span>
+                <span className="hub-party-date">Lapkričio 7 d.</span>
               </div>
-              <strong>Laukite naujienų</strong>
-              <p>Naujas Klaipėdos vakarėlis numatomas spalio pabaigoje arba lapkričio pradžioje.</p>
+              <strong>Tautos. Aplink pasaulį per 360 minučių</strong>
+              <p>Vienas vakaras Priekulėje, daugybė kultūrų, skonių, muzikos ir pasaulio stotelių.</p>
             </button>
           </div>
         </section>
@@ -5714,7 +5736,7 @@ export default function Page() {
   }
 
   return (
-      <main className="page-shell">
+      <main className="page-shell world-party">
         <div className="page-glow page-glow-left" />
         <div className="page-glow page-glow-right" />
         {showConfetti || celebratingRegistration ? (
@@ -5735,12 +5757,12 @@ export default function Page() {
 
         <section className="hero">
         <div className="hero-copy">
-          <CircusLights />
+          <WorldJourneyVisual />
           <div className="eyebrow">Klaipėdos vakarėlio registracija</div>
             <h1>{EVENT_NAME}</h1>
             <p>
-              Kviečiame į spalvingą vakarėlį, kuriame lauks žaidimai, šokiai, gera muzika, smagi
-              kompanija, daug dūmų, lazerių, šviesų, didelė scena, erdvi salė ir tik smagūs potyriai.
+              Vieną vakarą Priekulė taps mūsų kelionės pradžia. Per šešias valandas muzika, skoniai,
+              žaidimai ir aprangos akcentai nuves per skirtingas pasaulio kultūras.
             </p>
 
           <div className="chip-grid">
@@ -5753,17 +5775,23 @@ export default function Page() {
               <strong>{EVENT_PLACE}</strong>
             </div>
             <div className="chip">
+              <span>Kelionės trukmė</span>
+              <strong>{EVENT_DURATION}</strong>
+            </div>
+            <div className="chip">
               <span>Kaina</span>
               <strong>13+ m. – 8 €, vaikams iki 13 m. – nemokamai</strong>
             </div>
           </div>
 
-          <div className="hero-gallery" aria-label="Renginio vietos nuotraukos">
+          <div className="hero-gallery" aria-label="Kelionės pradžios vietos nuotraukos">
             <figure className="hero-gallery-card hero-gallery-card-large">
               <img alt="Priekulės kultūros centro apšvietimas renginio metu" src="/event-gallery/priekules-apsvietimas.jpg" />
+              <figcaption>Kelionės pradžia · Priekulė</figcaption>
             </figure>
             <figure className="hero-gallery-card">
               <img alt="Priekulės kultūros centro salės vaizdas" src="/event-gallery/priekules-sale.jpg" />
+              <figcaption>Viena salė · visas pasaulis</figcaption>
             </figure>
           </div>
 
@@ -5781,18 +5809,11 @@ export default function Page() {
           </div>
 
           <div className="theme-reminder">
-            <strong>Aprangos tema: CIRKAS</strong>
+            <strong>Vakaro tema: pasaulio tautos ir kultūros</strong>
             <p>
-              Klounas, cirko direktorius, akrobatas, gimnastas, žonglierius, mimo artistas,
-              stipruolis, balionų artistas, popkornų pardavėjas, bilietų tikrintojas, cukraus
-              vata, cirko palapinė, kortų karalienė, lėlė, marionetė, ugnies artistas, cirko
-              muzikantas, trapecijos artistas, lankų šokėja, hula-hoop artistė, vienračio
-              artistas, cirko bilietas „VIP“, cirko afiša, teatro kaukė, šou atlikėjas, konfeti
-              žmogus, cirko šviesų ženklas, veidrodis, „Didžiojo šou“ žvaigždė, senų laikų cirko
-              personažas, cirko darbuotojas užkulisiuose, bilietų kasa, cirkas naktį, raudonai
-              baltas dryžuotas personažas, liūtas, tigras, zebras, dramblys, beždžionė, arklys,
-              ponis, meška, pudelis, gyvatė, papūga ir daug kitų. Tik prašome atminti, jog
-              rinktumėtės tokią tematiką, kuri būtų padori ir tinkama krikščioniui.
+              Pasirink šalį, regioną ar kelionės kryptį ir perteik ją spalvomis, raštais,
+              aksesuarais ar subtilia aprangos detale. Įkvėpimo semkimės pagarbiai: venkime
+              pašaipos, stereotipų ir nepagarbaus tautinių ar religinių simbolių naudojimo.
             </p>
           </div>
 
@@ -6228,7 +6249,7 @@ export default function Page() {
                   <input value={lookup} onChange={(event) => setLookup(event.target.value)} placeholder="El. paštas, tel., vardas ar QR kodas" />
                 </Field>
                 <Field label="Įklijuotas QR turinys">
-                  <input value={scannerValue} onChange={(event) => setScannerValue(event.target.value)} placeholder='{"qrCode":"CIRKAS-0001", ...}' />
+                  <input value={scannerValue} onChange={(event) => setScannerValue(event.target.value)} placeholder='{"qrCode":"TAUTOS-0001", ...}' />
                 </Field>
               </div>
 
@@ -6825,7 +6846,7 @@ export default function Page() {
         </div>
       </SectionCard>
 
-      <ClownJumpGame scores={gameScores} onSaveScore={saveGameScore} />
+      <WorldJourneyGame scores={gameScores} onSaveScore={saveGameScore} />
 
       <footer className="site-footer">
         Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus
