@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../lib/supabase/server";
 
 const STATE_ID = "main";
 const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
+const INTERNAL_GAME_SESSIONS_KEY = "__gameScoreSessions";
 const DELETED_RESERVATION_IDS_KEY = "deletedReservationIds";
 const MAX_SAVE_RETRIES = 5;
 const ADMIN_PIN = process.env.ADMIN_PIN;
@@ -391,6 +392,7 @@ export async function GET() {
     }
 
     const payload = isRecord(data?.payload) ? sanitizeStoredPayload({ ...data.payload }) : null;
+    if (payload) delete payload[INTERNAL_GAME_SESSIONS_KEY];
 
     return NextResponse.json({
       payload,
@@ -418,6 +420,12 @@ export async function POST(request: Request) {
     }
 
     const incomingPayload = payload as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(incomingPayload, INTERNAL_GAME_SESSIONS_KEY)) {
+      return NextResponse.json({ error: "Invalid payload section" }, { status: 403 });
+    }
+    if (!isAdminRequest && Object.prototype.hasOwnProperty.call(incomingPayload, "gameScores")) {
+      return NextResponse.json({ error: "Game scores require a verified session" }, { status: 403 });
+    }
     const supabase = createSupabaseServerClient();
 
     for (let attempt = 1; attempt <= MAX_SAVE_RETRIES; attempt += 1) {

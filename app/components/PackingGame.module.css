@@ -158,6 +158,8 @@
 
 .fullscreenButton:disabled,
 .actionRow button:disabled,
+.newGameButton:disabled,
+.overlay button:disabled,
 .saveCard button:disabled,
 .controls button:disabled {
   cursor: not-allowed;
@@ -192,6 +194,38 @@
 
 .comboStat strong {
   color: var(--region-accent);
+}
+
+.liveRank {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -2px 0 12px;
+  padding: 10px 13px;
+  border: 1px solid var(--region-soft);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #52707a;
+}
+
+.liveRank span {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.liveRank strong {
+  color: var(--region-accent-dark);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.liveRankTop {
+  border-color: rgba(217, 119, 6, 0.3);
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.9), rgba(255, 255, 255, 0.82));
+  box-shadow: 0 9px 22px rgba(217, 119, 6, 0.1);
 }
 
 .stabilityBanner {
@@ -259,6 +293,10 @@
     radial-gradient(circle at 50% 18%, var(--region-glow), transparent 44%),
     #031520;
   background-size: 10% calc(100% / 18), 10% calc(100% / 18), auto, auto;
+}
+
+.boardClearing {
+  animation: board-clear-flash 0.48s ease-out;
 }
 
 .cell {
@@ -442,6 +480,56 @@
 .confetti i:nth-child(5n) { --x: 118px; --y: 18px; --r: 330deg; }
 .confetti i:nth-child(6n) { --x: -116px; --y: 10px; --r: -330deg; }
 .confetti i:nth-child(7n) { --x: 12px; --y: -92px; --r: 290deg; }
+
+.lineExplosions {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lineExplosion {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(100% / 18);
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  transform: translateY(-50%);
+}
+
+.lineExplosion::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8%;
+  height: 3px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 0 18px 7px #f4c95d;
+  transform: translate(-50%, -50%);
+  animation: line-shockwave 0.62s ease-out forwards;
+}
+
+.lineExplosion i {
+  width: 76%;
+  aspect-ratio: 1;
+  place-self: center;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #ffffff, #f4c95d 55%, var(--region-accent));
+  box-shadow: 0 0 14px rgba(244, 201, 93, 0.8);
+  animation: line-cell-burst 0.78s cubic-bezier(0.16, 0.75, 0.22, 1) forwards;
+  --burst-x: 0px;
+  --burst-y: -34px;
+  --burst-r: 120deg;
+}
+
+.lineExplosion i:nth-child(2n) { --burst-y: 38px; --burst-r: -150deg; }
+.lineExplosion i:nth-child(3n) { --burst-x: 16px; --burst-y: -48px; --burst-r: 210deg; }
+.lineExplosion i:nth-child(4n) { --burst-x: -18px; --burst-y: 46px; --burst-r: -230deg; }
+.lineExplosion i:nth-child(5n) { --burst-x: 28px; --burst-y: -26px; --burst-r: 280deg; }
 
 .touchHint {
   margin: 10px 0 0;
@@ -658,6 +746,67 @@
   color: white;
 }
 
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.achievements > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  padding: 9px;
+  border: 1px dashed rgba(100, 128, 138, 0.3);
+  border-radius: 13px;
+  background: rgba(232, 239, 240, 0.58);
+  opacity: 0.55;
+}
+
+.achievements > div > span {
+  grid-row: 1 / span 2;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #91a7ad;
+  border-radius: 50%;
+  color: #52707a;
+  font-size: 0.62rem;
+  font-weight: 950;
+}
+
+.achievements strong {
+  overflow: hidden;
+  color: #315d65;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.achievements small {
+  color: #71878e;
+  font-size: 0.62rem;
+}
+
+.achievements .achievementDone {
+  border-style: solid;
+  border-color: var(--region-accent);
+  background: var(--region-soft);
+  opacity: 1;
+  animation: achievement-unlock 0.5s ease both;
+}
+
+.achievements .achievementDone > span {
+  border-color: var(--region-accent);
+  background: var(--region-accent);
+  color: white;
+  box-shadow: 0 7px 18px var(--region-glow);
+}
+
 .sideCard .bonusRule {
   margin-top: 10px;
   padding: 9px 10px;
@@ -788,6 +937,61 @@
   }
 }
 
+@keyframes board-clear-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: translateX(0);
+  }
+  18% {
+    filter: brightness(1.75) saturate(1.4);
+    transform: translateX(-3px);
+  }
+  36% {
+    transform: translateX(3px);
+  }
+  54% {
+    filter: brightness(1.25);
+    transform: translateX(-1px);
+  }
+}
+
+@keyframes line-shockwave {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(0.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(14);
+  }
+}
+
+@keyframes line-cell-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--burst-x), var(--burst-y)) rotate(var(--burst-r)) scale(0.2);
+  }
+}
+
+@keyframes achievement-unlock {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  65% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes celebration-pop {
   0% {
     opacity: 0;
@@ -899,6 +1103,7 @@
   .shell *,
   .shell *::before,
   .shell *::after {
+    animation: none !important;
     scroll-behavior: auto !important;
     transition: none !important;
   }

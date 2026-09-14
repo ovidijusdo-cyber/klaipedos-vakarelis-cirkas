@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import jsQR from "jsqr";
 import { QRCodeSVG } from "qrcode.react";
-import PackingGame from "./components/PackingGame";
+import PackingGame, { type GameScoreProof } from "./components/PackingGame";
 import {
   DEFAULT_MOVIE_SETTINGS,
   MOVIE_SEAT_HOLD_SECONDS,
@@ -3429,43 +3429,53 @@ export default function Page() {
     setVoteStep(2);
   }
 
-  async function saveGameScore(name: string, score: number) {
-    const now = formatDateTime();
-    const scoreEntry = { id: createNumericId(), name, score, createdAt: now };
-    const notificationEntry = { id: createNumericId(), message: `${name} išsaugojo žaidimo rezultatą: ${score} tšk.`, createdAt: now };
-    const nextGameScores = [...gameScores, scoreEntry]
-      .sort((a, b) => b.score - a.score || Date.parse(b.createdAt) - Date.parse(a.createdAt))
-      .slice(0, MAX_STORED_GAME_SCORES);
-    const timestamp = Date.now();
-
+  async function createGameSession() {
     try {
-      const response = await fetch("/api/state", {
+      const response = await fetch("/api/game-score", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          payload: {
-            gameScores: nextGameScores,
-          },
-          sectionUpdatedAt: {
-            gameScores: timestamp,
-          },
-          changedIds: {
-            gameScores: [scoreEntry.id],
-          },
-          adminPin: adminUnlocked ? adminPin : undefined,
-        }),
-        keepalive: true,
+        body: JSON.stringify({ action: "start" }),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to create game session");
+      }
+      const result = await response.json();
+      return typeof result?.token === "string" ? result.token : null;
+    } catch (error) {
+      console.error("Failed to create game session", error);
+      return null;
+    }
+  }
+
+  async function saveGameScore(name: string, score: number, proof: GameScoreProof) {
+    try {
+      const response = await fetch("/api/game-score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "finish", name, score, proof }),
+        cache: "no-store",
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save score");
-      }
+      if (!response.ok) throw new Error("Failed to save verified score");
+
+      const result = await response.json();
+      const nextGameScores = Array.isArray(result?.gameScores)
+        ? (result.gameScores as GameScore[]).slice(0, MAX_STORED_GAME_SCORES)
+        : gameScores;
+      const notificationEntry = result?.notification as NotificationItem | undefined;
+      const nextNotifications = notificationEntry
+        ? [notificationEntry, ...notifications.filter((item) => item.id !== notificationEntry.id)]
+        : notifications;
 
       setGameScores(nextGameScores);
-      setNotifications((previous) => [notificationEntry, ...previous]);
+      setNotifications(nextNotifications);
       syncedStateRef.current.gameScores = JSON.stringify(nextGameScores);
+      syncedStateRef.current.notifications = JSON.stringify(nextNotifications);
       return true;
     } catch (error) {
       console.error("Failed to save game score", error);
@@ -5973,7 +5983,7 @@ export default function Page() {
         </div>
       </SectionCard>
 
-      <PackingGame scores={gameScores} onSaveScore={saveGameScore} />
+      <PackingGame scores={gameScores} onCreateSession={createGameSession} onSaveScore={saveGameScore} />
 
       <footer className="site-footer">
         Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus

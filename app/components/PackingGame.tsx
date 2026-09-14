@@ -21,6 +21,20 @@ type ActivePiece = PieceTemplate & {
   row: number;
 };
 
+export type GameProofEvent = {
+  cleared: number;
+  dropPoints: number;
+};
+
+export type GameScoreProof = {
+  events: GameProofEvent[];
+  level: number;
+  lines: number;
+  maxClear: number;
+  maxCombo: number;
+  sessionToken: string;
+};
+
 type GameState = {
   active: ActivePiece | null;
   board: number[][];
@@ -28,12 +42,15 @@ type GameState = {
   effectId: number;
   gameOver: boolean;
   lastClear: number;
+  lastClearedRows: number[];
   level: number;
   leveledUp: boolean;
   lines: number;
   maxClear: number;
   maxCombo: number;
   next: PieceTemplate | null;
+  pieceDropPoints: number;
+  proofEvents: GameProofEvent[];
   running: boolean;
   score: number;
 };
@@ -111,11 +128,13 @@ function mergePiece(board: number[][], piece: ActivePiece) {
 }
 
 function clearCompletedLines(board: number[][]) {
-  const remaining = board.filter((row) => row.some((cell) => cell === 0));
+  const clearedRows = board.flatMap((row, index) => row.every((cell) => cell !== 0) ? [index] : []);
+  const remaining = board.filter((_, index) => !clearedRows.includes(index));
   const cleared = BOARD_ROWS - remaining.length;
   return {
     board: [...Array.from({ length: cleared }, () => Array<number>(BOARD_COLS).fill(0)), ...remaining],
     cleared,
+    clearedRows,
   };
 }
 
@@ -129,17 +148,21 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
   const nextTemplate = state.next ?? randomPiece();
   const active = spawnPiece(nextTemplate);
   const next = randomPiece();
+  const pieceDropPoints = state.pieceDropPoints + dropBonus;
   const roundState = {
     board: result.board,
     combo,
     effectId: result.cleared ? state.effectId + 1 : state.effectId,
     lastClear: result.cleared,
+    lastClearedRows: result.clearedRows,
     level,
     leveledUp: level > state.level,
     lines,
     maxClear: Math.max(state.maxClear, result.cleared),
     maxCombo: Math.max(state.maxCombo, combo),
     next,
+    pieceDropPoints: 0,
+    proofEvents: [...state.proofEvents, { cleared: result.cleared, dropPoints: pieceDropPoints }],
     score,
   };
 
@@ -157,12 +180,15 @@ const initialGameState: GameState = {
   effectId: 0,
   gameOver: false,
   lastClear: 0,
+  lastClearedRows: [],
   level: 1,
   leveledUp: false,
   lines: 0,
   maxClear: 0,
   maxCombo: 0,
   next: null,
+  pieceDropPoints: 0,
+  proofEvents: [],
   running: false,
   score: 0,
 };
@@ -201,6 +227,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     return {
       ...state,
       active: { ...state.active, row: nextRow },
+      pieceDropPoints: state.pieceDropPoints + (action.type === "softDrop" ? 1 : 0),
       score: state.score + (action.type === "softDrop" ? 1 : 0),
     };
   }
@@ -216,13 +243,17 @@ function ghostRow(board: number[][], piece: ActivePiece) {
 
 export default function PackingGame({
   scores,
+  onCreateSession,
   onSaveScore,
 }: {
   scores: GameScore[];
-  onSaveScore: (name: string, score: number) => Promise<boolean>;
+  onCreateSession: () => Promise<string | null>;
+  onSaveScore: (name: string, score: number, proof: GameScoreProof) => Promise<boolean>;
 }) {
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const sessionHandlerRef = useRef(onCreateSession);
+  const sessionTokenRef = useRef("");
   const scoreHandlerRef = useRef(onSaveScore);
   const scoreAttemptRef = useRef<string | null>(null);
   const stabilityLevelRef = useRef(0);
@@ -233,16 +264,19 @@ export default function PackingGame({
   const [playerName, setPlayerName] = useState("");
   const [savedScore, setSavedScore] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [stabilitySeconds, setStabilitySeconds] = useState(0);
   const [stabilityUntil, setStabilityUntil] = useState(0);
   const [startError, setStartError] = useState("");
 
-  const topScores = useMemo(
-    () => [...scores].sort((a, b) => b.score - a.score).slice(0, 5),
+  const sortedScores = useMemo(
+    () => [...scores].sort((a, b) => b.score - a.score),
     [scores],
   );
+  const topScores = sortedScores.slice(0, 5);
   const qualifiesForTopFive = state.score > 0 && (topScores.length < 5 || state.score > (topScores[4]?.score ?? 0));
+  const liveRank = state.score > 0 ? 1 + sortedScores.filter((entry) => entry.score > state.score).length : null;
   const regionIndex = Math.min(REGIONS.length - 1, Math.max(0, state.level - 1));
   const region = REGIONS[regionIndex];
   const regionClass = styles[`region${region.id}`];
@@ -255,6 +289,12 @@ export default function PackingGame({
     { id: "score", title: "Pilnas bilietas", detail: "Surink 1 000 taškų", progress: `${Math.min(state.score, 1000)}/1000`, done: state.score >= 1000 },
     { id: "level", title: "Penki žemynai", detail: "Pasiek 5 lygį", progress: `${Math.min(state.level, 5)}/5`, done: state.level >= 5 },
     { id: "clear", title: "Tobulas lagaminas", detail: "Pašalink 4 eilutes kartu", progress: `${Math.min(state.maxClear, 4)}/4`, done: state.maxClear >= 4 },
+  ];
+  const achievements = [
+    { id: "first-line", code: "01", title: "Pirmoji eilutė", done: state.lines >= 1 },
+    { id: "combo", code: "K3", title: "Kombo meistras", done: state.maxCombo >= 3 },
+    { id: "continents", code: "360", title: "Penki žemynai", done: state.level >= 5 },
+    { id: "perfect", code: "4X", title: "Tobulas lagaminas", done: state.maxClear >= 4 },
   ];
   const landingRow = state.active ? ghostRow(state.board, state.active) : 0;
   const activeCells = new Map<string, number>();
@@ -271,8 +311,9 @@ export default function PackingGame({
   }
 
   useEffect(() => {
+    sessionHandlerRef.current = onCreateSession;
     scoreHandlerRef.current = onSaveScore;
-  }, [onSaveScore]);
+  }, [onCreateSession, onSaveScore]);
 
   useEffect(() => {
     if (!state.running) return;
@@ -353,12 +394,20 @@ export default function PackingGame({
     scoreAttemptRef.current = key;
     setSaving(true);
     setSaveError("");
-    void scoreHandlerRef.current(name, state.score).then((saved) => {
+    const proof: GameScoreProof = {
+      events: state.proofEvents,
+      level: state.level,
+      lines: state.lines,
+      maxClear: state.maxClear,
+      maxCombo: state.maxCombo,
+      sessionToken: sessionTokenRef.current,
+    };
+    void scoreHandlerRef.current(name, state.score, proof).then((saved) => {
       setSaving(false);
       if (saved) setSavedScore(state.score);
       else setSaveError("Nepavyko išsaugoti rezultato. Patikrink internetą ir pabandyk dar kartą.");
     });
-  }, [playerName, qualifiesForTopFive, savedScore, state.gameOver, state.score]);
+  }, [playerName, qualifiesForTopFive, savedScore, state.gameOver, state.level, state.lines, state.maxClear, state.maxCombo, state.proofEvents, state.score]);
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -368,12 +417,22 @@ export default function PackingGame({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  function startGame() {
+  async function startGame() {
     if (!playerName.trim()) {
       setStartError("Pirmiausia įrašyk savo vardą.");
       window.requestAnimationFrame(() => nameInputRef.current?.focus());
       return;
     }
+    if (starting) return;
+    setStarting(true);
+    setStartError("");
+    const sessionToken = await sessionHandlerRef.current();
+    setStarting(false);
+    if (!sessionToken) {
+      setStartError("Nepavyko saugiai pradėti žaidimo. Patikrink internetą ir bandyk dar kartą.");
+      return;
+    }
+    sessionTokenRef.current = sessionToken;
     setSavedScore(null);
     scoreAttemptRef.current = null;
     stabilityLevelRef.current = 0;
@@ -389,7 +448,14 @@ export default function PackingGame({
     if (!name || !state.gameOver || !qualifiesForTopFive) return;
     setSaving(true);
     setSaveError("");
-    const saved = await scoreHandlerRef.current(name, state.score);
+    const saved = await scoreHandlerRef.current(name, state.score, {
+      events: state.proofEvents,
+      level: state.level,
+      lines: state.lines,
+      maxClear: state.maxClear,
+      maxCombo: state.maxCombo,
+      sessionToken: sessionTokenRef.current,
+    });
     setSaving(false);
     if (!saved) {
       setSaveError("Nepavyko išsaugoti rezultato. Patikrink internetą ir pabandyk dar kartą.");
@@ -469,6 +535,13 @@ export default function PackingGame({
           <div className={state.combo > 1 ? styles.comboStat : ""}><span>Kombo</span><strong>{state.combo > 1 ? `x${state.combo}` : "–"}</strong></div>
         </div>
 
+        {state.running && liveRank ? (
+          <div className={`${styles.liveRank}${liveRank <= 5 ? ` ${styles.liveRankTop}` : ""}`} aria-live="polite">
+            <span>Gyva turnyro vieta</span>
+            <strong>{liveRank === 1 ? "Šiuo metu būtum 1 vietoje" : `Šiuo metu būtum ${liveRank} vietoje`}</strong>
+          </div>
+        ) : null}
+
         {stabilitySeconds > 0 ? (
           <div className={styles.stabilityBanner} aria-live="polite">
             <strong>Ramus skrydis</strong>
@@ -482,7 +555,7 @@ export default function PackingGame({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div className={styles.board} role="group" aria-label="Žaidimo Lagaminas 360 lenta">
+          <div className={`${styles.board}${celebration && state.lastClear ? ` ${styles.boardClearing}` : ""}`} role="group" aria-label="Žaidimo Lagaminas 360 lenta">
             {state.board.flatMap((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const key = `${rowIndex}:${colIndex}`;
@@ -509,14 +582,16 @@ export default function PackingGame({
                       setStartError("");
                     }}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") startGame();
+                      if (event.key === "Enter") void startGame();
                     }}
                     placeholder="Įrašyk vardą prieš žaidimą"
                     autoComplete="name"
                   />
                 </label>
                 {startError ? <small className={styles.startError}>{startError}</small> : null}
-                <button type="button" onClick={startGame}>Pradėti žaidimą</button>
+                <button disabled={starting} type="button" onClick={() => void startGame()}>
+                  {starting ? "Tikrinama..." : "Pradėti žaidimą"}
+                </button>
               </div>
             ) : null}
 
@@ -534,7 +609,9 @@ export default function PackingGame({
                       : saveError || "Ruošiamas rezultato išsaugojimas..."
                       : `${playerName.trim()}, šį kartą iki Top 5 šiek tiek pritrūko.`}
                 </small>
-                <button type="button" onClick={startGame}>Žaisti dar kartą</button>
+                <button disabled={starting} type="button" onClick={() => void startGame()}>
+                  {starting ? "Tikrinama..." : "Žaisti dar kartą"}
+                </button>
               </div>
             ) : null}
 
@@ -545,6 +622,16 @@ export default function PackingGame({
                 <div className={styles.confetti} aria-hidden="true">
                   {Array.from({ length: 14 }, (_, index) => <i key={index} />)}
                 </div>
+              </div>
+            ) : null}
+
+            {celebration && state.lastClearedRows.length ? (
+              <div className={styles.lineExplosions} aria-hidden="true">
+                {state.lastClearedRows.map((row) => (
+                  <div className={styles.lineExplosion} style={{ top: `${((row + 0.5) / BOARD_ROWS) * 100}%` }} key={`${celebration.id}-${row}`}>
+                    {Array.from({ length: BOARD_COLS }, (_, index) => <i key={index} />)}
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -579,8 +666,8 @@ export default function PackingGame({
             })}
           </div>
           {playerName.trim() ? <div className={styles.playerTag}>Žaidžia: <strong>{playerName.trim()}</strong></div> : null}
-          <button className={styles.newGameButton} type="button" onClick={startGame}>
-            {state.active || state.gameOver ? "Pradėti iš naujo" : "Pradėti žaidimą"}
+          <button className={styles.newGameButton} disabled={starting} type="button" onClick={() => void startGame()}>
+            {starting ? "Tikrinama..." : state.active || state.gameOver ? "Pradėti iš naujo" : "Pradėti žaidimą"}
           </button>
         </div>
 
@@ -614,6 +701,22 @@ export default function PackingGame({
             ))}
           </div>
           <p className={styles.bonusRule}>Nuo 5 lygio kas tris lygius gausi „Ramaus skrydžio“ bonusą: 15 sekundžių be naujo pagreitėjimo.</p>
+        </div>
+
+        <div className={styles.sideCard}>
+          <div className={styles.sideTitle}>
+            <strong>Pasiekimų ženkliukai</strong>
+            <span>{achievements.filter((achievement) => achievement.done).length}/{achievements.length}</span>
+          </div>
+          <div className={styles.achievements}>
+            {achievements.map((achievement) => (
+              <div className={achievement.done ? styles.achievementDone : ""} key={achievement.id}>
+                <span>{achievement.code}</span>
+                <strong>{achievement.title}</strong>
+                <small>{achievement.done ? "Atrakinta" : "Dar neatrakinta"}</small>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className={styles.sideCard}>
