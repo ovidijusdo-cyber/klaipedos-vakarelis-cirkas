@@ -2918,6 +2918,231 @@ textarea {
   gap: 30px;
 }
 
+.champion-games-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.champion-games-head h3,
+.champion-game-brief h3 {
+  margin: 5px 0 7px;
+  font-family: var(--font-heading), serif;
+}
+
+.champion-games-head p,
+.champion-game-brief p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.champion-games-count {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(14, 116, 144, 0.2);
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.champion-game-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.champion-game-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  min-height: 104px;
+  padding: 14px;
+  border: 1px solid rgba(14, 116, 144, 0.18);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f0fdfa, #ecfeff);
+  color: #164e63;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.champion-game-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #0891b2;
+  box-shadow: 0 15px 28px rgba(8, 145, 178, 0.12);
+}
+
+.champion-game-card.selected {
+  border-color: #0891b2;
+  box-shadow: inset 0 0 0 2px rgba(8, 145, 178, 0.12), 0 15px 28px rgba(8, 145, 178, 0.1);
+}
+
+.champion-game-card > span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #0e7490;
+  color: white;
+  font-family: var(--font-heading), serif;
+  font-size: 1.05rem;
+}
+
+.champion-game-card > div {
+  display: grid;
+  gap: 3px;
+}
+
+.champion-game-card small {
+  color: #0e7490;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.champion-game-card strong {
+  font-family: var(--font-heading), serif;
+  font-size: 1.05rem;
+}
+
+.champion-game-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.champion-game-card > b {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #cffafe;
+  color: #0e7490;
+  font-size: 0.65rem;
+}
+
+.champion-game-card.upcoming {
+  border-style: dashed;
+  background: #f8fafc;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.champion-game-card.upcoming > span {
+  background: #94a3b8;
+}
+
+.champion-game-card.upcoming > b {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.champion-game-brief {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.58fr) minmax(0, 1.42fr);
+  gap: 24px;
+  align-items: center;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 12% 22%, rgba(251, 191, 36, 0.2), transparent 32%),
+    linear-gradient(135deg, #fff7ed, #ffffff 58%, #ecfeff);
+}
+
+.missing-passport-art {
+  position: relative;
+  min-height: 180px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 12px;
+  border-radius: 22px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.07)),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(255, 255, 255, 0.05) 38px 40px),
+    linear-gradient(145deg, #164e63, #0f766e);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.missing-passport-art i {
+  position: relative;
+  z-index: 2;
+  width: 58px;
+  height: 66px;
+  border: 3px solid rgba(255, 255, 255, 0.82);
+  border-top-width: 7px;
+  border-radius: 8px 8px 20px 20px;
+  background: linear-gradient(145deg, #fb923c, #ea580c);
+  box-shadow: 0 13px 20px rgba(15, 23, 42, 0.24), inset 0 -9px 0 rgba(124, 45, 18, 0.16);
+  transform: rotate(-4deg);
+}
+
+.missing-passport-art i:nth-of-type(2) {
+  transform: translateY(-11px);
+}
+
+.missing-passport-art i:nth-of-type(3) {
+  transform: rotate(4deg);
+}
+
+.passport-token {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  z-index: 1;
+  width: 48px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fde68a;
+  border-radius: 5px;
+  background: #1d4ed8;
+  color: white;
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  transform: translateX(-50%) rotate(-8deg);
+}
+
+.champion-game-rules {
+  display: grid;
+  gap: 7px;
+  margin: 15px 0 0;
+  padding: 0;
+}
+
+.champion-game-rules > div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px 0;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.champion-game-rules > div > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
 .champion-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.86fr) minmax(320px, 1.14fr);
@@ -2977,6 +3202,12 @@ textarea {
   padding: 14px;
   border-radius: 18px;
   background: linear-gradient(180deg, #fff7ed, #ffedd5);
+}
+
+.champion-selected-game {
+  color: #9a3412;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .champion-board-head {
@@ -6735,6 +6966,29 @@ th {
   .wheel-section.compact,
   .wheel-section {
     gap: 18px;
+  }
+
+  .champion-game-picker,
+  .champion-game-brief {
+    grid-template-columns: 1fr;
+  }
+
+  .champion-games-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .champion-game-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .champion-game-card > b {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .missing-passport-art {
+    min-height: 150px;
   }
 
   .wheel-wrapper,

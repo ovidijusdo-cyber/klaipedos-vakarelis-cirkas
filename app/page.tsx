@@ -139,6 +139,8 @@ type ChampionMatch = {
   guestPersonId: string;
   guestLabel: string;
   city: string;
+  gameId?: string;
+  gameLabel?: string;
   result: "champion_won" | "guest_won";
   task: string | null;
   createdAt: string;
@@ -715,6 +717,22 @@ const IMPORTANT_REMINDERS = [
   "Prašome patiems pasirūpinti atvykimu iki vakarėlio vietos. Jeigu bandėte susieškoti ir nepavyko surasti vietos pas ką nors atvykti į vakarėlį, parašykite broliui Ovidijui: +370 6635 2281.",
   "Ateikite su gera nuotaika ir pasiruošę linksmybėms.",
 ];
+
+const CHAMPION_GAMES = [
+  {
+    id: "missing-passport",
+    number: "01",
+    title: "Dingęs Pasas",
+    subtitle: "Trijų puodelių iššūkis",
+    description: "Kampo čempionas paslepia paso kortelę po vienu iš trijų puodelių, juos sumaišo, o svečias turi atsekti, kur pasas dingo.",
+    rules: [
+      "Svečias stebi, po kuriuo puodeliu paslepiamas pasas.",
+      "Kampo čempionas sumaišo tris puodelius.",
+      "Svečias pasirenka vieną puodelį ir patikrina spėjimą.",
+      "Radęs pasą svečias laimi, neradus sukamas užduočių ratas.",
+    ],
+  },
+] as const;
 
 const WHEEL_PRIZES = [
   "Pakviesk vieną žmogų trumpam šokiui.",
@@ -1686,6 +1704,7 @@ export default function Page() {
   const [wheelRotation, setWheelRotation] = useState(0);
   const [wheelResult, setWheelResult] = useState("");
   const [wheelSpinning, setWheelSpinning] = useState(false);
+  const [selectedChampionGameId, setSelectedChampionGameId] = useState<string>(CHAMPION_GAMES[0].id);
   const [championLookup, setChampionLookup] = useState("");
   const [selectedChampionGuestId, setSelectedChampionGuestId] = useState("");
   const [championBoardLookup, setChampionBoardLookup] = useState("");
@@ -2449,6 +2468,7 @@ export default function Page() {
     () => voteEligiblePeople.find((person) => person.id === selectedChampionGuestId) ?? null,
     [selectedChampionGuestId, voteEligiblePeople],
   );
+  const selectedChampionGame = CHAMPION_GAMES.find((game) => game.id === selectedChampionGameId) ?? CHAMPION_GAMES[0];
   const championPublicMatches = useMemo(() => {
     const query = championBoardLookup.trim().toLowerCase();
     const exactPerson = query ? voteEligiblePeople.find((person) => person.name.toLowerCase() === query) : null;
@@ -3374,6 +3394,8 @@ export default function Page() {
           guestPersonId: matchGuest.id,
           guestLabel: matchGuest.publicName,
           city: matchGuest.city,
+          gameId: selectedChampionGame.id,
+          gameLabel: selectedChampionGame.title,
           result: "champion_won",
           task,
           createdAt: formatDateTime(),
@@ -3394,6 +3416,8 @@ export default function Page() {
         guestPersonId: selectedChampionGuest.id,
         guestLabel: selectedChampionGuest.publicName,
         city: selectedChampionGuest.city,
+        gameId: selectedChampionGame.id,
+        gameLabel: selectedChampionGame.title,
         result: "guest_won",
         task: null,
         createdAt: formatDateTime(),
@@ -5841,8 +5865,67 @@ export default function Page() {
         </SectionCard>
       ) : null}
 
-      <SectionCard title="Kampo čempiono arena" description="Sužaisk kryžiukus-nuliukus: pergalė pelno taurę, pralaimėjimas atneša smagią rato užduotį.">
+      <SectionCard title="Kampo čempiono žaidimų arena" description="Pasirink vakaro iššūkį, mesk iššūkį Kampo čempionui ir laimėk taurę arba išsuk smagią užduotį.">
         <div className="champion-arena">
+          <div className="champion-games-head">
+            <div>
+              <span className="eyebrow">Vakaro žaidimai</span>
+              <h3>Pasirink iššūkį</h3>
+              <p>Pirmasis žaidimas jau paruoštas. Kitą arenos iššūkį paskelbsime vėliau.</p>
+            </div>
+            <span className="champion-games-count">1 aktyvus žaidimas</span>
+          </div>
+
+          <div className="champion-game-picker" aria-label="Kampo čempiono žaidimų pasirinkimas">
+            {CHAMPION_GAMES.map((game) => (
+              <button
+                className={`champion-game-card${selectedChampionGameId === game.id ? " selected" : ""}`}
+                key={game.id}
+                type="button"
+                onClick={() => setSelectedChampionGameId(game.id)}
+              >
+                <span>{game.number}</span>
+                <div>
+                  <small>Galima žaisti</small>
+                  <strong>{game.title}</strong>
+                  <p>{game.subtitle}</p>
+                </div>
+                <b>Pasirinkta</b>
+              </button>
+            ))}
+            <button className="champion-game-card upcoming" type="button" disabled>
+              <span>02</span>
+              <div>
+                <small>Netrukus</small>
+                <strong>Kitas žaidimas</strong>
+                <p>Pavadinimas ir taisyklės bus paskelbti vėliau</p>
+              </div>
+              <b>Užrakinta</b>
+            </button>
+          </div>
+
+          <div className="champion-game-brief">
+            <div className="missing-passport-art" aria-hidden="true">
+              <span className="passport-token">PASAS</span>
+              <i />
+              <i />
+              <i />
+            </div>
+            <div>
+              <span className="eyebrow">Dabar žaidžiama</span>
+              <h3>{selectedChampionGame.title}</h3>
+              <p>{selectedChampionGame.description}</p>
+              <div className="champion-game-rules">
+                {selectedChampionGame.rules.map((rule, index) => (
+                  <div key={rule}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <p>{rule}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="wheel-section compact">
             <div className="wheel-wrapper small">
               <div className="wheel-pointer" />
@@ -5859,7 +5942,7 @@ export default function Page() {
               </div>
             </div>
             <div className="wheel-side">
-              <p>Kampo čempionas meta iššūkį svečiams. Jei jis laimi, ratas skiria vakaro misiją; jei laimi svečias, šalia jo vardo sužiba taurė.</p>
+              <p>Jei svečias neranda dingusio paso, Kampo čempionas laimi ir pasuka užduočių ratą. Radus pasą, svečiui skiriama pergalė ir taurė.</p>
               <div className="wheel-result">
                 <strong>Paskutinis arenos įvykis</strong>
                 <p>{wheelResult || "Rezultatai ir išsuktos užduotys atsiras lentoje žemiau."}</p>
@@ -5913,12 +5996,13 @@ export default function Page() {
                   {selectedChampionGuest ? (
                     <div className="champion-selected">
                       <strong>Žaidžia: {selectedChampionGuest.name}</strong>
+                      <span className="champion-selected-game">Žaidimas: {selectedChampionGame.title}</span>
                       <div className="stack-inline">
                         <button className="primary-button" type="button" onClick={spinWheel} disabled={wheelSpinning}>
-                          {wheelSpinning ? "Ratas sukasi..." : "Čempionas laimėjo - sukti ratą"}
+                          {wheelSpinning ? "Ratas sukasi..." : "Paso nerado - sukti ratą"}
                         </button>
                         <button className="secondary-button" type="button" onClick={recordChampionGuestWin} disabled={wheelSpinning}>
-                          Svečias laimėjo
+                          Pasą rado - svečias laimėjo
                         </button>
                       </div>
                     </div>
@@ -5933,7 +6017,7 @@ export default function Page() {
               <div className="champion-board-head">
                 <div>
                   <span className="eyebrow">Vieša lenta</span>
-                  <h3>Čempiono iššūkiai</h3>
+                  <h3>Žaidimų rezultatai</h3>
                   <p>Įvesk savo vardą ir pavardę, kad rastum savo užduotį. Viešai vardai rodomi sutrumpinti.</p>
                 </div>
                 <input
@@ -5949,7 +6033,7 @@ export default function Page() {
                     <div className={`champion-match ${match.result}`} key={match.id}>
                       <div className="champion-match-person">
                         <strong>{match.guestLabel}</strong>
-                        <span>{match.city} · {match.createdAt}</span>
+                        <span>{match.gameLabel ?? "Ankstesnis arenos žaidimas"} · {match.city} · {match.createdAt}</span>
                       </div>
                       {match.result === "guest_won" ? (
                         <div className="champion-trophy" title="Laimėjo prieš Kampo čempioną">
