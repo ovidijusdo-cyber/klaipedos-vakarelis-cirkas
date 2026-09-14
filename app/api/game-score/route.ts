@@ -146,7 +146,7 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
     Number(proof.maxCombo) !== maxCombo
   ) return null;
 
-  return { eventsCount: events.length, level, lines, maxClear, maxCombo, score };
+  return { durationMs: elapsed, eventsCount: events.length, level, lines, maxClear, maxCombo, score };
 }
 
 function publicScores(value: unknown) {
@@ -157,8 +157,19 @@ function publicScores(value: unknown) {
     const score = Number(item.score);
     const name = normalizeName(item.name);
     const createdAt = typeof item.createdAt === "string" ? item.createdAt : "";
+    const startedAt = typeof item.startedAt === "string" ? item.startedAt : undefined;
+    const finishedAt = typeof item.finishedAt === "string" ? item.finishedAt : undefined;
+    const durationMs = Number(item.durationMs);
     return Number.isFinite(id) && Number.isInteger(score) && score >= 0 && name && createdAt
-      ? [{ id, name, score, createdAt }]
+      ? [{
+          id,
+          name,
+          score,
+          createdAt,
+          ...(startedAt ? { startedAt } : {}),
+          ...(finishedAt ? { finishedAt } : {}),
+          ...(Number.isInteger(durationMs) && durationMs >= MIN_GAME_MS && durationMs <= SESSION_TTL_MS ? { durationMs } : {}),
+        }]
       : [];
   });
 }
@@ -197,6 +208,9 @@ export async function POST(request: Request) {
       name,
       score: verified.score,
       createdAt: now,
+      startedAt: new Date(session.issuedAt).toISOString(),
+      finishedAt: new Date(session.issuedAt + verified.durationMs).toISOString(),
+      durationMs: verified.durationMs,
     };
     const notificationEntry = {
       id: scoreEntry.id + 1,

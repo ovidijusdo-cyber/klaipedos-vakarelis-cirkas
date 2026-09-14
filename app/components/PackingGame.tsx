@@ -8,6 +8,9 @@ type GameScore = {
   name: string;
   score: number;
   createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
 };
 
 type PieceTemplate = {
@@ -66,6 +69,14 @@ type GameAction =
 const BOARD_COLS = 10;
 const BOARD_ROWS = 18;
 const LINE_POINTS = [0, 100, 300, 500, 800];
+const GAME_TIME_FORMATTER = new Intl.DateTimeFormat("lt-LT", {
+  timeZone: "Europe/Vilnius",
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
 
 const REGIONS = [
   { id: "Europe", code: "EU", name: "Europa", note: "Kelionės pradžia" },
@@ -239,6 +250,22 @@ function ghostRow(board: number[][], piece: ActivePiece) {
   let row = piece.row;
   while (canPlace(board, piece, row + 1, piece.col)) row += 1;
   return row;
+}
+
+function formatGameTimestamp(value: string | undefined) {
+  if (!value) return "–";
+  if (!value.includes("T")) return value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : GAME_TIME_FORMATTER.format(parsed);
+}
+
+function formatGameDuration(value: number | undefined) {
+  if (!Number.isFinite(value) || !value || value < 0) return null;
+  const totalSeconds = Math.max(1, Math.round(value / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours ? `${hours} val.` : "", minutes ? `${minutes} min.` : "", `${seconds} sek.`].filter(Boolean).join(" ");
 }
 
 export default function PackingGame({
@@ -749,8 +776,22 @@ export default function PackingGame({
             {topScores.length ? topScores.map((entry, index) => (
               <div key={entry.id}>
                 <span>{index + 1}</span>
-                <strong>{entry.name}</strong>
-                <b>{entry.score}</b>
+                <section className={styles.leaderboardPlayer}>
+                  <strong>{entry.name}</strong>
+                  {entry.startedAt && entry.finishedAt && formatGameDuration(entry.durationMs) ? (
+                    <small>
+                      <span>Pradėta {formatGameTimestamp(entry.startedAt)}</span>
+                      <span>Baigta {formatGameTimestamp(entry.finishedAt)}</span>
+                      <b>Žaista {formatGameDuration(entry.durationMs)}</b>
+                    </small>
+                  ) : (
+                    <small>
+                      <span>Baigta {formatGameTimestamp(entry.createdAt)}</span>
+                      <span>Trukmė anksčiau nefiksuota</span>
+                    </small>
+                  )}
+                </section>
+                <b className={styles.leaderboardScore}>{entry.score}</b>
               </div>
             )) : <p>Rekordų dar nėra. Pirmasis lagaminas laukia tavęs.</p>}
           </div>

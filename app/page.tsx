@@ -123,6 +123,9 @@ type GameScore = {
   name: string;
   score: number;
   createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
 };
 
 type ResponsiblePerson = {

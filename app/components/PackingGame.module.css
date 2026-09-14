@@ -887,8 +887,34 @@
   background: #d97706;
 }
 
-.leaderboard b {
+.leaderboardPlayer {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.leaderboardPlayer > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboardPlayer small {
+  display: grid;
+  gap: 1px;
+  color: #6b7f86;
+  font-size: 0.61rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.leaderboardPlayer small b {
+  color: var(--region-accent-dark);
+}
+
+.leaderboardScore {
   color: var(--region-accent);
+  font-size: 0.92rem;
 }
 
 .fullscreen {
