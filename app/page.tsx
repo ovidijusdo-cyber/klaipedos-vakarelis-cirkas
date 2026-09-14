@@ -5832,10 +5832,6 @@ export default function Page() {
               <span><b>Skoniai</b> Pavaišink pasirinktos šalies įkvėptu savo pagamintu patiekalu.</span>
               <span><b>Veiklos</b> Parodyk šokį ar žaidimą, kurio išmokome iš delegatų arba mokėme juos.</span>
             </div>
-            <p className="theme-respect-note">
-              Kultūras pristatykime kūrybiškai ir pagarbiai, vengdami pašaipos, stereotipų bei
-              nepagarbaus tautinių ar religinių simbolių naudojimo.
-            </p>
           </div>
 
           <div className="stats-grid">
