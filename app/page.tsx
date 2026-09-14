@@ -1478,14 +1478,24 @@ function WorldJourneyVisual() {
         <span>Vakaro maršrutas</span>
         <strong>Priekulė · aplink pasaulį · Priekulė</strong>
       </div>
-      <div className="world-globe">
-        <span className="world-globe-line longitude-one" />
-        <span className="world-globe-line longitude-two" />
-        <span className="world-globe-line latitude-one" />
-        <span className="world-globe-line latitude-two" />
-        <span className="world-land land-one" />
-        <span className="world-land land-two" />
-        <span className="world-land land-three" />
+      <div className="world-route-art">
+        <svg viewBox="0 0 320 124">
+          <path className="world-route-map" d="M27 77c16-24 40-37 65-33 18 3 25 14 42 14 22 0 28-25 54-29 30-5 43 24 66 23 17 0 24-10 41-17" />
+          <path className="world-route-path" d="M22 91C79 22 137 101 194 45c30-30 66-33 104 4" />
+          <circle className="world-route-dot start" cx="22" cy="91" r="5" />
+          <circle className="world-route-dot" cx="104" cy="61" r="4" />
+          <circle className="world-route-dot" cx="194" cy="45" r="4" />
+          <circle className="world-route-dot finish" cx="298" cy="49" r="5" />
+          <text className="world-route-label" x="17" y="113">PRIEKULĖ</text>
+          <text className="world-route-label" x="94" y="83">EUROPA</text>
+          <text className="world-route-label" x="184" y="68">AZIJA</text>
+          <text className="world-route-label" x="259" y="74">PASAULIS</text>
+          <g transform="translate(218 31) rotate(-13)">
+            <g className="world-route-plane">
+              <path d="M-21-5h13L4-19h6L6-5l20 5L6 5l4 14H4L-8 5h-13l7-5z" />
+            </g>
+          </g>
+        </svg>
       </div>
       <div className="world-stamps">
         <span>07 NOV</span>
@@ -5811,9 +5821,20 @@ export default function Page() {
           <div className="theme-reminder">
             <strong>Vakaro tema: pasaulio tautos ir kultūros</strong>
             <p>
-              Pasirink šalį, regioną ar kelionės kryptį ir perteik ją spalvomis, raštais,
-              aksesuarais ar subtilia aprangos detale. Įkvėpimo semkimės pagarbiai: venkime
-              pašaipos, stereotipų ir nepagarbaus tautinių ar religinių simbolių naudojimo.
+              Buvęs tarptautinis kongresas mus įkvėpė pažinti ir patirti naujas kultūras. Daugelis
+              parsivežėme įvairių akcentų, drabužių, skrybėlių, kimono, Teksaso kaklaraiščių ar kitų
+              dovanų. Pats metas pratęsti tą ypatingą jausmą ir vienam vakarui tapti įvairių šalių
+              delegatais.
+            </p>
+            <div className="theme-inspiration-grid">
+              <span><b>Įvaizdis</b> Parodyk pasirinktos šalies aprangą ar akcentus.</span>
+              <span><b>Dovanėlės</b> Atsinešk, dovanok arba keiskis likusiomis kongreso dovanėlėmis.</span>
+              <span><b>Skoniai</b> Pavaišink pasirinktos šalies įkvėptu savo pagamintu patiekalu.</span>
+              <span><b>Veiklos</b> Parodyk šokį ar žaidimą, kurio išmokome iš delegatų arba mokėme juos.</span>
+            </div>
+            <p className="theme-respect-note">
+              Kultūras pristatykime kūrybiškai ir pagarbiai, vengdami pašaipos, stereotipų bei
+              nepagarbaus tautinių ar religinių simbolių naudojimo.
             </p>
           </div>
 

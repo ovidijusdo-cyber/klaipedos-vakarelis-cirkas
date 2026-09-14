@@ -5775,7 +5775,7 @@ th {
 .world-journey-visual {
   min-height: 124px;
   margin: -10px -10px 22px;
-  padding: 18px 174px 18px 20px;
+  padding: 18px 340px 18px 20px;
   display: flex;
   align-items: center;
   position: relative;
@@ -5808,74 +5808,65 @@ th {
   line-height: 1.25;
 }
 
-.world-globe {
+.world-route-art {
   position: absolute;
   top: 50%;
-  right: 64px;
-  width: 116px;
+  right: 56px;
+  width: 280px;
   height: 116px;
-  overflow: hidden;
-  border: 3px solid rgba(255, 250, 240, 0.9);
-  border-radius: 50%;
   transform: translateY(-50%);
-  box-shadow: 0 0 0 9px rgba(244, 201, 93, 0.08), 0 20px 38px rgba(0, 0, 0, 0.22);
-  animation: world-globe-float 5s ease-in-out infinite;
 }
 
-.world-globe-line {
-  position: absolute;
-  border: 1px solid rgba(255, 250, 240, 0.46);
+.world-route-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
-.world-globe-line.longitude-one,
-.world-globe-line.longitude-two {
-  inset: -3px 25px;
-  border-radius: 50%;
+.world-route-map {
+  fill: none;
+  stroke: rgba(188, 231, 223, 0.16);
+  stroke-width: 24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.world-globe-line.longitude-two {
-  inset: -3px 43px;
+.world-route-path {
+  fill: none;
+  stroke: #f4c95d;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 6 7;
+  animation: world-route-dash 8s linear infinite;
 }
 
-.world-globe-line.latitude-one,
-.world-globe-line.latitude-two {
-  inset: 25px -3px;
-  border-radius: 50%;
+.world-route-dot {
+  fill: #fffaf0;
+  stroke: #0f766e;
+  stroke-width: 3;
 }
 
-.world-globe-line.latitude-two {
-  inset: 43px -3px;
+.world-route-dot.start,
+.world-route-dot.finish {
+  fill: #d85b52;
+  stroke: #fffaf0;
 }
 
-.world-land {
-  position: absolute;
-  border-radius: 58% 42% 55% 45%;
-  background: #f4c95d;
-  box-shadow: inset -5px -4px 0 rgba(216, 91, 82, 0.25);
+.world-route-label {
+  fill: rgba(255, 250, 240, 0.72);
+  font-family: var(--font-body), sans-serif;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.1px;
 }
 
-.world-land.land-one {
-  top: 18px;
-  left: 18px;
-  width: 37px;
-  height: 29px;
-  transform: rotate(-15deg);
-}
-
-.world-land.land-two {
-  top: 44px;
-  right: 16px;
-  width: 43px;
-  height: 31px;
-  transform: rotate(24deg);
-}
-
-.world-land.land-three {
-  left: 38px;
-  bottom: 14px;
-  width: 25px;
-  height: 34px;
-  transform: rotate(13deg);
+.world-route-plane {
+  fill: #fffaf0;
+  filter: drop-shadow(0 7px 7px rgba(0, 0, 0, 0.26));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: world-plane-float 2.8s ease-in-out infinite;
 }
 
 .world-stamps {
@@ -5944,6 +5935,40 @@ th {
   color: #f4c95d;
   font-family: var(--font-heading), sans-serif;
   font-size: 1.25rem;
+}
+
+.world-party .theme-inspiration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.world-party .theme-inspiration-grid span {
+  min-height: 78px;
+  padding: 13px 14px;
+  border: 1px solid rgba(244, 201, 93, 0.18);
+  border-radius: 17px;
+  background: rgba(3, 21, 32, 0.28);
+  color: rgba(255, 250, 240, 0.88);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.world-party .theme-inspiration-grid b {
+  display: block;
+  margin-bottom: 3px;
+  color: #f4c95d;
+  font-size: 0.75rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.world-party .theme-respect-note {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(188, 231, 223, 0.18);
+  font-size: 0.88rem;
 }
 
 .world-party .spotlight-card,
@@ -6054,13 +6079,19 @@ th {
   background: linear-gradient(180deg, #0f766e, #083344);
 }
 
-@keyframes world-globe-float {
+@keyframes world-route-dash {
+  to {
+    stroke-dashoffset: -52;
+  }
+}
+
+@keyframes world-plane-float {
   0%,
   100% {
-    transform: translateY(-50%) rotate(-2deg);
+    transform: translateY(0) rotate(-1deg);
   }
   50% {
-    transform: translateY(calc(-50% - 5px)) rotate(2deg);
+    transform: translateY(-4px) rotate(1deg);
   }
 }
 
@@ -6241,13 +6272,13 @@ th {
   .world-journey-visual {
     min-height: 116px;
     margin: -4px -4px 18px;
-    padding: 16px 128px 16px 16px;
+    padding: 16px 185px 16px 16px;
   }
 
-  .world-globe {
-    right: 25px;
-    width: 94px;
-    height: 94px;
+  .world-route-art {
+    right: 14px;
+    width: 166px;
+    height: 92px;
   }
 
   .world-stamps {
@@ -6904,18 +6935,21 @@ th {
 
   .world-journey-visual {
     min-height: 108px;
-    padding-right: 100px;
+    padding-right: 132px;
   }
 
-  .world-globe {
-    right: 13px;
-    width: 78px;
+  .world-route-art {
+    right: 5px;
+    width: 122px;
     height: 78px;
-    border-width: 2px;
   }
 
   .world-route-copy strong {
     font-size: 0.92rem;
+  }
+
+  .world-party .theme-inspiration-grid {
+    grid-template-columns: 1fr;
   }
 
   .hero-copy,
