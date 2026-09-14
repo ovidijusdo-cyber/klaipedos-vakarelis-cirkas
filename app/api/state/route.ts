@@ -20,6 +20,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function cleanRidePhone(value: unknown) {
+  return typeof value === "string" ? value.trim().slice(0, 40) : "";
+}
+
+function cleanRideEmail(value: unknown) {
+  if (typeof value !== "string") return "";
+  const email = value.trim().toLowerCase().slice(0, 254);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+}
+
+function stripPrivateRideContacts(item: Record<string, unknown>) {
+  const publicItem = { ...item };
+  delete publicItem.rideContactPhone;
+  delete publicItem.rideNotificationEmail;
+  return publicItem;
+}
+
+function publicStatePayload(payload: Record<string, unknown>) {
+  const publicPayload = { ...payload };
+  if (Array.isArray(publicPayload.reservations)) {
+    publicPayload.reservations = publicPayload.reservations.filter(isRecord).map(stripPrivateRideContacts);
+  }
+  if (Array.isArray(publicPayload.waitingList)) {
+    publicPayload.waitingList = publicPayload.waitingList.filter(isRecord).map(stripPrivateRideContacts);
+  }
+  return publicPayload;
+}
+
 function mergeById(
   existingValue: unknown,
   incomingValue: unknown,
@@ -215,12 +243,15 @@ function sanitizePublicReservation(existingItem: Record<string, unknown> | undef
   if (!existingItem) {
     const rideOfferSeats = Number(incomingItem.rideOfferSeats);
     const safeRideOfferSeats = incomingItem.rideOfferSeats === null ? null : Number.isFinite(rideOfferSeats) ? rideOfferSeats : null;
+    const canOfferRide = safeRideOfferSeats !== null && safeRideOfferSeats > 0;
 
     return {
       ...incomingItem,
       paid: false,
       paymentMethod: null,
       adminNote: "",
+      rideContactPhone: canOfferRide ? cleanRidePhone(incomingItem.rideContactPhone) : "",
+      rideNotificationEmail: canOfferRide ? cleanRideEmail(incomingItem.rideNotificationEmail) : "",
       rideReservations: sanitizeRideReservations([], incomingItem.rideReservations, safeRideOfferSeats),
       people: incomingPeople.map((person) => ({
         ...person,
@@ -247,7 +278,9 @@ function sanitizePublicReservation(existingItem: Record<string, unknown> | undef
     ...existingItem,
     needsRide: Boolean(incomingItem.needsRide ?? existingItem.needsRide ?? false),
     rideOfferSeats: safeRideOfferSeats,
-    rideReservations: sanitizeRideReservations(existingItem.rideReservations, incomingItem.rideReservations, safeRideOfferSeats as number | null),
+    rideContactPhone: safeRideOfferSeats ? cleanRidePhone(existingItem.rideContactPhone) : "",
+    rideNotificationEmail: safeRideOfferSeats ? cleanRideEmail(existingItem.rideNotificationEmail) : "",
+    rideReservations: sanitizeRideReservations(existingItem.rideReservations, existingItem.rideReservations, safeRideOfferSeats as number | null),
     people: existingPeople.map((existingPerson) => {
       const incomingPerson = incomingPeopleById.get(String(existingPerson.id ?? ""));
 
@@ -295,7 +328,26 @@ function mergeReservations(
   options: { overwriteExisting?: boolean; overwriteIds?: Set<number>; isAdmin: boolean; isQr: boolean },
 ) {
   if (options.isAdmin) {
-    return mergeById(existingValue, incomingValue, deletedIds, options);
+    const existingById = new Map<number, Record<string, unknown>>();
+    if (Array.isArray(existingValue)) {
+      existingValue.filter(isRecord).forEach((item) => {
+        const id = Number(item.id);
+        if (Number.isFinite(id)) existingById.set(id, item);
+      });
+    }
+    return mergeById(existingValue, incomingValue, deletedIds, options).map((item) => {
+      const existingItem = existingById.get(Number(item.id));
+      if (!existingItem) return item;
+      return {
+        ...item,
+        rideContactPhone: Object.prototype.hasOwnProperty.call(item, "rideContactPhone")
+          ? cleanRidePhone(item.rideContactPhone)
+          : cleanRidePhone(existingItem.rideContactPhone),
+        rideNotificationEmail: Object.prototype.hasOwnProperty.call(item, "rideNotificationEmail")
+          ? cleanRideEmail(item.rideNotificationEmail)
+          : cleanRideEmail(existingItem.rideNotificationEmail),
+      };
+    });
   }
 
   const overwriteExisting = options.overwriteExisting ?? true;
@@ -391,7 +443,8 @@ export async function GET() {
       throw error;
     }
 
-    const payload = isRecord(data?.payload) ? sanitizeStoredPayload({ ...data.payload }) : null;
+    const storedPayload = isRecord(data?.payload) ? sanitizeStoredPayload({ ...data.payload }) : null;
+    const payload = storedPayload ? publicStatePayload(storedPayload) : null;
     if (payload) delete payload[INTERNAL_GAME_SESSIONS_KEY];
 
     return NextResponse.json({

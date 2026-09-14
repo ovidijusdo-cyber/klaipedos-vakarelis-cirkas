@@ -4633,6 +4633,17 @@ textarea {
   box-shadow: none;
 }
 
+.ride-contact-fields {
+  margin-top: 14px;
+}
+
+.ride-contact-note {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .driver-contact-note {
   display: flex;
   align-items: center;

@@ -56,6 +56,8 @@ type Reservation = {
   createdAt: string;
   discountPercent: number;
   rideOfferSeats: number | null;
+  rideContactPhone?: string;
+  rideNotificationEmail?: string;
   rideReservations: RideReservation[];
   needsRide: boolean;
   adminNote: string;
@@ -68,6 +70,8 @@ type WaitingItem = {
   contactPhone: string;
   contactEmail: string;
   rideOfferSeats: number | null;
+  rideContactPhone?: string;
+  rideNotificationEmail?: string;
   needsRide: boolean;
   people: Person[];
   createdAt: string;
@@ -1675,6 +1679,7 @@ export default function Page() {
   const [rideBookingDriverId, setRideBookingDriverId] = useState<number | null>(null);
   const [rideBookingLookup, setRideBookingLookup] = useState("");
   const [selectedRidePassengerId, setSelectedRidePassengerId] = useState("");
+  const [rideBookingSaving, setRideBookingSaving] = useState(false);
   const [scannerValue, setScannerValue] = useState("");
   const [doorNotice, setDoorNotice] = useState<Notice | null>(null);
   const [songForm, setSongForm] = useState({ title: "", url: "" });
@@ -1756,6 +1761,8 @@ export default function Page() {
     discountCode: "",
     canOfferRide: false,
     rideSeats: "",
+    rideContactPhone: "",
+    rideNotificationEmail: "",
     needsRide: false,
     consentAccepted: false,
     people: [createEmptyPerson()],
@@ -2389,7 +2396,7 @@ export default function Page() {
             seats,
             availableSeats,
             booked,
-            phone: reservation.contactPhone,
+            phone: reservation.rideContactPhone || reservation.contactPhone,
             createdAt: reservation.createdAt,
           };
         })
@@ -2696,6 +2703,8 @@ export default function Page() {
       discountCode: "",
       canOfferRide: false,
       rideSeats: "",
+      rideContactPhone: "",
+      rideNotificationEmail: "",
       needsRide: false,
       consentAccepted: false,
       people: [createEmptyPerson()],
@@ -2734,6 +2743,8 @@ export default function Page() {
       createdAt,
       discountPercent: formDiscountActive ? VOLUNTEER_DISCOUNT_PERCENT : 0,
       rideOfferSeats: form.canOfferRide ? Number(form.rideSeats) : null,
+      rideContactPhone: form.canOfferRide ? form.rideContactPhone.trim() : "",
+      rideNotificationEmail: form.canOfferRide ? form.rideNotificationEmail.trim() : "",
       rideReservations: existingReservation?.rideReservations ?? [],
       needsRide: form.needsRide,
       adminNote: "",
@@ -2755,6 +2766,8 @@ export default function Page() {
           contactPhone: reservation.contactPhone,
           contactEmail: reservation.contactEmail,
           rideOfferSeats: reservation.rideOfferSeats,
+          rideContactPhone: reservation.rideContactPhone,
+          rideNotificationEmail: reservation.rideNotificationEmail,
           needsRide: reservation.needsRide,
           people: reservation.people,
           createdAt: reservation.createdAt,
@@ -2799,6 +2812,9 @@ export default function Page() {
     }
     if (form.canOfferRide && !form.rideSeats) {
       setRideSeatsTouched(true);
+      return;
+    }
+    if (form.canOfferRide && !form.rideContactPhone.trim()) {
       return;
     }
     if (!form.consentAccepted) {
@@ -3086,8 +3102,8 @@ export default function Page() {
     setSelectedRidePassengerId("");
   }
 
-  function reserveRideSeat() {
-    if (!rideBookingDriver) return;
+  async function reserveRideSeat() {
+    if (!rideBookingDriver || rideBookingSaving) return;
     const selected = rideBookingMatches.find((match) => `${match.reservationId}:${match.personId}` === selectedRidePassengerId);
     if (!selected) {
       setDoorNotice({ type: "warning", text: "Pirma pasirink žmogų, kuriam rezervuojama vieta." });
@@ -3102,60 +3118,85 @@ export default function Page() {
       return;
     }
 
-    const now = formatDateTime();
-    const booking: RideReservation = {
-      passengerReservationId: selected.reservationId,
-      passengerPersonId: selected.personId,
-      passengerName: selected.maskedName,
-      createdAt: now,
-    };
+    setRideBookingSaving(true);
+    try {
+      const response = await fetch("/api/ride-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          driverReservationId: rideBookingDriver.id,
+          passengerReservationId: selected.reservationId,
+          passengerPersonId: selected.personId,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        reservations?: Reservation[];
+        notifications?: NotificationItem[];
+        notificationSent?: boolean;
+      };
+      if (!response.ok) {
+        throw new Error(data.error || "Nepavyko rezervuoti vietos.");
+      }
 
-    setReservations((previous) =>
-      previous.map((reservation) =>
-        reservation.id === rideBookingDriver.id
-          ? {
-              ...reservation,
-              rideReservations: [...(reservation.rideReservations ?? []), booking],
-            }
-          : reservation,
-      ),
-    );
-    setNotifications((previous) => [
-      {
-        id: createNumericId(),
-        message: `${selected.maskedName} rezervavo transporto vietą pas ${rideBookingDriver.label}.`,
-        createdAt: now,
-      },
-      ...previous,
-    ]);
-    setDoorNotice({ type: "success", text: `Vieta rezervuota pas ${rideBookingDriver.label}.` });
-    closeRideBooking();
+      const nextReservations = normalizeReservations(Array.isArray(data.reservations) ? data.reservations : reservations);
+      const nextNotifications = Array.isArray(data.notifications) ? data.notifications : notifications;
+      syncedStateRef.current.reservations = JSON.stringify(nextReservations);
+      syncedStateRef.current.notifications = JSON.stringify(nextNotifications);
+      setReservations(nextReservations);
+      setNotifications(nextNotifications);
+      setDoorNotice({
+        type: "success",
+        text: data.notificationSent
+          ? `Vieta rezervuota pas ${rideBookingDriver.label}. Vairuotojui išsiųstas pranešimas.`
+          : `Vieta rezervuota pas ${rideBookingDriver.label}.`,
+      });
+      closeRideBooking();
+    } catch (error) {
+      setDoorNotice({
+        type: "warning",
+        text: error instanceof Error ? error.message : "Nepavyko rezervuoti vietos. Bandyk dar kartą.",
+      });
+    } finally {
+      setRideBookingSaving(false);
+    }
   }
 
-  function confirmRideSeatCancellation() {
-    if (!pendingRideCancel) return;
-    const now = formatDateTime();
+  async function confirmRideSeatCancellation() {
+    if (!pendingRideCancel || rideBookingSaving) return;
+    setRideBookingSaving(true);
+    try {
+      const response = await fetch("/api/ride-booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          driverReservationId: pendingRideCancel.driverId,
+          passengerPersonId: pendingRideCancel.passengerPersonId,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        reservations?: Reservation[];
+        notifications?: NotificationItem[];
+      };
+      if (!response.ok) throw new Error(data.error || "Nepavyko atšaukti transporto vietos.");
 
-    setReservations((previous) =>
-      previous.map((reservation) =>
-        reservation.id === pendingRideCancel.driverId
-          ? {
-              ...reservation,
-              rideReservations: (reservation.rideReservations ?? []).filter((booking) => booking.passengerPersonId !== pendingRideCancel.passengerPersonId),
-            }
-          : reservation,
-      ),
-    );
-    setNotifications((previous) => [
-      {
-        id: createNumericId(),
-        message: `${pendingRideCancel.passengerName} atšaukė transporto vietą pas ${pendingRideCancel.driverLabel}.`,
-        createdAt: now,
-      },
-      ...previous,
-    ]);
-    setDoorNotice({ type: "success", text: "Vieta ekipaže atšaukta." });
-    setPendingRideCancel(null);
+      const nextReservations = normalizeReservations(Array.isArray(data.reservations) ? data.reservations : reservations);
+      const nextNotifications = Array.isArray(data.notifications) ? data.notifications : notifications;
+      syncedStateRef.current.reservations = JSON.stringify(nextReservations);
+      syncedStateRef.current.notifications = JSON.stringify(nextNotifications);
+      setReservations(nextReservations);
+      setNotifications(nextNotifications);
+      setDoorNotice({ type: "success", text: "Vieta ekipaže atšaukta." });
+      setPendingRideCancel(null);
+    } catch (error) {
+      setDoorNotice({
+        type: "warning",
+        text: error instanceof Error ? error.message : "Nepavyko atšaukti transporto vietos.",
+      });
+    } finally {
+      setRideBookingSaving(false);
+    }
   }
 
   function updateAdminNote(reservationId: number, adminNote: string) {
@@ -6146,9 +6187,14 @@ export default function Page() {
                       setField("canOfferRide", checked);
                       if (checked) {
                         setField("needsRide", false);
+                        if (!form.rideContactPhone.trim()) {
+                          setField("rideContactPhone", form.contactPhone);
+                        }
                       }
                       if (!checked) {
                         setField("rideSeats", "");
+                        setField("rideContactPhone", "");
+                        setField("rideNotificationEmail", "");
                         setRideSeatsTouched(false);
                       }
                     }}
@@ -6157,22 +6203,49 @@ export default function Page() {
                   <span>Galiu pavežti ką nors</span>
                 </label>
                 {form.canOfferRide ? (
-                  <Field label="Kiek laisvų vietų turi automobilyje?">
-                    <select
-                      value={form.rideSeats}
-                      onChange={(event) => {
-                        setField("rideSeats", event.target.value);
-                        if (event.target.value) setRideSeatsTouched(false);
-                      }}
-                    >
-                      <option value="">Pasirink vietų skaičių</option>
-                      {Array.from({ length: 8 }, (_, index) => (
-                        <option key={index + 1} value={String(index + 1)}>
-                          {index + 1}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
+                  <div className="stack ride-contact-fields">
+                    <Field label="Kiek laisvų vietų turi automobilyje?">
+                      <select
+                        required
+                        value={form.rideSeats}
+                        onChange={(event) => {
+                          setField("rideSeats", event.target.value);
+                          if (event.target.value) setRideSeatsTouched(false);
+                        }}
+                      >
+                        <option value="">Pasirink vietų skaičių</option>
+                        {Array.from({ length: 8 }, (_, index) => (
+                          <option key={index + 1} value={String(index + 1)}>
+                            {index + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <div className="form-grid two">
+                      <Field label="Mob. tel. numeris susisiekimui">
+                        <input
+                          required
+                          inputMode="tel"
+                          autoComplete="tel"
+                          value={form.rideContactPhone}
+                          onChange={(event) => setField("rideContactPhone", event.target.value)}
+                          placeholder="Pvz. +370 600 00000"
+                        />
+                      </Field>
+                      <Field label="El. paštas pranešimui (nebūtina)">
+                        <input
+                          type="email"
+                          autoComplete="email"
+                          value={form.rideNotificationEmail}
+                          onChange={(event) => setField("rideNotificationEmail", event.target.value)}
+                          placeholder="vardas@email.com"
+                        />
+                      </Field>
+                    </div>
+                    <p className="ride-contact-note">
+                      El. paštą įrašyk tik jei nori gauti pranešimą, kai kitas dalyvis rezervuos vietą tavo automobilyje. Šie kontaktai viešame vairuotojų sąraše nerodomi.
+                    </p>
+                  </div>
                 ) : (
                   <p>Jei turi vietos automobilyje, pažymėk šį laukelį. Tai padės organizuoti atvykimą tiems, kam reikės pavežimo.</p>
                 )}
@@ -6188,6 +6261,8 @@ export default function Page() {
                       if (checked) {
                         setField("canOfferRide", false);
                         setField("rideSeats", "");
+                        setField("rideContactPhone", "");
+                        setField("rideNotificationEmail", "");
                         setRideSeatsTouched(false);
                       }
                     }}
@@ -6332,11 +6407,11 @@ export default function Page() {
           </div>
           <div className="privacy-section">
             <strong>2. Kokie duomenys renkami</strong>
-            <p>Registracijos metu gali būti renkami šie duomenys: vardas, pavardė, miestas, telefono numeris, el. pašto adresas, registruojamų asmenų sąrašas, mokėjimo būsena ir su atvykimu susiję žymėjimai.</p>
+            <p>Registracijos metu gali būti renkami šie duomenys: vardas, pavardė, miestas, telefono numeris, el. pašto adresas, registruojamų asmenų sąrašas, mokėjimo būsena ir su atvykimu bei pavežėjimu susiję žymėjimai ir kontaktai.</p>
           </div>
           <div className="privacy-section">
             <strong>3. Duomenų tvarkymo tikslas</strong>
-            <p>Duomenys naudojami renginio registracijai administruoti, dalyvių sąrašui sudaryti, mokėjimams sutikrinti, QR patikrai prie įėjimo, komunikacijai dėl renginio ir vietų valdymui.</p>
+            <p>Duomenys naudojami renginio registracijai administruoti, dalyvių sąrašui sudaryti, mokėjimams sutikrinti, QR patikrai prie įėjimo, komunikacijai dėl renginio, vietų valdymui ir dalyvių pavežėjimui suderinti.</p>
           </div>
           <div className="privacy-section">
             <strong>4. Teisinis pagrindas</strong>
@@ -6522,11 +6597,11 @@ export default function Page() {
           ) : null}
 
           <div className="modal-actions">
-            <button className="ghost-button" type="button" onClick={closeRideBooking}>
+            <button className="ghost-button" type="button" onClick={closeRideBooking} disabled={rideBookingSaving}>
               Uždaryti
             </button>
-            <button className="primary-button" type="button" onClick={reserveRideSeat} disabled={!selectedRidePassengerId || !rideBookingDriver || rideBookingDriver.availableSeats <= 0}>
-              Rezervuoti vietą
+            <button className="primary-button" type="button" onClick={() => void reserveRideSeat()} disabled={rideBookingSaving || !selectedRidePassengerId || !rideBookingDriver || rideBookingDriver.availableSeats <= 0}>
+              {rideBookingSaving ? "Rezervuojama..." : "Rezervuoti vietą"}
             </button>
           </div>
         </div>
@@ -6548,8 +6623,8 @@ export default function Page() {
             <button className="ghost-button" type="button" onClick={() => setPendingRideCancel(null)}>
               Ne, palikti
             </button>
-            <button className="danger-button" type="button" onClick={confirmRideSeatCancellation}>
-              Taip, atšaukti
+            <button className="danger-button" type="button" onClick={() => void confirmRideSeatCancellation()} disabled={rideBookingSaving}>
+              {rideBookingSaving ? "Atšaukiama..." : "Taip, atšaukti"}
             </button>
           </div>
         </div>
