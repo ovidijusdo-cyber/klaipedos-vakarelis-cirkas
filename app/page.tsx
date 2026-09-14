@@ -1489,7 +1489,7 @@ function WorldJourneyVisual() {
           <text className="world-route-label" x="17" y="113">PRIEKULĖ</text>
           <text className="world-route-label" x="94" y="83">EUROPA</text>
           <text className="world-route-label" x="184" y="68">AZIJA</text>
-          <text className="world-route-label" x="259" y="74">PASAULIS</text>
+          <text className="world-route-label" x="259" y="74">AMERIKA</text>
           <g transform="translate(218 31) rotate(-13)">
             <g className="world-route-plane">
               <path d="M-21-5h13L4-19h6L6-5l20 5L6 5l4 14H4L-8 5h-13l7-5z" />
