@@ -1,0 +1,462 @@
+.shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(250px, 0.7fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 24px;
+  color: #102a35;
+}
+
+.gameCard,
+.sideCard {
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  background:
+    radial-gradient(circle at 95% 4%, rgba(244, 201, 93, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 254, 249, 0.98), rgba(236, 247, 244, 0.96));
+  box-shadow: 0 18px 42px rgba(8, 47, 73, 0.1);
+}
+
+.gameCard {
+  padding: 20px;
+  border-radius: 26px;
+}
+
+.gameHead,
+.sideTitle,
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gameHead > div {
+  display: grid;
+  gap: 3px;
+}
+
+.gameHead strong {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.5rem;
+}
+
+.kicker {
+  color: #0f766e;
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.fullscreenButton,
+.actionRow button,
+.saveCard button {
+  min-height: 42px;
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  border-radius: 13px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #0b4f5c, #0f766e);
+  color: white;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.fullscreenButton:disabled,
+.actionRow button:disabled,
+.saveCard button:disabled,
+.controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin: 16px 0 12px;
+}
+
+.stats div {
+  min-height: 68px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.stats span,
+.stats strong {
+  display: block;
+}
+
+.stats span {
+  color: #64808a;
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stats strong {
+  margin-top: 3px;
+  color: #083344;
+  font-size: 1.35rem;
+}
+
+.boardFrame {
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 10px;
+  border: 1px solid rgba(244, 201, 93, 0.32);
+  border-radius: 22px;
+  background:
+    repeating-linear-gradient(135deg, rgba(244, 201, 93, 0.08) 0 8px, transparent 8px 16px),
+    #071d2d;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.035), 0 18px 36px rgba(8, 47, 73, 0.2);
+}
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  aspect-ratio: 10 / 18;
+  overflow: hidden;
+  border-radius: 14px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 18%, rgba(15, 118, 110, 0.2), transparent 44%),
+    #031520;
+  background-size: 10% calc(100% / 18), 10% calc(100% / 18), auto, auto;
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.025);
+}
+
+.filled::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.34), transparent 45%);
+  opacity: 0.7;
+}
+
+.color1 { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+.color2 { background: linear-gradient(135deg, #f4c95d, #d97706); }
+.color3 { background: linear-gradient(135deg, #d85b52, #b9384c); }
+.color4 { background: linear-gradient(135deg, #34d399, #0f766e); }
+.color5 { background: linear-gradient(135deg, #c084fc, #7c3aed); }
+.color6 { background: linear-gradient(135deg, #fb923c, #ea580c); }
+.color7 { background: linear-gradient(135deg, #f472b6, #be185d); }
+
+.ghost {
+  background: rgba(244, 201, 93, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(244, 201, 93, 0.48);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(3, 21, 32, 0.78);
+  color: white;
+  text-align: center;
+  backdrop-filter: blur(5px);
+}
+
+.overlay span {
+  color: #f4c95d;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.overlay strong {
+  max-width: 280px;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.25rem, 4vw, 1.8rem);
+}
+
+.overlay button {
+  min-height: 46px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, #f4c95d, #e9a23b);
+  color: #082f49;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(217, 119, 6, 0.3);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 1.35fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.controls button {
+  min-height: 54px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #083344;
+  font-size: 1.35rem;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(8, 47, 73, 0.08);
+  touch-action: manipulation;
+}
+
+.controls .dropButton {
+  background: linear-gradient(135deg, #f4c95d, #e9a23b);
+  font-size: 0.85rem;
+}
+
+.side {
+  display: grid;
+  gap: 14px;
+}
+
+.sideCard {
+  padding: 17px;
+  border-radius: 21px;
+}
+
+.sideCard > strong,
+.sideTitle strong {
+  color: #083344;
+  font-size: 1rem;
+}
+
+.sideTitle span {
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sideCard p {
+  margin: 8px 0 0;
+  color: #5f7480;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.preview {
+  width: 116px;
+  height: 116px;
+  margin: 14px auto;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 3px;
+  border-radius: 18px;
+  background: #071d2d;
+}
+
+.previewCell {
+  position: relative;
+  border-radius: 5px;
+}
+
+.actionRow button {
+  flex: 1;
+  min-width: 0;
+}
+
+.actionRow button:last-child {
+  background: rgba(255, 255, 255, 0.86);
+  color: #0f5963;
+}
+
+.keyGuide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.keyGuide span {
+  padding: 8px 9px;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.08);
+  color: #315d65;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.saveCard {
+  border-color: rgba(217, 119, 6, 0.26);
+  background: linear-gradient(145deg, #fff8df, #f7fbf8);
+}
+
+.saveCard input {
+  margin-top: 12px;
+}
+
+.saveCard button {
+  width: 100%;
+  margin-top: 9px;
+}
+
+.saveCard small {
+  display: block;
+  margin-top: 8px;
+  color: #b91c1c;
+}
+
+.leaderboard {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.leaderboard div {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  min-height: 44px;
+  padding: 7px 10px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.leaderboard div > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #0f766e;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.leaderboard div:first-child > span {
+  background: #d97706;
+}
+
+.leaderboard b {
+  color: #0f766e;
+}
+
+.fullscreen {
+  min-height: 100vh;
+  padding: 22px;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(250px, 0.45fr);
+  justify-content: center;
+  align-items: start;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(15, 118, 110, 0.3), transparent 28%),
+    linear-gradient(145deg, #031520, #0b3f4b);
+}
+
+.fullscreen .gameCard {
+  max-width: 660px;
+  width: 100%;
+  justify-self: end;
+}
+
+.fullscreen .side {
+  max-width: 380px;
+}
+
+.fullscreen .boardFrame {
+  max-width: min(52vh, 460px);
+}
+
+@media (max-width: 860px) {
+  .shell,
+  .fullscreen {
+    grid-template-columns: 1fr;
+  }
+
+  .fullscreen .gameCard,
+  .fullscreen .side {
+    max-width: 620px;
+    width: 100%;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .gameCard {
+    padding: 13px;
+    border-radius: 20px;
+  }
+
+  .gameHead strong {
+    font-size: 1.25rem;
+  }
+
+  .fullscreenButton {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 0.74rem;
+  }
+
+  .stats {
+    margin-top: 12px;
+  }
+
+  .stats div {
+    min-height: 58px;
+    padding: 8px;
+  }
+
+  .stats strong {
+    font-size: 1.15rem;
+  }
+
+  .boardFrame {
+    padding: 7px;
+    border-radius: 18px;
+  }
+
+  .controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .controls button {
+    min-height: 50px;
+  }
+
+  .controls .dropButton {
+    grid-column: 1 / -1;
+  }
+
+  .keyGuide {
+    grid-template-columns: 1fr;
+  }
+
+  .fullscreen {
+    padding: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell *,
+  .shell *::before,
+  .shell *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
