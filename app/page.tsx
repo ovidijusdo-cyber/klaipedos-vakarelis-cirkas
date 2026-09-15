@@ -330,7 +330,6 @@ const ADULT_AGE_START = 13;
 const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 140;
-const INVITATION_CODE = "360";
 const SONG_PLAYLIST_PIN = "v";
 const SONG_VOTES_STORAGE_KEY = "klaipedos-vakaras-song-votes";
 const COMMON_SONG_TITLE = "Laimingos akys, reginčios tave";
@@ -1707,7 +1706,6 @@ export default function Page() {
   const [registerStep, setRegisterStep] = useState<"details" | "payment">("details");
   const [pendingRegistration, setPendingRegistration] = useState<Reservation | null>(null);
   const [privacyTouched, setPrivacyTouched] = useState(false);
-  const [invitationCodeTouched, setInvitationCodeTouched] = useState(false);
   const [rideSeatsTouched, setRideSeatsTouched] = useState(false);
   const [selectedTransferPersonId, setSelectedTransferPersonId] = useState("");
   const [transferForm, setTransferForm] = useState({ replacementName: "", replacementPhone: "" });
@@ -1765,8 +1763,6 @@ export default function Page() {
   const [form, setForm] = useState({
     city: "",
     contactPhone: "",
-    contactEmail: "",
-    invitationCode: "",
     discountCode: "",
     canOfferRide: false,
     rideSeats: "",
@@ -2707,8 +2703,6 @@ export default function Page() {
     setForm({
       city: "",
       contactPhone: "",
-      contactEmail: "",
-      invitationCode: "",
       discountCode: "",
       canOfferRide: false,
       rideSeats: "",
@@ -2720,7 +2714,6 @@ export default function Page() {
     });
     setRegisterStep("details");
     setPrivacyTouched(false);
-    setInvitationCodeTouched(false);
     setRideSeatsTouched(false);
   }
 
@@ -2743,7 +2736,7 @@ export default function Page() {
       id,
       city: form.city.trim(),
       contactPhone: form.contactPhone.trim(),
-      contactEmail: form.contactEmail.trim(),
+      contactEmail: existingReservation?.contactEmail ?? "",
       qrCode: qrFromId(id),
       paid: false,
       paymentMethod: null,
@@ -2799,10 +2792,12 @@ export default function Page() {
     });
 
     if (!existingReservation) {
+      const registrant = reservation.people[0];
+      const registrantName = registrant ? `${registrant.firstName} ${registrant.lastName}`.trim() : reservation.qrCode;
       setNotifications((previous) => [
         {
           id: createNumericId(),
-          message: `Gauta nauja rezervacija: ${reservation.contactEmail}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}${reservation.needsRide ? " Reikia pavežimo." : ""}`,
+          message: `Gauta nauja rezervacija: ${registrantName}.${reservation.rideOfferSeats ? ` Siūlo ${reservation.rideOfferSeats} viet. automobilyje.` : ""}${reservation.needsRide ? " Reikia pavežimo." : ""}`,
           createdAt: formatDateTime(),
         },
         ...previous,
@@ -2815,10 +2810,6 @@ export default function Page() {
 
   function submitReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (form.invitationCode.trim() !== INVITATION_CODE) {
-      setInvitationCodeTouched(true);
-      return;
-    }
     if (form.canOfferRide && !form.rideSeats) {
       setRideSeatsTouched(true);
       return;
@@ -5115,11 +5106,13 @@ export default function Page() {
               <p>Mokėtina suma: {amount(submitted)} €</p>
               {submitted.discountPercent ? <p>Taikyta savanorio nuolaida: -{submitted.discountPercent}%</p> : null}
             </div>
-            <div className="panel">
-              <span className="muted-label">Kontaktai</span>
-              <p>{submitted.contactPhone}</p>
-              <p>{submitted.contactEmail}</p>
-            </div>
+            {submitted.contactPhone || submitted.contactEmail ? (
+              <div className="panel">
+                <span className="muted-label">Kontaktai</span>
+                {submitted.contactPhone ? <p>{submitted.contactPhone}</p> : null}
+                {submitted.contactEmail ? <p>{submitted.contactEmail}</p> : null}
+              </div>
+            ) : null}
             <div className="panel qr-panel">
               <QRCodeSVG value={qrPayload(submitted)} size={170} includeMargin />
             </div>
@@ -6154,7 +6147,7 @@ export default function Page() {
         <Modal
         open={registerOpen}
         title="Registracijos forma"
-        description="Įvesk bendrus kontaktus ir visus registruojamus asmenis."
+        description="Įrašyk registruojamus asmenis ir, jei nori, kontaktinį telefono numerį."
           onClose={() => {
             setRegisterOpen(false);
             setPendingRegistration(null);
@@ -6164,28 +6157,49 @@ export default function Page() {
         <form className="stack" onSubmit={submitReservation}>
           {registerStep === "details" ? (
             <>
-              <div className="form-grid three">
-                <Field label="Kvietimo numeris">
-                  <input
-                    required
-                    value={form.invitationCode}
-                    onChange={(event) => {
-                      setField("invitationCode", event.target.value);
-                      if (event.target.value.trim() === INVITATION_CODE) {
-                        setInvitationCodeTouched(false);
-                      }
-                    }}
-                    placeholder="Įrašyk kvietimo kodą"
-                  />
-                </Field>
+              <div className="stack">
+                <div className="inline-header">
+                  <h4>Registruojami asmenys</h4>
+                  <button className="ghost-button" type="button" onClick={addPerson}>
+                    Pridėti žmogų
+                  </button>
+                </div>
+                {form.people.map((person, index) => (
+                  <div className="person-row" key={person.formId}>
+                    <input
+                      required={index === 0}
+                      value={person.firstName}
+                      onChange={(event) => setPerson(index, "firstName", event.target.value)}
+                      placeholder="Vardas"
+                    />
+                    <input
+                      value={person.lastName}
+                      onChange={(event) => setPerson(index, "lastName", event.target.value)}
+                      placeholder="Pavardė"
+                    />
+                    <select value={person.type} onChange={(event) => setPerson(index, "type", event.target.value as PersonType)}>
+                      <option value="adult">Nuo {ADULT_AGE_START} m.</option>
+                      <option value="child">Vaikas iki {CHILD_AGE_LIMIT} m.</option>
+                    </select>
+                    <button className="ghost-button" disabled={form.people.length === 1} type="button" onClick={() => removePerson(index)}>
+                      Pašalinti
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="form-grid two">
                 <Field label="Miestas">
                   <input required value={form.city} onChange={(event) => setField("city", event.target.value)} />
                 </Field>
-                <Field label="Telefono numeris">
-                  <input required value={form.contactPhone} onChange={(event) => setField("contactPhone", event.target.value)} />
-                </Field>
-                <Field label="El. paštas">
-                  <input required type="email" value={form.contactEmail} onChange={(event) => setField("contactEmail", event.target.value)} />
+                <Field label="Telefono numeris (nebūtina)">
+                  <input
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={form.contactPhone}
+                    onChange={(event) => setField("contactPhone", event.target.value)}
+                    placeholder="Pvz. +370 600 00000"
+                  />
                 </Field>
               </div>
 
@@ -6298,37 +6312,6 @@ export default function Page() {
                 ) : null}
               </div>
 
-              <div className="stack">
-                <div className="inline-header">
-                  <h4>Registruojami asmenys</h4>
-                  <button className="ghost-button" type="button" onClick={addPerson}>
-                    Pridėti žmogų
-                  </button>
-                </div>
-                {form.people.map((person, index) => (
-                  <div className="person-row" key={person.formId}>
-                    <input
-                      required={index === 0}
-                      value={person.firstName}
-                      onChange={(event) => setPerson(index, "firstName", event.target.value)}
-                      placeholder="Vardas"
-                    />
-                    <input
-                      value={person.lastName}
-                      onChange={(event) => setPerson(index, "lastName", event.target.value)}
-                      placeholder="Pavardė"
-                    />
-                    <select value={person.type} onChange={(event) => setPerson(index, "type", event.target.value as PersonType)}>
-                      <option value="adult">Nuo {ADULT_AGE_START} m.</option>
-                      <option value="child">Vaikas iki {CHILD_AGE_LIMIT} m.</option>
-                    </select>
-                    <button className="ghost-button" disabled={form.people.length === 1} type="button" onClick={() => removePerson(index)}>
-                      Pašalinti
-                    </button>
-                  </div>
-                ))}
-              </div>
-
               <div className="summary-box">
                 <span>Mokėtina suma</span>
                 <strong>{formTotal} €</strong>
@@ -6352,9 +6335,6 @@ export default function Page() {
                   ir asmens duomenų tvarkymu registracijos tikslu. Duomenys bus ištrinti per 2–5 dienas po renginio.
                 </span>
               </label>
-              {invitationCodeTouched ? (
-                <div className="validation-error">Įveskite teisingą kvietimo numerį, kad galėtumėte tęsti registraciją.</div>
-              ) : null}
               {privacyTouched && !form.consentAccepted ? (
                 <div className="validation-error">Pirma spustelėkite, kad sutinkate su privatumo politika.</div>
               ) : null}
