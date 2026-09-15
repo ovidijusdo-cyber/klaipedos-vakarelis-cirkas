@@ -697,9 +697,10 @@ export default function PackingGame({
     >
       <div className={styles.gameCard}>
         <div className={styles.gameHead}>
-          <div>
+          <div className={styles.gameIdentity}>
             <span className={styles.kicker}>Pakuok išmaniai</span>
             <strong>Lagaminas 360</strong>
+            <span className={styles.antiCheatBadge}><i aria-hidden="true" />Veikia anti-sukčiavimo sistema</span>
           </div>
           <button className={styles.fullscreenButton} type="button" onClick={toggleFullscreen}>
             {isFullscreen ? "Mažinti" : "Visas ekranas"}

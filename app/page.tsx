@@ -4972,6 +4972,18 @@ export default function Page() {
               žaidimai ir aprangos akcentai nuves per skirtingas pasaulio kultūras.
             </p>
 
+            <div className="tetris-announcement" role="note">
+              <span className="tetris-announcement-mark" aria-hidden="true">
+                {Array.from({ length: 6 }, (_, index) => <i key={index} />)}
+              </span>
+              <div>
+                <small>Žaidimas su prizais</small>
+                <strong>Apačioje puslapio tavęs laukia TETRIS „Lagaminas 360“</strong>
+                <p>Per vakarėlį daugiausia taškų surinkę <b>TOP 3 žaidėjai</b> gaus prizus.</p>
+              </div>
+              <a href="#tetris-zaidimas">Eiti į žaidimą</a>
+            </div>
+
           <div className="chip-grid">
             <div className="chip">
               <span>Data</span>
@@ -6120,7 +6132,9 @@ export default function Page() {
         </div>
       </SectionCard>
 
-      <PackingGame scores={gameScores} onCreateSession={createGameSession} onSaveScore={saveGameScore} />
+      <div id="tetris-zaidimas">
+        <PackingGame scores={gameScores} onCreateSession={createGameSession} onSaveScore={saveGameScore} />
+      </div>
 
       <footer className="site-footer">
         Šią svetainę sukūrė ir visas autorines teises turi: Ovidijus Domkus

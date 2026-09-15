@@ -69,7 +69,7 @@
   gap: 12px;
 }
 
-.gameHead > div {
+.gameIdentity {
   display: grid;
   gap: 3px;
 }
@@ -85,6 +85,44 @@
   font-weight: 950;
   letter-spacing: 0.11em;
   text-transform: uppercase;
+}
+
+.antiCheatBadge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 5px 9px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.09);
+  color: #047857;
+  font-size: 0.63rem;
+  font-weight: 950;
+  letter-spacing: 0.025em;
+}
+
+.antiCheatBadge i {
+  position: relative;
+  width: 12px;
+  height: 14px;
+  display: inline-block;
+  border-radius: 7px 7px 8px 8px;
+  background: #10b981;
+  clip-path: polygon(50% 0, 100% 18%, 90% 72%, 50% 100%, 10% 72%, 0 18%);
+}
+
+.antiCheatBadge i::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  width: 3px;
+  height: 5px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .fullscreenButton,
