@@ -6160,8 +6160,8 @@ export default function Page() {
               <div className="stack">
                 <div className="inline-header">
                   <h4>Registruojami asmenys</h4>
-                  <button className="ghost-button" type="button" onClick={addPerson}>
-                    Pridėti žmogų
+                  <button className="ghost-button add-person-button" type="button" onClick={addPerson}>
+                    + Pridėti žmogų
                   </button>
                 </div>
                 {form.people.map((person, index) => (
