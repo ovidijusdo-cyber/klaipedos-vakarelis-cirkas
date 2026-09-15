@@ -2342,6 +2342,12 @@ textarea {
   min-height: 220px;
 }
 
+.hero-gallery-card.hero-gallery-card-wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+}
+
 .countdown-card,
 .theme-reminder {
   margin-top: 16px;

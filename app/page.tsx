@@ -4991,6 +4991,10 @@ export default function Page() {
               <img alt="Priekulės kultūros centro salės vaizdas" src="/event-gallery/priekules-sale.jpg" />
               <figcaption>Viena salė · visas pasaulis</figcaption>
             </figure>
+            <figure className="hero-gallery-card hero-gallery-card-wide">
+              <img alt="Ankstesnio Klaipėdos vakarėlio dalyvių bendra nuotrauka" src="/event-gallery/buves-vakarelis.jpg" />
+              <figcaption>Buvęs vakarėlis. Tad pakartokim</figcaption>
+            </figure>
           </div>
 
           <div className="countdown-card">
