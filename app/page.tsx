@@ -4972,18 +4972,6 @@ export default function Page() {
               žaidimai ir aprangos akcentai nuves per skirtingas pasaulio kultūras.
             </p>
 
-            <div className="tetris-announcement" role="note">
-              <span className="tetris-announcement-mark" aria-hidden="true">
-                {Array.from({ length: 6 }, (_, index) => <i key={index} />)}
-              </span>
-              <div>
-                <small>Žaidimas su prizais</small>
-                <strong>Apačioje puslapio tavęs laukia TETRIS „Lagaminas 360“</strong>
-                <p>Per vakarėlį daugiausia taškų surinkę <b>TOP 3 žaidėjai</b> gaus prizus.</p>
-              </div>
-              <a href="#tetris-zaidimas">Eiti į žaidimą</a>
-            </div>
-
           <div className="chip-grid">
             <div className="chip">
               <span>Data</span>
@@ -5158,6 +5146,18 @@ export default function Page() {
           ) : null}
         </SectionCard>
       ) : null}
+
+      <div className="tetris-announcement tetris-announcement-standalone" role="note">
+        <span className="tetris-announcement-mark" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, index) => <i key={index} />)}
+        </span>
+        <div>
+          <small>Žaidimas su prizais</small>
+          <strong>Apačioje puslapio tavęs laukia TETRIS „Lagaminas 360“</strong>
+          <p>Per vakarėlį daugiausia taškų surinkę <b>TOP 3 žaidėjai</b> gaus prizus.</p>
+        </div>
+        <a href="#tetris-zaidimas">Eiti į žaidimą</a>
+      </div>
 
       <section className="panel-switcher">
         <button className={activePanel === "guests" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("guests")}>

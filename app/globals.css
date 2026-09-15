@@ -6010,6 +6010,10 @@ th {
   box-shadow: 0 16px 34px rgba(3, 21, 32, 0.2);
 }
 
+.tetris-announcement-standalone {
+  margin: 26px 0 0;
+}
+
 .tetris-announcement-mark {
   width: 52px;
   height: 52px;
