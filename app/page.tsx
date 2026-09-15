@@ -316,8 +316,9 @@ const EVENT_PLACE = "Priekulės kultūros centras";
 const EVENT_DURATION = "360 minučių";
 const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Priekul%C4%97s+kult%C5%ABros+centras";
 const WAZE_URL = "https://waze.com/ul?q=Priekul%C4%97s%20kult%C5%ABros%20centras";
-const ADULT_PRICE = 8;
-const CHILD_AGE_LIMIT = 13;
+const ADULT_PRICE = 9;
+const CHILD_AGE_LIMIT = 12;
+const ADULT_AGE_START = 13;
 const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 140;
@@ -4084,7 +4085,7 @@ export default function Page() {
               <PaymentBadge method={reservation.paymentMethod ?? reservation.preferredPaymentMethod} />
             </div>
             <div className="admin-person-meta">
-              <p>{person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
+              <p>{person.type === "adult" ? `Nuo ${ADULT_AGE_START} m.` : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
               <button className="ghost-button compact" type="button" onClick={() => startAdminPersonEdit(reservation.id, person)}>
                 Redaguoti vardą
               </button>
@@ -4978,7 +4979,7 @@ export default function Page() {
             </div>
             <div className="chip">
               <span>Kaina</span>
-              <strong>13+ m. – 8 €, vaikams iki 13 m. – nemokamai</strong>
+              <strong>9 € / asmeniui, vaikams iki 12 m. – nemokamai</strong>
             </div>
           </div>
 
@@ -5529,7 +5530,7 @@ export default function Page() {
                             {person.firstName} {person.lastName}
                           </strong>
                           <p>
-                            {person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}
+                            {person.type === "adult" ? `Nuo ${ADULT_AGE_START} m.` : `Iki ${CHILD_AGE_LIMIT} m.`}
                             {person.arrivedAt ? ` • Atvyko ${person.arrivedAt}` : ""}
                           </p>
                         </div>
@@ -6296,8 +6297,8 @@ export default function Page() {
                       placeholder="Pavardė"
                     />
                     <select value={person.type} onChange={(event) => setPerson(index, "type", event.target.value as PersonType)}>
-                      <option value="adult">Nuo 13 m.</option>
-                      <option value="child">Vaikas iki 13 m.</option>
+                      <option value="adult">Nuo {ADULT_AGE_START} m.</option>
+                      <option value="child">Vaikas iki {CHILD_AGE_LIMIT} m.</option>
                     </select>
                     <button className="ghost-button" disabled={form.people.length === 1} type="button" onClick={() => removePerson(index)}>
                       Pašalinti
@@ -6648,7 +6649,7 @@ export default function Page() {
                     <strong>
                       {person.firstName} {person.lastName}
                     </strong>
-                    <p>{person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
+                    <p>{person.type === "adult" ? `Nuo ${ADULT_AGE_START} m.` : `Iki ${CHILD_AGE_LIMIT} m.`}</p>
                   </div>
                   <button
                     className="danger-button"
@@ -6701,7 +6702,7 @@ export default function Page() {
                       <strong>
                         {person.firstName} {person.lastName}
                       </strong>
-                      <small>{person.type === "adult" ? "Nuo 13 m." : `Iki ${CHILD_AGE_LIMIT} m.`}</small>
+                      <small>{person.type === "adult" ? `Nuo ${ADULT_AGE_START} m.` : `Iki ${CHILD_AGE_LIMIT} m.`}</small>
                     </span>
                   </label>
                 ))}
