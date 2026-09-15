@@ -13,6 +13,11 @@ const MAX_SAVE_RETRIES = 5;
 const MAX_STORED_SCORES = 100;
 const MAX_STORED_SESSIONS = 500;
 const LINE_POINTS = [0, 100, 300, 500, 800];
+const DIRECT_FLIGHT_BONUS = 1_200;
+const CUSTOMS_INTERVAL = 10;
+const LOST_LUGGAGE_INTERVAL = 14;
+const GOLDEN_TICKET_INTERVAL = 24;
+const MAX_AUDIT_EVENTS = 40;
 
 type SessionPayload = {
   fingerprint: string;
@@ -22,8 +27,10 @@ type SessionPayload = {
 };
 
 type ProofEvent = {
+  atMs?: number;
   cleared: number;
   dropPoints: number;
+  goldenTicketsUsed: number;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -96,23 +103,33 @@ function normalizeName(value: unknown) {
   return name.length >= 2 && name.length <= 50 && /^[\p{L}\p{M}0-9 .'-]+$/u.test(name) ? name : null;
 }
 
-function parseProofEvents(value: unknown): ProofEvent[] | null {
+function parseProofEvents(value: unknown, proofVersion: number): ProofEvent[] | null {
   if (!Array.isArray(value) || value.length < 5 || value.length > 2_000) return null;
   const events: ProofEvent[] = [];
   for (const item of value) {
     if (!isRecord(item)) return null;
     const cleared = Number(item.cleared);
     const dropPoints = Number(item.dropPoints);
+    const atMs = Number(item.atMs);
+    const goldenTicketsUsed = Number(item.goldenTicketsUsed ?? 0);
     if (!Number.isInteger(cleared) || cleared < 0 || cleared > 4) return null;
     if (!Number.isInteger(dropPoints) || dropPoints < 0 || dropPoints > 34) return null;
-    events.push({ cleared, dropPoints });
+    if (!Number.isInteger(goldenTicketsUsed) || goldenTicketsUsed < 0 || goldenTicketsUsed > 4) return null;
+    if (proofVersion >= 2 && (!Number.isInteger(atMs) || atMs < 0 || atMs > SESSION_TTL_MS)) return null;
+    events.push({
+      ...(proofVersion >= 2 ? { atMs } : {}),
+      cleared,
+      dropPoints,
+      goldenTicketsUsed,
+    });
   }
   return events;
 }
 
 function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
   const proof = isRecord(body.proof) ? body.proof : null;
-  const events = parseProofEvents(proof?.events);
+  const proofVersion = Number(proof?.version) === 2 ? 2 : 1;
+  const events = parseProofEvents(proof?.events, proofVersion);
   const submittedScore = Number(body.score);
   if (!proof || !events || !Number.isInteger(submittedScore) || submittedScore < 0 || submittedScore > 2_000_000) return null;
 
@@ -124,16 +141,32 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
   let maxClear = 0;
   let maxCombo = 0;
   let score = 0;
+  let directFlights = 0;
+  let goldenTicketsEarned = 0;
+  let goldenTicketsUsed = 0;
+  let previousAtMs = 0;
 
-  for (const event of events) {
+  for (const [index, event] of events.entries()) {
+    if (proofVersion >= 2) {
+      const atMs = event.atMs ?? 0;
+      if (atMs < previousAtMs || atMs > elapsed + 5_000) return null;
+      previousAtMs = atMs;
+      if (goldenTicketsUsed + event.goldenTicketsUsed > goldenTicketsEarned) return null;
+      goldenTicketsUsed += event.goldenTicketsUsed;
+    }
     const levelBeforeClear = 1 + Math.floor(lines / 10);
     combo = event.cleared ? combo + 1 : 0;
     score += event.dropPoints;
     score += (LINE_POINTS[event.cleared] ?? 0) * levelBeforeClear;
     score += event.cleared ? Math.max(0, combo - 1) * 50 * levelBeforeClear : 0;
+    if (proofVersion >= 2 && event.cleared === 4) {
+      score += DIRECT_FLIGHT_BONUS * levelBeforeClear;
+      directFlights += 1;
+    }
     lines += event.cleared;
     maxClear = Math.max(maxClear, event.cleared);
     maxCombo = Math.max(maxCombo, combo);
+    if ((index + 1) % GOLDEN_TICKET_INTERVAL === 0) goldenTicketsEarned += 1;
   }
 
   const level = 1 + Math.floor(lines / 10);
@@ -146,7 +179,39 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
     Number(proof.maxCombo) !== maxCombo
   ) return null;
 
-  return { durationMs: elapsed, eventsCount: events.length, level, lines, maxClear, maxCombo, score };
+  const auditLog = events.slice(-MAX_AUDIT_EVENTS).map((event, index) => {
+    const ordinal = events.length - Math.min(events.length, MAX_AUDIT_EVENTS) + index + 1;
+    return {
+      n: ordinal,
+      ...(event.atMs === undefined ? {} : { atMs: event.atMs }),
+      cleared: event.cleared,
+      dropPoints: event.dropPoints,
+      ...(event.goldenTicketsUsed ? { goldenTicketsUsed: event.goldenTicketsUsed } : {}),
+      ...(ordinal % CUSTOMS_INTERVAL === 0 ? { customsCheck: true } : {}),
+      ...(ordinal % LOST_LUGGAGE_INTERVAL === 0 ? { lostLuggage: true } : {}),
+      ...(ordinal % GOLDEN_TICKET_INTERVAL === 0 ? { goldenPiece: true } : {}),
+      ...(event.cleared === 4 && proofVersion >= 2 ? { directFlight: true } : {}),
+    };
+  });
+
+  return {
+    auditLog,
+    auditSummary: {
+      customsChecks: Math.floor(events.length / CUSTOMS_INTERVAL),
+      directFlights,
+      eventsCount: events.length,
+      goldenTicketsUsed,
+      lostLuggage: Math.floor(events.length / LOST_LUGGAGE_INTERVAL),
+    },
+    durationMs: elapsed,
+    eventsCount: events.length,
+    level,
+    lines,
+    maxClear,
+    maxCombo,
+    proofVersion,
+    score,
+  };
 }
 
 function publicScores(value: unknown) {
@@ -160,6 +225,10 @@ function publicScores(value: unknown) {
     const startedAt = typeof item.startedAt === "string" ? item.startedAt : undefined;
     const finishedAt = typeof item.finishedAt === "string" ? item.finishedAt : undefined;
     const durationMs = Number(item.durationMs);
+    const verified = item.verified === true;
+    const verificationVersion = Number(item.verificationVersion);
+    const auditSummary = isRecord(item.auditSummary) ? item.auditSummary : undefined;
+    const auditLog = Array.isArray(item.auditLog) ? item.auditLog.filter(isRecord).slice(-MAX_AUDIT_EVENTS) : undefined;
     return Number.isFinite(id) && Number.isInteger(score) && score >= 0 && name && createdAt
       ? [{
           id,
@@ -169,6 +238,10 @@ function publicScores(value: unknown) {
           ...(startedAt ? { startedAt } : {}),
           ...(finishedAt ? { finishedAt } : {}),
           ...(Number.isInteger(durationMs) && durationMs >= MIN_GAME_MS && durationMs <= SESSION_TTL_MS ? { durationMs } : {}),
+          ...(verified ? { verified: true } : {}),
+          ...(Number.isInteger(verificationVersion) && verificationVersion > 0 ? { verificationVersion } : {}),
+          ...(auditSummary ? { auditSummary } : {}),
+          ...(auditLog ? { auditLog } : {}),
         }]
       : [];
   });
@@ -211,6 +284,10 @@ export async function POST(request: Request) {
       startedAt: new Date(session.issuedAt).toISOString(),
       finishedAt: new Date(session.issuedAt + verified.durationMs).toISOString(),
       durationMs: verified.durationMs,
+      verified: true,
+      verificationVersion: verified.proofVersion,
+      auditSummary: verified.auditSummary,
+      auditLog: verified.auditLog,
     };
     const notificationEntry = {
       id: scoreEntry.id + 1,

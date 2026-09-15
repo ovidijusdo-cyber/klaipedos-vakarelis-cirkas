@@ -11,6 +11,14 @@ type GameScore = {
   startedAt?: string;
   finishedAt?: string;
   durationMs?: number;
+  verified?: boolean;
+  auditSummary?: {
+    customsChecks: number;
+    directFlights: number;
+    eventsCount: number;
+    goldenTicketsUsed: number;
+    lostLuggage: number;
+  };
 };
 
 type PieceTemplate = {
@@ -25,8 +33,10 @@ type ActivePiece = PieceTemplate & {
 };
 
 export type GameProofEvent = {
+  atMs: number;
   cleared: number;
   dropPoints: number;
+  goldenTicketsUsed: number;
 };
 
 export type GameScoreProof = {
@@ -35,6 +45,7 @@ export type GameScoreProof = {
   lines: number;
   maxClear: number;
   maxCombo: number;
+  version: 2;
   sessionToken: string;
 };
 
@@ -44,6 +55,9 @@ type GameState = {
   combo: number;
   effectId: number;
   gameOver: boolean;
+  goldenTickets: number;
+  goldenTicketsUsedPending: number;
+  lastBonus: number;
   lastClear: number;
   lastClearedRows: number[];
   level: number;
@@ -56,19 +70,40 @@ type GameState = {
   proofEvents: GameProofEvent[];
   running: boolean;
   score: number;
+  startedAtMs: number;
 };
 
 type GameAction =
-  | { type: "start" }
+  | { type: "start"; startedAtMs: number }
   | { type: "tick" }
   | { type: "move"; direction: -1 | 1 }
   | { type: "rotate" }
   | { type: "softDrop" }
-  | { type: "hardDrop" };
+  | { type: "hardDrop" }
+  | { type: "useGoldenTicket"; row: number };
 
 const BOARD_COLS = 10;
 const BOARD_ROWS = 18;
 const LINE_POINTS = [0, 100, 300, 500, 800];
+const DIRECT_FLIGHT_BONUS = 1_200;
+const CUSTOMS_INTERVAL = 10;
+const LOST_LUGGAGE_INTERVAL = 14;
+const GOLDEN_TICKET_INTERVAL = 24;
+const PREFERENCES_KEY = "packing-game-preferences-v1";
+
+type GamePreferences = {
+  controlSide: "left" | "right";
+  haptics: boolean;
+  reduceEffects: boolean;
+  swipeSensitivity: number;
+};
+
+const DEFAULT_PREFERENCES: GamePreferences = {
+  controlSide: "right",
+  haptics: true,
+  reduceEffects: false,
+  swipeSensitivity: 38,
+};
 const GAME_TIME_FORMATTER = new Intl.DateTimeFormat("lt-LT", {
   timeZone: "Europe/Vilnius",
   day: "2-digit",
@@ -104,12 +139,28 @@ function randomPiece() {
   return PIECES[Math.floor(Math.random() * PIECES.length)];
 }
 
-function spawnPiece(template: PieceTemplate): ActivePiece {
+function spawnPiece(template: PieceTemplate, ordinal = 1): ActivePiece {
+  let prepared = template;
+  let shape = template.shape.map((row) => [...row]);
+
+  if (ordinal > 1 && ordinal % LOST_LUGGAGE_INTERVAL === 0) {
+    if (shape.length === 2 && shape[0]?.length === 2) {
+      prepared = PIECES[2];
+      shape = prepared.shape.map((row) => [...row]);
+    }
+    const rotations = 1 + (ordinal % 3);
+    for (let index = 0; index < rotations; index += 1) shape = rotateShape(shape);
+  }
+
+  if (ordinal > 1 && ordinal % GOLDEN_TICKET_INTERVAL === 0) {
+    prepared = { ...prepared, color: 8, name: "Auksinis bilietas" };
+  }
+
   return {
-    ...template,
-    shape: template.shape.map((row) => [...row]),
+    ...prepared,
+    shape,
     row: 0,
-    col: Math.floor((BOARD_COLS - template.shape[0].length) / 2),
+    col: Math.floor((BOARD_COLS - shape[0].length) / 2),
   };
 }
 
@@ -155,15 +206,26 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
   const level = 1 + Math.floor(lines / 10);
   const combo = result.cleared ? state.combo + 1 : 0;
   const comboBonus = result.cleared ? Math.max(0, combo - 1) * 50 * state.level : 0;
-  const score = state.score + dropBonus + (LINE_POINTS[result.cleared] ?? 0) * state.level + comboBonus;
+  const directFlightBonus = result.cleared === 4 ? DIRECT_FLIGHT_BONUS * state.level : 0;
+  const score = state.score + dropBonus + (LINE_POINTS[result.cleared] ?? 0) * state.level + comboBonus + directFlightBonus;
   const nextTemplate = state.next ?? randomPiece();
-  const active = spawnPiece(nextTemplate);
+  const eventNumber = state.proofEvents.length + 1;
+  const nextOrdinal = eventNumber + 1;
+  const active = spawnPiece(nextTemplate, nextOrdinal);
   const next = randomPiece();
   const pieceDropPoints = state.pieceDropPoints + dropBonus;
+  const earnedGoldenTicket = eventNumber % GOLDEN_TICKET_INTERVAL === 0 ? 1 : 0;
+  const atMs = Math.max(
+    (state.proofEvents.at(-1)?.atMs ?? 0) + 1,
+    Date.now() - state.startedAtMs,
+  );
   const roundState = {
     board: result.board,
     combo,
     effectId: result.cleared ? state.effectId + 1 : state.effectId,
+    goldenTickets: state.goldenTickets + earnedGoldenTicket,
+    goldenTicketsUsedPending: 0,
+    lastBonus: directFlightBonus,
     lastClear: result.cleared,
     lastClearedRows: result.clearedRows,
     level,
@@ -173,7 +235,12 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
     maxCombo: Math.max(state.maxCombo, combo),
     next,
     pieceDropPoints: 0,
-    proofEvents: [...state.proofEvents, { cleared: result.cleared, dropPoints: pieceDropPoints }],
+    proofEvents: [...state.proofEvents, {
+      atMs,
+      cleared: result.cleared,
+      dropPoints: pieceDropPoints,
+      goldenTicketsUsed: state.goldenTicketsUsedPending,
+    }],
     score,
   };
 
@@ -190,6 +257,9 @@ const initialGameState: GameState = {
   combo: 0,
   effectId: 0,
   gameOver: false,
+  goldenTickets: 0,
+  goldenTicketsUsedPending: 0,
+  lastBonus: 0,
   lastClear: 0,
   lastClearedRows: [],
   level: 1,
@@ -202,15 +272,34 @@ const initialGameState: GameState = {
   proofEvents: [],
   running: false,
   score: 0,
+  startedAtMs: 0,
 };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   if (action.type === "start") {
     const first = randomPiece();
-    return { ...initialGameState, board: emptyBoard(), active: spawnPiece(first), next: randomPiece(), running: true };
+    return {
+      ...initialGameState,
+      board: emptyBoard(),
+      active: spawnPiece(first),
+      next: randomPiece(),
+      running: true,
+      startedAtMs: action.startedAtMs,
+    };
   }
 
   if (!state.running || !state.active) return state;
+
+  if (action.type === "useGoldenTicket") {
+    if (state.goldenTickets < 1 || action.row < 0 || action.row >= BOARD_ROWS || !state.board[action.row].some(Boolean)) return state;
+    const board = state.board.map((row, index) => index === action.row ? Array<number>(BOARD_COLS).fill(0) : [...row]);
+    return {
+      ...state,
+      board,
+      goldenTickets: state.goldenTickets - 1,
+      goldenTicketsUsedPending: state.goldenTicketsUsedPending + 1,
+    };
+  }
 
   if (action.type === "move") {
     const col = state.active.col + action.direction;
@@ -284,11 +373,13 @@ export default function PackingGame({
   const scoreHandlerRef = useRef(onSaveScore);
   const scoreAttemptRef = useRef<string | null>(null);
   const stabilityLevelRef = useRef(0);
+  const hapticEventRef = useRef(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const [celebration, setCelebration] = useState<{ id: number; title: string; detail: string } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [preferences, setPreferences] = useState<GamePreferences>(DEFAULT_PREFERENCES);
   const [savedScore, setSavedScore] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -296,6 +387,7 @@ export default function PackingGame({
   const [stabilitySeconds, setStabilitySeconds] = useState(0);
   const [stabilityUntil, setStabilityUntil] = useState(0);
   const [startError, setStartError] = useState("");
+  const [ticketMode, setTicketMode] = useState(false);
 
   const sortedScores = useMemo(
     () => [...scores].sort((a, b) => b.score - a.score),
@@ -304,6 +396,10 @@ export default function PackingGame({
   const topScores = sortedScores.slice(0, 5);
   const qualifiesForTopFive = state.score > 0 && (topScores.length < 5 || state.score > (topScores[4]?.score ?? 0));
   const liveRank = state.score > 0 ? 1 + sortedScores.filter((entry) => entry.score > state.score).length : null;
+  const activeOrdinal = state.proofEvents.length + 1;
+  const customsActive = state.running && activeOrdinal > 1 && activeOrdinal % CUSTOMS_INTERVAL === 0;
+  const lostLuggageActive = state.running && activeOrdinal > 1 && activeOrdinal % LOST_LUGGAGE_INTERVAL === 0;
+  const goldenPieceActive = state.running && activeOrdinal > 1 && activeOrdinal % GOLDEN_TICKET_INTERVAL === 0;
   const regionIndex = Math.min(REGIONS.length - 1, Math.max(0, state.level - 1));
   const region = REGIONS[regionIndex];
   const regionClass = styles[`region${region.id}`];
@@ -343,10 +439,45 @@ export default function PackingGame({
   }, [onCreateSession, onSaveScore]);
 
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(PREFERENCES_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as Partial<GamePreferences>;
+      setPreferences({
+        controlSide: parsed.controlSide === "left" ? "left" : "right",
+        haptics: parsed.haptics !== false,
+        reduceEffects: parsed.reduceEffects === true,
+        swipeSensitivity: [24, 38, 54].includes(Number(parsed.swipeSensitivity)) ? Number(parsed.swipeSensitivity) : 38,
+      });
+    } catch (error) {
+      console.error("Failed to load game preferences", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+    } catch (error) {
+      console.error("Failed to save game preferences", error);
+    }
+  }, [preferences]);
+
+  useEffect(() => {
     if (!state.running) return;
     const timer = window.setInterval(() => dispatch({ type: "tick" }), dropDelay);
     return () => window.clearInterval(timer);
   }, [dropDelay, state.running]);
+
+  useEffect(() => {
+    const eventCount = state.proofEvents.length;
+    if (!preferences.haptics || eventCount <= hapticEventRef.current) {
+      hapticEventRef.current = eventCount;
+      return;
+    }
+    hapticEventRef.current = eventCount;
+    const latest = state.proofEvents.at(-1);
+    if (typeof navigator.vibrate === "function") navigator.vibrate(latest?.cleared ? [24, 35, 48] : 18);
+  }, [preferences.haptics, state.proofEvents]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -369,24 +500,31 @@ export default function PackingGame({
 
   useEffect(() => {
     if (!state.effectId) return;
-    const title = state.leveledUp
-      ? `${region.name} atrakinta`
-      : state.lastClear === 4
-        ? "Tobulas lagaminas"
+    const comboTitle = state.combo >= 4
+      ? "Kelionės meistras"
+      : state.combo === 3
+        ? "Be persėdimų"
+        : "Puikus maršrutas";
+    const title = state.lastClear === 4
+        ? "Tiesioginis skrydis"
+        : state.leveledUp
+          ? `${region.name} atrakinta`
         : state.combo > 1
-          ? `Kombo x${state.combo}`
+          ? `${comboTitle} · kombo x${state.combo}`
           : state.lastClear > 1
             ? `${state.lastClear} eilutės vienu metu`
             : "Kelionės antspaudas";
-    const detail = state.leveledUp
-      ? `${state.level} lygis · ${region.note}`
-      : state.combo > 1
+    const detail = state.lastClear === 4
+        ? `Keturių eilučių bonusas +${state.lastBonus} taškų`
+        : state.leveledUp
+          ? `${state.level} lygis · ${region.note}`
+        : state.combo > 1
         ? `Papildomas ${Math.max(0, state.combo - 1) * 50 * state.level} taškų priedas`
         : "+ viena pilna eilutė";
     setCelebration({ id: state.effectId, title, detail });
     const timer = window.setTimeout(() => setCelebration(null), 1250);
     return () => window.clearTimeout(timer);
-  }, [region, state.combo, state.effectId, state.lastClear, state.level, state.leveledUp]);
+  }, [region, state.combo, state.effectId, state.lastBonus, state.lastClear, state.level, state.leveledUp]);
 
   useEffect(() => {
     const isBonusLevel = state.level >= 5 && (state.level - 5) % 3 === 0;
@@ -427,6 +565,7 @@ export default function PackingGame({
       lines: state.lines,
       maxClear: state.maxClear,
       maxCombo: state.maxCombo,
+      version: 2,
       sessionToken: sessionTokenRef.current,
     };
     void scoreHandlerRef.current(name, state.score, proof).then((saved) => {
@@ -467,7 +606,9 @@ export default function PackingGame({
     setStabilitySeconds(0);
     setStabilityUntil(0);
     setStartError("");
-    dispatch({ type: "start" });
+    setTicketMode(false);
+    hapticEventRef.current = 0;
+    dispatch({ type: "start", startedAtMs: Date.now() });
   }
 
   async function retryScoreSave() {
@@ -481,6 +622,7 @@ export default function PackingGame({
       lines: state.lines,
       maxClear: state.maxClear,
       maxCombo: state.maxCombo,
+      version: 2,
       sessionToken: sessionTokenRef.current,
     });
     setSaving(false);
@@ -509,19 +651,37 @@ export default function PackingGame({
     const x = touch.clientX - start.x;
     const y = touch.clientY - start.y;
 
-    if (Math.abs(x) < 18 && Math.abs(y) < 18 && Date.now() - start.time < 450) {
+    const sensitivity = preferences.swipeSensitivity;
+    const gestureThreshold = Math.max(16, Math.round(sensitivity * 0.65));
+
+    if (Math.abs(x) < gestureThreshold && Math.abs(y) < gestureThreshold && Date.now() - start.time < 450) {
       dispatch({ type: "rotate" });
       return;
     }
 
-    if (Math.abs(x) > Math.abs(y) && Math.abs(x) >= 24) {
+    if (Math.abs(x) > Math.abs(y) && Math.abs(x) >= gestureThreshold) {
       const direction = x > 0 ? 1 : -1;
-      const steps = Math.min(4, Math.max(1, Math.round(Math.abs(x) / 38)));
+      const steps = Math.min(4, Math.max(1, Math.round(Math.abs(x) / sensitivity)));
       for (let step = 0; step < steps; step += 1) dispatch({ type: "move", direction });
       return;
     }
 
-    if (y > 28) dispatch({ type: "hardDrop" });
+    if (y > gestureThreshold) dispatch({ type: "hardDrop" });
+  }
+
+  function useGoldenTicket(row: number) {
+    if (!ticketMode || !state.board[row]?.some(Boolean)) return;
+    dispatch({ type: "useGoldenTicket", row });
+    setTicketMode(false);
+    setCelebration({
+      id: Date.now(),
+      title: "Auksinis bilietas panaudotas",
+      detail: `Pašalinta ${row + 1} lentos eilutė`,
+    });
+  }
+
+  function updatePreference<K extends keyof GamePreferences>(key: K, value: GamePreferences[K]) {
+    setPreferences((previous) => ({ ...previous, [key]: value }));
   }
 
   async function toggleFullscreen() {
@@ -531,7 +691,10 @@ export default function PackingGame({
   }
 
   return (
-    <div className={`${styles.shell} ${regionClass}${isFullscreen ? ` ${styles.fullscreen}` : ""}`} ref={fullscreenRef}>
+    <div
+      className={`${styles.shell} ${regionClass}${isFullscreen ? ` ${styles.fullscreen}` : ""}${preferences.reduceEffects ? ` ${styles.reducedEffects}` : ""}`}
+      ref={fullscreenRef}
+    >
       <div className={styles.gameCard}>
         <div className={styles.gameHead}>
           <div>
@@ -576,6 +739,19 @@ export default function PackingGame({
           </div>
         ) : null}
 
+        {goldenPieceActive || customsActive || lostLuggageActive ? (
+          <div className={`${styles.specialBanner}${goldenPieceActive ? ` ${styles.goldenBanner}` : ""}`} aria-live="polite">
+            <span>{goldenPieceActive ? "Auksinis bilietas" : customsActive ? "Muitinės patikra" : "Pamestas bagažas"}</span>
+            <strong>
+              {goldenPieceActive
+                ? "Nuleisk auksinę figūrą ir gauk vienos blogos eilutės pašalinimą"
+                : customsActive
+                  ? "Kita figūra laikinai paslėpta"
+                  : "Figūra atkeliavo netikėta padėtimi"}
+            </strong>
+          </div>
+        ) : null}
+
         <div
           className={styles.boardFrame}
           onTouchStart={handleTouchStart}
@@ -594,6 +770,24 @@ export default function PackingGame({
                 return <span className={className} key={key} />;
               }),
             )}
+
+            {ticketMode ? (
+              <div className={styles.ticketRows} aria-label="Pasirink eilutę, kurią pašalins auksinis bilietas">
+                {state.board.map((row, rowIndex) => (
+                  <button
+                    aria-label={`${rowIndex + 1} eilutė${row.some(Boolean) ? "" : " tuščia"}`}
+                    disabled={!row.some(Boolean)}
+                    key={rowIndex}
+                    type="button"
+                    onTouchStart={(event) => event.stopPropagation()}
+                    onTouchEnd={(event) => event.stopPropagation()}
+                    onClick={() => useGoldenTicket(rowIndex)}
+                  >
+                    {row.some(Boolean) ? `${rowIndex + 1}` : ""}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             {!state.active && !state.gameOver ? (
               <div className={styles.overlay}>
@@ -642,7 +836,7 @@ export default function PackingGame({
               </div>
             ) : null}
 
-            {celebration ? (
+            {celebration && !preferences.reduceEffects ? (
               <div className={styles.celebration} key={celebration.id} aria-live="polite">
                 <strong>{celebration.title}</strong>
                 <span>{celebration.detail}</span>
@@ -652,7 +846,7 @@ export default function PackingGame({
               </div>
             ) : null}
 
-            {celebration && state.lastClearedRows.length ? (
+            {celebration && state.lastClearedRows.length && !preferences.reduceEffects ? (
               <div className={styles.lineExplosions} aria-hidden="true">
                 {state.lastClearedRows.map((row) => (
                   <div className={styles.lineExplosion} style={{ top: `${((row + 0.5) / BOARD_ROWS) * 100}%` }} key={`${celebration.id}-${row}`}>
@@ -664,14 +858,29 @@ export default function PackingGame({
           </div>
         </div>
 
-        <p className={styles.touchHint}>Telefone: brauk į šonus, bakstelėk pasukti, brauk žemyn nuleisti.</p>
+        <p className={styles.touchHint}>Telefone: brauk į šonus, bakstelėk arba spausk didįjį mygtuką pasukti, brauk žemyn nuleisti.</p>
 
-        <div className={styles.controls} aria-label="Žaidimo valdymas">
-          <button aria-label="Stumti į kairę" disabled={!state.running} type="button" onClick={() => dispatch({ type: "move", direction: -1 })}>←</button>
-          <button aria-label="Pasukti figūrą" disabled={!state.running} type="button" onClick={() => dispatch({ type: "rotate" })}>↻</button>
-          <button aria-label="Stumti į dešinę" disabled={!state.running} type="button" onClick={() => dispatch({ type: "move", direction: 1 })}>→</button>
-          <button aria-label="Nuleisti vienu langeliu" disabled={!state.running} type="button" onClick={() => dispatch({ type: "softDrop" })}>↓</button>
-          <button className={styles.dropButton} disabled={!state.running} type="button" onClick={() => dispatch({ type: "hardDrop" })}>Nuleisti</button>
+        <div className={`${styles.controls} ${preferences.controlSide === "left" ? styles.controlsLeft : styles.controlsRight}`} aria-label="Žaidimo valdymas">
+          <button className={styles.rotateButton} aria-label="Pasukti figūrą" disabled={!state.running} type="button" onClick={() => dispatch({ type: "rotate" })}>
+            <b>↻</b><span>Pasukti</span>
+          </button>
+          <div className={styles.controlPad}>
+            <button aria-label="Stumti į kairę" disabled={!state.running} type="button" onClick={() => dispatch({ type: "move", direction: -1 })}>←</button>
+            <button aria-label="Stumti į dešinę" disabled={!state.running} type="button" onClick={() => dispatch({ type: "move", direction: 1 })}>→</button>
+            <button aria-label="Nuleisti vienu langeliu" disabled={!state.running} type="button" onClick={() => dispatch({ type: "softDrop" })}>↓</button>
+            <button className={styles.dropButton} disabled={!state.running} type="button" onClick={() => dispatch({ type: "hardDrop" })}>Nuleisti</button>
+          </div>
+        </div>
+
+        <div className={styles.goldenTicketBar}>
+          <div><span>Auksinis bilietas</span><strong>{state.goldenTickets ? `${state.goldenTickets} paruošta` : `Kas ${GOLDEN_TICKET_INTERVAL} figūras`}</strong></div>
+          <button
+            disabled={!state.running || state.goldenTickets < 1}
+            type="button"
+            onClick={() => setTicketMode((current) => !current)}
+          >
+            {ticketMode ? "Atšaukti" : "Pasirinkti eilutę"}
+          </button>
         </div>
       </div>
 
@@ -679,23 +888,58 @@ export default function PackingGame({
         <div className={styles.sideCard}>
           <div className={styles.sideTitle}>
             <strong>Kita detalė</strong>
-            <span>{state.next?.name ?? "Laukia starto"}</span>
+            <span>{customsActive ? "Tikrinama" : state.next?.name ?? "Laukia starto"}</span>
           </div>
-          <div className={styles.preview} aria-label="Kita žaidimo detalė">
-            {Array.from({ length: 16 }, (_, index) => {
-              const row = Math.floor(index / 4);
-              const col = index % 4;
-              const shape = state.next?.shape ?? [];
-              const rowOffset = Math.floor((4 - shape.length) / 2);
-              const colOffset = Math.floor((4 - (shape[0]?.length ?? 0)) / 2);
-              const filled = shape[row - rowOffset]?.[col - colOffset];
-              return <span className={`${styles.previewCell}${filled ? ` ${styles.filled} ${styles[`color${state.next?.color ?? 1}`]}` : ""}`} key={index} />;
-            })}
+          <div className={`${styles.preview}${customsActive ? ` ${styles.previewBlocked}` : ""}`} aria-label="Kita žaidimo detalė">
+            {customsActive ? (
+              <div><b>MUITINĖ</b><small>Figūra slepiama</small></div>
+            ) : Array.from({ length: 16 }, (_, index) => {
+                const row = Math.floor(index / 4);
+                const col = index % 4;
+                const shape = state.next?.shape ?? [];
+                const rowOffset = Math.floor((4 - shape.length) / 2);
+                const colOffset = Math.floor((4 - (shape[0]?.length ?? 0)) / 2);
+                const filled = shape[row - rowOffset]?.[col - colOffset];
+                return <span className={`${styles.previewCell}${filled ? ` ${styles.filled} ${styles[`color${state.next?.color ?? 1}`]}` : ""}`} key={index} />;
+              })}
           </div>
           {playerName.trim() ? <div className={styles.playerTag}>Žaidžia: <strong>{playerName.trim()}</strong></div> : null}
           <button className={styles.newGameButton} disabled={starting} type="button" onClick={() => void startGame()}>
             {starting ? "Tikrinama..." : state.active || state.gameOver ? "Pradėti iš naujo" : "Pradėti žaidimą"}
           </button>
+        </div>
+
+        <div className={styles.sideCard}>
+          <div className={styles.sideTitle}>
+            <strong>Telefono valdymas</strong>
+            <span>Išsaugoma šiame telefone</span>
+          </div>
+          <div className={styles.gameSettings}>
+            <label>
+              <span>Braukimo jautrumas</span>
+              <select
+                value={preferences.swipeSensitivity}
+                onChange={(event) => updatePreference("swipeSensitivity", Number(event.target.value))}
+              >
+                <option value={24}>Jautrus</option>
+                <option value={38}>Subalansuotas</option>
+                <option value={54}>Ramus</option>
+              </select>
+            </label>
+            <fieldset>
+              <legend>Vienos rankos valdymas</legend>
+              <button className={preferences.controlSide === "left" ? styles.settingActive : ""} type="button" onClick={() => updatePreference("controlSide", "left")}>Kairėje</button>
+              <button className={preferences.controlSide === "right" ? styles.settingActive : ""} type="button" onClick={() => updatePreference("controlSide", "right")}>Dešinėje</button>
+            </fieldset>
+            <label className={styles.toggleSetting}>
+              <input checked={preferences.haptics} type="checkbox" onChange={(event) => updatePreference("haptics", event.target.checked)} />
+              <span>Vibracija nusileidus figūrai</span>
+            </label>
+            <label className={styles.toggleSetting}>
+              <input checked={preferences.reduceEffects} type="checkbox" onChange={(event) => updatePreference("reduceEffects", event.target.checked)} />
+              <span>Išjungti intensyvias animacijas</span>
+            </label>
+          </div>
         </div>
 
         <div className={styles.sideCard}>
@@ -748,7 +992,7 @@ export default function PackingGame({
 
         <div className={styles.sideCard}>
           <strong>Kaip žaisti</strong>
-          <p>Užpildyk horizontalią eilutę be tarpų. Šalink eilutes viena figūra po kitos, kad augtų kombo ir taškų priedas.</p>
+          <p>Užpildyk horizontalią eilutę be tarpų. Šalink eilutes viena figūra po kitos, kad augtų kombo. Keturios eilutės vienu metu aktyvuoja „Tiesioginį skrydį“, o kas 24 figūras gausi „Auksinį bilietą“ blogai eilutei pašalinti.</p>
           <div className={styles.keyGuide}>
             <span>← → judėti</span>
             <span>↑ pasukti</span>
@@ -778,11 +1022,13 @@ export default function PackingGame({
                 <span>{index + 1}</span>
                 <section className={styles.leaderboardPlayer}>
                   <strong>{entry.name}</strong>
+                  {entry.verified ? <em className={styles.verifiedBadge}>✓ Patvirtintas rezultatas</em> : null}
                   {entry.startedAt && entry.finishedAt && formatGameDuration(entry.durationMs) ? (
                     <small>
                       <span>Pradėta {formatGameTimestamp(entry.startedAt)}</span>
                       <span>Baigta {formatGameTimestamp(entry.finishedAt)}</span>
                       <b>Žaista {formatGameDuration(entry.durationMs)}</b>
+                      {entry.auditSummary ? <span>{entry.auditSummary.eventsCount} figūrų · serverio žurnalas išsaugotas</span> : null}
                     </small>
                   ) : (
                     <small>

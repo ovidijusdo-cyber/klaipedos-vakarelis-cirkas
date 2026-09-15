@@ -130,6 +130,14 @@ type GameScore = {
   startedAt?: string;
   finishedAt?: string;
   durationMs?: number;
+  verified?: boolean;
+  auditSummary?: {
+    customsChecks: number;
+    directFlights: number;
+    eventsCount: number;
+    goldenTicketsUsed: number;
+    lostLuggage: number;
+  };
 };
 
 type ResponsiblePerson = {

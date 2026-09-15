@@ -252,6 +252,41 @@
   font-weight: 800;
 }
 
+.specialBanner {
+  display: grid;
+  gap: 2px;
+  margin: -2px 0 12px;
+  padding: 10px 13px 10px 46px;
+  border: 1px solid rgba(217, 119, 6, 0.32);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 22px 50%, #f4c95d 0 7px, transparent 8px),
+    linear-gradient(135deg, rgba(254, 243, 199, 0.92), rgba(255, 255, 255, 0.86));
+  box-shadow: 0 9px 22px rgba(217, 119, 6, 0.11);
+}
+
+.specialBanner span {
+  color: #92400e;
+  font-size: 0.67rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.specialBanner strong {
+  color: #713f12;
+  font-size: 0.8rem;
+}
+
+.goldenBanner {
+  border-color: rgba(234, 179, 8, 0.6);
+  background:
+    radial-gradient(circle at 22px 50%, #fef08a 0 7px, transparent 8px),
+    linear-gradient(110deg, #fff7c2, #f4c95d, #fff7c2);
+  background-size: auto, 220% 100%;
+  animation: golden-ticket-shine 1.8s linear infinite;
+}
+
 .stats span {
   color: #64808a;
   font-size: 0.67rem;
@@ -321,10 +356,44 @@
 .color5 { background: linear-gradient(135deg, #c084fc, #7c3aed); }
 .color6 { background: linear-gradient(135deg, #fb923c, #ea580c); }
 .color7 { background: linear-gradient(135deg, #f472b6, #be185d); }
+.color8 {
+  background: linear-gradient(135deg, #fff7ae, #eab308 55%, #a16207);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.42), 0 0 12px rgba(250, 204, 21, 0.72);
+}
 
 .ghost {
   background: rgba(244, 201, 93, 0.08);
   box-shadow: inset 0 0 0 2px rgba(244, 201, 93, 0.48);
+}
+
+.ticketRows {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: grid;
+  grid-template-rows: repeat(18, 1fr);
+  background: rgba(3, 21, 32, 0.38);
+}
+
+.ticketRows button {
+  border: 0;
+  border-block-end: 1px dashed rgba(244, 201, 93, 0.32);
+  background: rgba(244, 201, 93, 0.08);
+  color: transparent;
+  cursor: pointer;
+}
+
+.ticketRows button:not(:disabled):hover,
+.ticketRows button:not(:disabled):focus-visible {
+  background: rgba(244, 201, 93, 0.48);
+  color: #fff;
+  outline: 2px solid #f4c95d;
+  outline-offset: -2px;
+}
+
+.ticketRows button:disabled {
+  background: transparent;
+  cursor: not-allowed;
 }
 
 .overlay {
@@ -540,10 +609,25 @@
 }
 
 .controls {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) 1.35fr;
+  display: flex;
   gap: 8px;
   margin-top: 14px;
+}
+
+.controlsLeft {
+  flex-direction: row;
+}
+
+.controlsRight {
+  flex-direction: row-reverse;
+}
+
+.controlPad {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 1.35fr;
+  gap: 8px;
 }
 
 .controls button {
@@ -559,9 +643,78 @@
   touch-action: manipulation;
 }
 
+.controls .rotateButton {
+  width: 92px;
+  flex: 0 0 92px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  border-color: rgba(217, 119, 6, 0.34);
+  background: linear-gradient(145deg, #fff8df, #f4c95d);
+  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.18);
+}
+
+.rotateButton b {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.rotateButton span {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
 .controls .dropButton {
   background: linear-gradient(135deg, #f4c95d, #e9a23b);
   font-size: 0.85rem;
+}
+
+.goldenTicketBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(217, 119, 6, 0.24);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.72), rgba(255, 255, 255, 0.84));
+}
+
+.goldenTicketBar > div {
+  display: grid;
+  gap: 2px;
+}
+
+.goldenTicketBar span {
+  color: #92400e;
+  font-size: 0.65rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.goldenTicketBar strong {
+  color: #713f12;
+  font-size: 0.78rem;
+}
+
+.goldenTicketBar button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 11px;
+  padding: 0 12px;
+  background: linear-gradient(135deg, #d97706, #f4c95d);
+  color: #422006;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.goldenTicketBar button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.5;
 }
 
 .side {
@@ -610,6 +763,111 @@
 .previewCell {
   position: relative;
   border-radius: 5px;
+}
+
+.previewBlocked {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  place-items: center;
+  border: 2px dashed rgba(244, 201, 93, 0.72);
+  background:
+    repeating-linear-gradient(135deg, rgba(244, 201, 93, 0.16) 0 8px, transparent 8px 16px),
+    #071d2d;
+}
+
+.previewBlocked > div {
+  display: grid;
+  gap: 4px;
+  color: #f4c95d;
+  text-align: center;
+}
+
+.previewBlocked b {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+.previewBlocked small {
+  color: #d9f3ec;
+  font-size: 0.63rem;
+}
+
+.gameSettings {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.gameSettings > label:first-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.gameSettings label > span,
+.gameSettings legend {
+  color: #315d65;
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.gameSettings select {
+  min-height: 38px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  border-radius: 10px;
+  padding: 0 9px;
+  background: #fff;
+  color: #173f49;
+  font-weight: 800;
+}
+
+.gameSettings fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.gameSettings legend {
+  grid-column: 1 / -1;
+  margin-bottom: 6px;
+}
+
+.gameSettings fieldset button {
+  min-height: 38px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #315d65;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.gameSettings fieldset .settingActive {
+  border-color: var(--region-accent);
+  background: var(--region-accent);
+  color: #fff;
+}
+
+.toggleSetting {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.toggleSetting input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--region-accent);
 }
 
 .actionRow button {
@@ -899,6 +1157,26 @@
   white-space: nowrap;
 }
 
+.verifiedBadge {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  font-size: 0.56rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.reducedEffects *,
+.reducedEffects *::before,
+.reducedEffects *::after {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+
 .leaderboardPlayer small {
   display: grid;
   gap: 1px;
@@ -961,6 +1239,11 @@
   to {
     box-shadow: 0 10px 26px rgba(56, 189, 248, 0.26);
   }
+}
+
+@keyframes golden-ticket-shine {
+  from { background-position: 0 0, 100% 0; }
+  to { background-position: 0 0, -120% 0; }
 }
 
 @keyframes board-clear-flash {
@@ -1105,7 +1388,14 @@
   }
 
   .controls {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: 330px;
+  }
+
+  .controlsLeft { margin-right: auto; }
+  .controlsRight { margin-left: auto; }
+
+  .controlPad {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .controls button {
@@ -1114,6 +1404,12 @@
 
   .controls .dropButton {
     grid-column: 1 / -1;
+  }
+
+  .controls .rotateButton {
+    width: 82px;
+    flex-basis: 82px;
+    min-height: 108px;
   }
 
   .keyGuide {
