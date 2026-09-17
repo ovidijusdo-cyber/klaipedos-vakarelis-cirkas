@@ -4663,6 +4663,118 @@ textarea {
   line-height: 1.55;
 }
 
+.transport-options-box {
+  display: grid;
+  gap: 12px;
+}
+
+.transport-options-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.transport-options-heading p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.transport-options-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  padding: 10px;
+  border-radius: 15px;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.13);
+}
+
+.checkbox-row.transport-choice {
+  position: relative;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 14px 16px;
+  border: 2px solid rgba(15, 118, 110, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.checkbox-row.transport-choice:hover {
+  border-color: rgba(15, 118, 110, 0.48);
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.1);
+  transform: translateY(-1px);
+}
+
+.checkbox-row.transport-choice input {
+  width: 25px;
+  height: 25px;
+  min-height: 25px;
+  flex: 0 0 25px;
+  margin: 0;
+  accent-color: #0f766e;
+  cursor: pointer;
+}
+
+.transport-choice-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.transport-choice-copy strong {
+  color: #17324d;
+  font-size: 1.04rem;
+}
+
+.transport-choice-copy small {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.checkbox-row.transport-choice.active {
+  border-color: #0f766e;
+  background: linear-gradient(135deg, rgba(204, 251, 241, 0.94), rgba(240, 253, 250, 0.92));
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.14);
+}
+
+.checkbox-row.transport-choice.active.need {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.94), rgba(239, 246, 255, 0.94));
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.13);
+}
+
+.checkbox-row.transport-choice.active.need input {
+  accent-color: #2563eb;
+}
+
+.transport-watch-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  border-radius: 16px;
+  background: rgba(239, 246, 255, 0.9);
+  color: #1e3a5f;
+}
+
+.transport-watch-note p {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.transport-watch-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  color: #2563eb;
+}
+
 .driver-contact-note {
   display: flex;
   align-items: center;

@@ -6244,8 +6244,15 @@ export default function Page() {
                 {formDiscountActive ? <strong className="success-text">Savanorio nuolaida pritaikyta.</strong> : null}
               </div>
 
-              <div className="highlight-box">
-                <label className="checkbox-row">
+              <div className="highlight-box transport-options-box">
+                <div className="transport-options-heading">
+                  <CarIcon className="transport-options-icon" />
+                  <div>
+                    <strong>Kaip atvyksi į vakarėlį?</strong>
+                    <p>Jei aktualu, pažymėk vieną iš pasirinkimų.</p>
+                  </div>
+                </div>
+                <label className={`checkbox-row transport-choice${form.canOfferRide ? " active offer" : ""}`}>
                   <input
                     checked={form.canOfferRide}
                     onChange={(event) => {
@@ -6266,7 +6273,10 @@ export default function Page() {
                     }}
                     type="checkbox"
                   />
-                  <span>Galiu pavežti ką nors</span>
+                  <span className="transport-choice-copy">
+                    <strong>Galiu pavežti ką nors</strong>
+                    <small>Pažymėk, kiek laisvų vietų turi automobilyje.</small>
+                  </span>
                 </label>
                 {form.canOfferRide ? (
                   <div className="stack ride-contact-fields">
@@ -6318,7 +6328,7 @@ export default function Page() {
                 {rideSeatsTouched && form.canOfferRide ? (
                   <div className="validation-error">Pasirinkite, kiek laisvų vietų galite pasiūlyti automobilyje.</div>
                 ) : null}
-                <label className="checkbox-row">
+                <label className={`checkbox-row transport-choice${form.needsRide ? " active need" : ""}`}>
                   <input
                     checked={form.needsRide}
                     onChange={(event) => {
@@ -6334,10 +6344,19 @@ export default function Page() {
                     }}
                     type="checkbox"
                   />
-                  <span>Man reikia pavežimo</span>
+                  <span className="transport-choice-copy">
+                    <strong>Man reikia pavežimo</strong>
+                    <small>Organizatorius matys tavo poreikį ir galės padėti rasti vairuotoją.</small>
+                  </span>
                 </label>
                 {form.needsRide ? (
-                  <p>Organizatorius matys, kad tau reikia transporto, ir galės lengviau sujungti su vairuotojais.</p>
+                  <div className="transport-watch-note">
+                    <CarIcon className="transport-watch-icon" />
+                    <p>
+                      <strong>Po registracijos stebėk skiltį „Vairuotojai, kurie turi vietos“.</strong>
+                      Ten matysi laisvas vietas ir galėsi pasiprašyti važiuoti kartu.
+                    </p>
+                  </div>
                 ) : null}
               </div>
 
