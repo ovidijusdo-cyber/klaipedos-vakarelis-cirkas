@@ -798,6 +798,10 @@
   background: #071d2d;
 }
 
+.mobileNextPiece {
+  display: none;
+}
+
 .previewCell {
   position: relative;
   border-radius: 5px;
@@ -1245,6 +1249,15 @@
     linear-gradient(145deg, #031520, #0b3f4b);
 }
 
+.fullscreenFallback {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+}
+
 .fullscreen .gameCard {
   max-width: 660px;
   width: 100%;
@@ -1423,6 +1436,65 @@
   .boardFrame {
     padding: 7px;
     border-radius: 18px;
+  }
+
+  .mobileNextPiece {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    z-index: 2;
+    width: 72px;
+    display: grid;
+    gap: 2px;
+    justify-items: center;
+    padding: 5px;
+    border: 1px solid rgba(244, 201, 93, 0.5);
+    border-radius: 12px;
+    background: rgba(3, 21, 32, 0.82);
+    color: white;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+    pointer-events: none;
+    backdrop-filter: blur(5px);
+  }
+
+  .mobileNextPiece > small {
+    color: #f4c95d;
+    font-size: 0.5rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mobileNextPiece > strong {
+    max-width: 100%;
+    overflow: hidden;
+    color: white;
+    font-size: 0.55rem;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .preview.previewCompact {
+    width: 54px;
+    height: 54px;
+    margin: 1px 0 0;
+    padding: 3px;
+    gap: 1px;
+    border-radius: 8px;
+  }
+
+  .previewCompact .previewCell {
+    border-radius: 2px;
+  }
+
+  .previewCompact.previewBlocked b {
+    font-size: 0.48rem;
+  }
+
+  .previewCompact.previewBlocked small {
+    display: none;
   }
 
   .controls {

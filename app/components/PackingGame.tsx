@@ -357,6 +357,24 @@ function formatGameDuration(value: number | undefined) {
   return [hours ? `${hours} val.` : "", minutes ? `${minutes} min.` : "", `${seconds} sek.`].filter(Boolean).join(" ");
 }
 
+function NextPieceGrid({ piece, blocked, compact = false }: { piece: PieceTemplate | null; blocked: boolean; compact?: boolean }) {
+  return (
+    <div className={`${styles.preview}${compact ? ` ${styles.previewCompact}` : ""}${blocked ? ` ${styles.previewBlocked}` : ""}`} aria-label="Kita žaidimo detalė">
+      {blocked ? (
+        <div><b>MUITINĖ</b><small>Figūra slepiama</small></div>
+      ) : Array.from({ length: 16 }, (_, index) => {
+          const row = Math.floor(index / 4);
+          const col = index % 4;
+          const shape = piece?.shape ?? [];
+          const rowOffset = Math.floor((4 - shape.length) / 2);
+          const colOffset = Math.floor((4 - (shape[0]?.length ?? 0)) / 2);
+          const filled = shape[row - rowOffset]?.[col - colOffset];
+          return <span className={`${styles.previewCell}${filled ? ` ${styles.filled} ${styles[`color${piece?.color ?? 1}`]}` : ""}`} key={index} />;
+        })}
+    </div>
+  );
+}
+
 export default function PackingGame({
   scores,
   onCreateSession,
@@ -378,6 +396,7 @@ export default function PackingGame({
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const [celebration, setCelebration] = useState<{ id: number; title: string; detail: string } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFallbackFullscreen, setIsFallbackFullscreen] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [preferences, setPreferences] = useState<GamePreferences>(DEFAULT_PREFERENCES);
   const [savedScore, setSavedScore] = useState<number | null>(null);
@@ -453,6 +472,20 @@ export default function PackingGame({
       console.error("Failed to load game preferences", error);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isFallbackFullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFallbackFullscreen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isFallbackFullscreen]);
 
   useEffect(() => {
     try {
@@ -686,13 +719,24 @@ export default function PackingGame({
 
   async function toggleFullscreen() {
     if (!fullscreenRef.current) return;
-    if (document.fullscreenElement === fullscreenRef.current) await document.exitFullscreen();
-    else await fullscreenRef.current.requestFullscreen();
+    if (isFallbackFullscreen) {
+      setIsFallbackFullscreen(false);
+      return;
+    }
+    if (document.fullscreenElement === fullscreenRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+    try {
+      await fullscreenRef.current.requestFullscreen();
+    } catch {
+      setIsFallbackFullscreen(true);
+    }
   }
 
   return (
     <div
-      className={`${styles.shell} ${regionClass}${isFullscreen ? ` ${styles.fullscreen}` : ""}${preferences.reduceEffects ? ` ${styles.reducedEffects}` : ""}`}
+      className={`${styles.shell} ${regionClass}${isFullscreen || isFallbackFullscreen ? ` ${styles.fullscreen}` : ""}${isFallbackFullscreen ? ` ${styles.fullscreenFallback}` : ""}${preferences.reduceEffects ? ` ${styles.reducedEffects}` : ""}`}
       ref={fullscreenRef}
     >
       <div className={styles.gameCard}>
@@ -703,7 +747,7 @@ export default function PackingGame({
             <span className={styles.antiCheatBadge}><i aria-hidden="true" />Veikia anti-sukčiavimo sistema</span>
           </div>
           <button className={styles.fullscreenButton} type="button" onClick={toggleFullscreen}>
-            {isFullscreen ? "Mažinti" : "Visas ekranas"}
+            {isFullscreen || isFallbackFullscreen ? "Mažinti" : "Visas ekranas"}
           </button>
         </div>
 
@@ -771,6 +815,14 @@ export default function PackingGame({
                 return <span className={className} key={key} />;
               }),
             )}
+
+            {state.running ? (
+              <div className={styles.mobileNextPiece} aria-label={`Kita figūra: ${customsActive ? "paslėpta" : state.next?.name ?? "nežinoma"}`}>
+                <small>Kita</small>
+                <strong>{customsActive ? "Tikrinama" : state.next?.name ?? "–"}</strong>
+                <NextPieceGrid piece={state.next} blocked={customsActive} compact />
+              </div>
+            ) : null}
 
             {ticketMode ? (
               <div className={styles.ticketRows} aria-label="Pasirink eilutę, kurią pašalins auksinis bilietas">
@@ -891,19 +943,7 @@ export default function PackingGame({
             <strong>Kita detalė</strong>
             <span>{customsActive ? "Tikrinama" : state.next?.name ?? "Laukia starto"}</span>
           </div>
-          <div className={`${styles.preview}${customsActive ? ` ${styles.previewBlocked}` : ""}`} aria-label="Kita žaidimo detalė">
-            {customsActive ? (
-              <div><b>MUITINĖ</b><small>Figūra slepiama</small></div>
-            ) : Array.from({ length: 16 }, (_, index) => {
-                const row = Math.floor(index / 4);
-                const col = index % 4;
-                const shape = state.next?.shape ?? [];
-                const rowOffset = Math.floor((4 - shape.length) / 2);
-                const colOffset = Math.floor((4 - (shape[0]?.length ?? 0)) / 2);
-                const filled = shape[row - rowOffset]?.[col - colOffset];
-                return <span className={`${styles.previewCell}${filled ? ` ${styles.filled} ${styles[`color${state.next?.color ?? 1}`]}` : ""}`} key={index} />;
-              })}
-          </div>
+          <NextPieceGrid piece={state.next} blocked={customsActive} />
           {playerName.trim() ? <div className={styles.playerTag}>Žaidžia: <strong>{playerName.trim()}</strong></div> : null}
           <button className={styles.newGameButton} disabled={starting} type="button" onClick={() => void startGame()}>
             {starting ? "Tikrinama..." : state.active || state.gameOver ? "Pradėti iš naujo" : "Pradėti žaidimą"}

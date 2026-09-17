@@ -332,69 +332,94 @@ const VOLUNTEER_DISCOUNT_PERCENT = 50;
 const MAX_PLACES = 140;
 const SONG_PLAYLIST_PIN = "v";
 const SONG_VOTES_STORAGE_KEY = "klaipedos-vakaras-song-votes";
-const COMMON_SONG_TITLE = "Laimingos akys, reginčios tave";
+const COMMON_SONG_TITLE = "Ošia Vilnius";
 const COMMON_SONG_LYRICS = [
   {
     title: "1.",
     lines: [
-      "Ten pašlaitėje, tolumoj,",
-      "Saulės spindulių nušviestoj,",
-      "Jėzaus klausosi nuščiuvusi minia.",
-      "Kiek jo žodžiuose išminties!",
-      "Sminga jie giliai lig širdies.",
-      "„Ak, laimingos akys, reginčios tave!“",
+      "Suplaukia iš arti toli,",
+      "Šypsenos miestą pripildo.",
+      "„Labas!“ tau ištart skubu",
+      "Ir šiltai apkabinu.",
+      "Klegesys, dūzgesys",
+      "Šoka raudonais stogais.",
+      "Brolių, sesių debesis",
+      "Laimės tuoj prapliups lašais.",
     ],
   },
   {
-    title: "PRIEGIESMIS:",
+    title: "PRIEDAINIS:",
     chorus: true,
     lines: [
-      "Ar matai? Ar girdi?",
-      "Atsiliepk širdimi.",
-      "Lyg šviesa, žiburys nakty",
-      "Šviečia mums tiesa – tiesa ryški.",
+      "Ošia Vilnius! Ar girdi?",
+      "Vien draugai – seni, nauji.",
+      "Aidi Vilnius, ir aidės!",
+      "Džiaugsmas širdyje neblės.",
+      "Jūroj švytinčių veidų",
+      "Ar matai save ir tu?",
+      "Saisto mus šilti saitai –",
+      "Taip gyvensim amžinai.",
     ],
   },
   {
     title: "2.",
     lines: [
-      "Gal širdis sunki, prislėgta?",
-      "Kas įvyks rytoj, nežinia.",
-      "Dar neprašius, ko mums reikia, žino jis.",
-      "Jeigu taip gražiai aprengta",
-      "Paprasta laukų lelija,",
-      "Mūsų Tėvas pasirūpins ir mumis.",
+      "Ankstų rytą su kava",
+      "Į batus – ir važiuojam!",
+      "Įspūdžių pilna diena,",
+      "Pakeliui linksmai dainuojam.",
+      "¡Hola! Hej! Konichiwa!",
+      "Vienas kitą mes suprantam.",
+      "Kalbam meilės mes kalba",
+      "Ir gerais bičiuliais tampam.",
     ],
   },
   {
-    title: "PRIEGIESMIS:",
+    title: "PRIEDAINIS:",
     chorus: true,
     lines: [
-      "Ar matai? Ar girdi?",
-      "Atsiliepk širdimi.",
-      "Lyg šviesa, žiburys nakty",
-      "Šviečia mums tiesa – tiesa ryški.",
+      "Ošia Vilnius! Ar girdi?",
+      "Vien draugai – seni, nauji.",
+      "Aidi Vilnius, ir aidės!",
+      "Džiaugsmas širdyje neblės.",
+      "Jūroj švytinčių veidų",
+      "Ar matai save ir tu?",
+      "Saisto mus šilti saitai –",
+      "Taip gyvensim amžinai.",
+    ],
+  },
+  {
+    title: "INTARPAS:",
+    lines: [
+      "O virš mūsų, pažiūrėk,",
+      "Sklando dangumi gandrai.",
+      "Užsimerki, atsikvėpk,",
+      "Skriek su jais aukštai aukštai.",
     ],
   },
   {
     title: "3.",
     lines: [
-      "Nebijok liūties nei audros,",
-      "Tik stovėk tvirtai ant uolos.",
-      "Dievo Žodį vykdyk, kliaukis jo galia.",
-      "Tik siauru keliu eidami,",
-      "Pro ankštus vartus žengdami",
-      "Pamatysim: žemėj Dievo bus valia.",
+      "Kas kitas, jei ne Jehova,",
+      "Taip suvienytų visus?",
+      "Kils jam mūsų padėka,",
+      "Jam vienam šlovė tebus.",
     ],
   },
   {
-    title: "PRIEGIESMIS:",
+    title: "PRIEDAINIS:",
     chorus: true,
     lines: [
-      "Ar matai? Ar girdi?",
-      "Atsiliepk širdimi.",
-      "Lyg šviesa, žiburys nakty",
-      "Šviečia mums tiesa – tiesa ryški.",
+      "Ošia Vilnius! Ar girdi?",
+      "Vien draugai – seni, nauji.",
+      "Tiek spalvų ir tiek tautų!",
+      "Širdys plaka vienu ritmu.",
+      "Nepamiršim niekados",
+      "Šios laimingos dienos.",
+      "Kas bebūtų ateity,",
+      "Niekad nesame vieni.",
+      "Kas bebūtų ateity,",
+      "Niekad nesame vieni.",
     ],
   },
 ];
@@ -687,7 +712,7 @@ const COMMON_SONGS = {
   },
 };
 type CommonSongLanguage = keyof typeof COMMON_SONGS;
-const COMMON_SONG_LANGUAGE_OPTIONS = Object.entries(COMMON_SONGS).map(([id, song]) => ({
+const COMMON_SONG_LANGUAGE_OPTIONS = Object.entries(COMMON_SONGS).filter(([id]) => id === "lt").map(([id, song]) => ({
   id: id as CommonSongLanguage,
   label: song.label,
   name: song.name,
@@ -5045,7 +5070,7 @@ export default function Page() {
             </button>
             <button className="common-song-hero-button" type="button" onClick={() => { setCommonSongLanguage("lt"); setCommonSongOpen(true); }}>
               <MusicNoteIcon />
-              Bendra daina
+              Bendra daina · Ošia Vilnius
             </button>
             <button className="ghost-button light" type="button" onClick={() => setTransferOpen(true)}>
               Susikeisti
@@ -6979,19 +7004,21 @@ export default function Page() {
         onClose={() => setCommonSongOpen(false)}
       >
         <div className="common-song-modal">
-          <div className="common-song-languages" aria-label="Pasirinkti dainos kalbą">
-            {COMMON_SONG_LANGUAGE_OPTIONS.map((language) => (
-              <button
-                className={commonSongLanguage === language.id ? "active" : ""}
-                key={language.id}
-                type="button"
-                onClick={() => setCommonSongLanguage(language.id)}
-              >
-                <strong>{language.label}</strong>
-                <span>{language.name}</span>
-              </button>
-            ))}
-          </div>
+          {COMMON_SONG_LANGUAGE_OPTIONS.length > 1 ? (
+            <div className="common-song-languages" aria-label="Pasirinkti dainos kalbą">
+              {COMMON_SONG_LANGUAGE_OPTIONS.map((language) => (
+                <button
+                  className={commonSongLanguage === language.id ? "active" : ""}
+                  key={language.id}
+                  type="button"
+                  onClick={() => setCommonSongLanguage(language.id)}
+                >
+                  <strong>{language.label}</strong>
+                  <span>{language.name}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="common-song-toolbar">
             <span>Šrifto dydis: {commonSongFontSize}px</span>
             <div>
@@ -7015,8 +7042,8 @@ export default function Page() {
             {activeCommonSong.sections.map((section, index) => (
               <section className={section.chorus ? "song-section chorus" : "song-section"} key={`${section.title}-${index}`}>
                 <h3>{section.title}</h3>
-                {section.lines.map((line) => (
-                  <p key={line}>{line}</p>
+                {section.lines.map((line, lineIndex) => (
+                  <p key={`${line}-${lineIndex}`}>{line}</p>
                 ))}
               </section>
             ))}
