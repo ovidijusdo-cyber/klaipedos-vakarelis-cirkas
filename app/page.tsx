@@ -131,6 +131,10 @@ type GameScore = {
   finishedAt?: string;
   durationMs?: number;
   verified?: boolean;
+  scoreTimeline?: Array<{
+    atMs: number;
+    score: number;
+  }>;
   auditSummary?: {
     customsChecks: number;
     directFlights: number;

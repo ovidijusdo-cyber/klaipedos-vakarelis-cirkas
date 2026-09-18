@@ -18,6 +18,11 @@ const CUSTOMS_INTERVAL = 10;
 const LOST_LUGGAGE_INTERVAL = 14;
 const GOLDEN_TICKET_INTERVAL = 24;
 const MAX_AUDIT_EVENTS = 40;
+const MAX_TIMELINE_POINTS = 120;
+const RISK_CHOICE_LEVEL = 3;
+const NO_LUGGAGE_LINE_BONUS = 150;
+
+type RiskRoute = "safe" | "express" | "no-luggage";
 
 type SessionPayload = {
   fingerprint: string;
@@ -31,6 +36,8 @@ type ProofEvent = {
   cleared: number;
   dropPoints: number;
   goldenTicketsUsed: number;
+  riskRoute: RiskRoute;
+  routeChosen: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -112,15 +119,21 @@ function parseProofEvents(value: unknown, proofVersion: number): ProofEvent[] | 
     const dropPoints = Number(item.dropPoints);
     const atMs = Number(item.atMs);
     const goldenTicketsUsed = Number(item.goldenTicketsUsed ?? 0);
+    const riskRoute = item.riskRoute;
+    const routeChosen = item.routeChosen;
     if (!Number.isInteger(cleared) || cleared < 0 || cleared > 4) return null;
     if (!Number.isInteger(dropPoints) || dropPoints < 0 || dropPoints > 34) return null;
     if (!Number.isInteger(goldenTicketsUsed) || goldenTicketsUsed < 0 || goldenTicketsUsed > 4) return null;
     if (proofVersion >= 2 && (!Number.isInteger(atMs) || atMs < 0 || atMs > SESSION_TTL_MS)) return null;
+    if (proofVersion >= 3 && !(["safe", "express", "no-luggage"] as unknown[]).includes(riskRoute)) return null;
+    if (proofVersion >= 3 && typeof routeChosen !== "boolean") return null;
     events.push({
       ...(proofVersion >= 2 ? { atMs } : {}),
       cleared,
       dropPoints,
       goldenTicketsUsed,
+      riskRoute: proofVersion >= 3 ? riskRoute as RiskRoute : "safe",
+      routeChosen: proofVersion >= 3 ? routeChosen as boolean : false,
     });
   }
   return events;
@@ -128,7 +141,7 @@ function parseProofEvents(value: unknown, proofVersion: number): ProofEvent[] | 
 
 function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
   const proof = isRecord(body.proof) ? body.proof : null;
-  const proofVersion = Number(proof?.version) === 2 ? 2 : 1;
+  const proofVersion = Number(proof?.version) === 3 ? 3 : Number(proof?.version) === 2 ? 2 : 1;
   const events = parseProofEvents(proof?.events, proofVersion);
   const submittedScore = Number(body.score);
   if (!proof || !events || !Number.isInteger(submittedScore) || submittedScore < 0 || submittedScore > 2_000_000) return null;
@@ -145,6 +158,9 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
   let goldenTicketsEarned = 0;
   let goldenTicketsUsed = 0;
   let previousAtMs = 0;
+  let selectedRiskRoute: RiskRoute | null = null;
+  let routeWasChosen = false;
+  const scoreTimeline: Array<{ atMs: number; score: number }> = [];
 
   for (const [index, event] of events.entries()) {
     if (proofVersion >= 2) {
@@ -155,18 +171,33 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
       goldenTicketsUsed += event.goldenTicketsUsed;
     }
     const levelBeforeClear = 1 + Math.floor(lines / 10);
+    if (proofVersion >= 3) {
+      if (!event.routeChosen && routeWasChosen) return null;
+      if (event.routeChosen && levelBeforeClear < RISK_CHOICE_LEVEL) return null;
+      if (event.routeChosen && !routeWasChosen) {
+        selectedRiskRoute = event.riskRoute;
+        routeWasChosen = true;
+      }
+      if (routeWasChosen && event.riskRoute !== selectedRiskRoute) return null;
+      if (!event.routeChosen && event.riskRoute !== "safe") return null;
+    }
+    const scoreMultiplier = event.riskRoute === "express" ? 2 : 1;
     combo = event.cleared ? combo + 1 : 0;
-    score += event.dropPoints;
-    score += (LINE_POINTS[event.cleared] ?? 0) * levelBeforeClear;
-    score += event.cleared ? Math.max(0, combo - 1) * 50 * levelBeforeClear : 0;
+    score += event.dropPoints * scoreMultiplier;
+    score += (LINE_POINTS[event.cleared] ?? 0) * levelBeforeClear * scoreMultiplier;
+    score += (event.cleared ? Math.max(0, combo - 1) * 50 * levelBeforeClear : 0) * scoreMultiplier;
     if (proofVersion >= 2 && event.cleared === 4) {
-      score += DIRECT_FLIGHT_BONUS * levelBeforeClear;
+      score += DIRECT_FLIGHT_BONUS * levelBeforeClear * scoreMultiplier;
       directFlights += 1;
+    }
+    if (proofVersion >= 3 && event.riskRoute === "no-luggage") {
+      score += event.cleared * NO_LUGGAGE_LINE_BONUS * levelBeforeClear;
     }
     lines += event.cleared;
     maxClear = Math.max(maxClear, event.cleared);
     maxCombo = Math.max(maxCombo, combo);
     if ((index + 1) % GOLDEN_TICKET_INTERVAL === 0) goldenTicketsEarned += 1;
+    if (event.atMs !== undefined) scoreTimeline.push({ atMs: event.atMs, score });
   }
 
   const level = 1 + Math.floor(lines / 10);
@@ -187,12 +218,15 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
       cleared: event.cleared,
       dropPoints: event.dropPoints,
       ...(event.goldenTicketsUsed ? { goldenTicketsUsed: event.goldenTicketsUsed } : {}),
+      ...(proofVersion >= 3 ? { riskRoute: event.riskRoute, routeChosen: event.routeChosen } : {}),
       ...(ordinal % CUSTOMS_INTERVAL === 0 ? { customsCheck: true } : {}),
       ...(ordinal % LOST_LUGGAGE_INTERVAL === 0 ? { lostLuggage: true } : {}),
       ...(ordinal % GOLDEN_TICKET_INTERVAL === 0 ? { goldenPiece: true } : {}),
       ...(event.cleared === 4 && proofVersion >= 2 ? { directFlight: true } : {}),
     };
   });
+  const timelineStep = Math.max(1, Math.ceil(scoreTimeline.length / MAX_TIMELINE_POINTS));
+  const compactScoreTimeline = scoreTimeline.filter((_, index) => index % timelineStep === 0 || index === scoreTimeline.length - 1);
 
   return {
     auditLog,
@@ -211,6 +245,7 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
     maxCombo,
     proofVersion,
     score,
+    scoreTimeline: compactScoreTimeline,
   };
 }
 
@@ -229,6 +264,16 @@ function publicScores(value: unknown) {
     const verificationVersion = Number(item.verificationVersion);
     const auditSummary = isRecord(item.auditSummary) ? item.auditSummary : undefined;
     const auditLog = Array.isArray(item.auditLog) ? item.auditLog.filter(isRecord).slice(-MAX_AUDIT_EVENTS) : undefined;
+    const scoreTimeline = Array.isArray(item.scoreTimeline)
+      ? item.scoreTimeline.flatMap((point) => {
+          if (!isRecord(point)) return [];
+          const atMs = Number(point.atMs);
+          const pointScore = Number(point.score);
+          return Number.isInteger(atMs) && atMs >= 0 && atMs <= SESSION_TTL_MS && Number.isInteger(pointScore) && pointScore >= 0
+            ? [{ atMs, score: pointScore }]
+            : [];
+        }).slice(-MAX_TIMELINE_POINTS)
+      : undefined;
     return Number.isFinite(id) && Number.isInteger(score) && score >= 0 && name && createdAt
       ? [{
           id,
@@ -242,6 +287,7 @@ function publicScores(value: unknown) {
           ...(Number.isInteger(verificationVersion) && verificationVersion > 0 ? { verificationVersion } : {}),
           ...(auditSummary ? { auditSummary } : {}),
           ...(auditLog ? { auditLog } : {}),
+          ...(scoreTimeline?.length ? { scoreTimeline } : {}),
         }]
       : [];
   });
@@ -288,6 +334,7 @@ export async function POST(request: Request) {
       verificationVersion: verified.proofVersion,
       auditSummary: verified.auditSummary,
       auditLog: verified.auditLog,
+      scoreTimeline: verified.scoreTimeline,
     };
     const notificationEntry = {
       id: scoreEntry.id + 1,

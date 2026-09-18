@@ -12,6 +12,10 @@ type GameScore = {
   finishedAt?: string;
   durationMs?: number;
   verified?: boolean;
+  scoreTimeline?: Array<{
+    atMs: number;
+    score: number;
+  }>;
   auditSummary?: {
     customsChecks: number;
     directFlights: number;
@@ -32,11 +36,15 @@ type ActivePiece = PieceTemplate & {
   row: number;
 };
 
+type RiskRoute = "safe" | "express" | "no-luggage";
+
 export type GameProofEvent = {
   atMs: number;
   cleared: number;
   dropPoints: number;
   goldenTicketsUsed: number;
+  riskRoute: RiskRoute;
+  routeChosen: boolean;
 };
 
 export type GameScoreProof = {
@@ -45,7 +53,7 @@ export type GameScoreProof = {
   lines: number;
   maxClear: number;
   maxCombo: number;
-  version: 2;
+  version: 3;
   sessionToken: string;
 };
 
@@ -68,6 +76,8 @@ type GameState = {
   next: PieceTemplate | null;
   pieceDropPoints: number;
   proofEvents: GameProofEvent[];
+  riskRoute: RiskRoute;
+  routeChosen: boolean;
   running: boolean;
   score: number;
   startedAtMs: number;
@@ -80,6 +90,7 @@ type GameAction =
   | { type: "rotate" }
   | { type: "softDrop" }
   | { type: "hardDrop" }
+  | { type: "chooseRoute"; route: RiskRoute }
   | { type: "useGoldenTicket"; row: number };
 
 const BOARD_COLS = 10;
@@ -89,6 +100,8 @@ const DIRECT_FLIGHT_BONUS = 1_200;
 const CUSTOMS_INTERVAL = 10;
 const LOST_LUGGAGE_INTERVAL = 14;
 const GOLDEN_TICKET_INTERVAL = 24;
+const RISK_CHOICE_LEVEL = 3;
+const NO_LUGGAGE_LINE_BONUS = 150;
 const PREFERENCES_KEY = "packing-game-preferences-v1";
 
 type GamePreferences = {
@@ -120,6 +133,12 @@ const REGIONS = [
   { id: "Africa", code: "AF", name: "Afrika", note: "Šiltasis etapas" },
   { id: "Oceania", code: "OK", name: "Okeanija", note: "Kelionė aplink pasaulį" },
 ] as const;
+
+const RISK_ROUTES: Array<{ id: RiskRoute; name: string; detail: string; reward: string }> = [
+  { id: "safe", name: "Saugus maršrutas", detail: "Įprastas greitis ir matoma kita figūra.", reward: "Įprasti taškai" },
+  { id: "express", name: "Ekspresas", detail: "Figūros krinta 28 % greičiau.", reward: "Dvigubi taškai" },
+  { id: "no-luggage", name: "Be bagažo", detail: "Kita figūra lieka paslėpta.", reward: "+150 už eilutę × lygis" },
+];
 
 const PIECES: PieceTemplate[] = [
   { color: 1, name: "Skrydis", shape: [[1, 1, 1, 1]] },
@@ -200,6 +219,10 @@ function clearCompletedLines(board: number[][]) {
   };
 }
 
+function routeScoreMultiplier(route: RiskRoute) {
+  return route === "express" ? 2 : 1;
+}
+
 function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameState {
   const result = clearCompletedLines(mergePiece(state.board, piece));
   const lines = state.lines + result.cleared;
@@ -207,7 +230,9 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
   const combo = result.cleared ? state.combo + 1 : 0;
   const comboBonus = result.cleared ? Math.max(0, combo - 1) * 50 * state.level : 0;
   const directFlightBonus = result.cleared === 4 ? DIRECT_FLIGHT_BONUS * state.level : 0;
-  const score = state.score + dropBonus + (LINE_POINTS[result.cleared] ?? 0) * state.level + comboBonus + directFlightBonus;
+  const routeMultiplier = routeScoreMultiplier(state.riskRoute);
+  const noLuggageBonus = state.riskRoute === "no-luggage" ? result.cleared * NO_LUGGAGE_LINE_BONUS * state.level : 0;
+  const score = state.score + (dropBonus + (LINE_POINTS[result.cleared] ?? 0) * state.level + comboBonus + directFlightBonus) * routeMultiplier + noLuggageBonus;
   const nextTemplate = state.next ?? randomPiece();
   const eventNumber = state.proofEvents.length + 1;
   const nextOrdinal = eventNumber + 1;
@@ -240,6 +265,8 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
       cleared: result.cleared,
       dropPoints: pieceDropPoints,
       goldenTicketsUsed: state.goldenTicketsUsedPending,
+      riskRoute: state.riskRoute,
+      routeChosen: state.routeChosen,
     }],
     score,
   };
@@ -270,6 +297,8 @@ const initialGameState: GameState = {
   next: null,
   pieceDropPoints: 0,
   proofEvents: [],
+  riskRoute: "safe",
+  routeChosen: false,
   running: false,
   score: 0,
   startedAtMs: 0,
@@ -289,6 +318,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   }
 
   if (!state.running || !state.active) return state;
+
+  if (action.type === "chooseRoute") {
+    if (state.routeChosen || state.level < RISK_CHOICE_LEVEL) return state;
+    return { ...state, riskRoute: action.route, routeChosen: true };
+  }
 
   if (action.type === "useGoldenTicket") {
     if (state.goldenTickets < 1 || action.row < 0 || action.row >= BOARD_ROWS || !state.board[action.row].some(Boolean)) return state;
@@ -328,7 +362,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       ...state,
       active: { ...state.active, row: nextRow },
       pieceDropPoints: state.pieceDropPoints + (action.type === "softDrop" ? 1 : 0),
-      score: state.score + (action.type === "softDrop" ? 1 : 0),
+      score: state.score + (action.type === "softDrop" ? routeScoreMultiplier(state.riskRoute) : 0),
     };
   }
 
@@ -355,6 +389,21 @@ function formatGameDuration(value: number | undefined) {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   return [hours ? `${hours} val.` : "", minutes ? `${minutes} min.` : "", `${seconds} sek.`].filter(Boolean).join(" ");
+}
+
+function scoreAtElapsed(entry: GameScore | undefined, elapsedMs: number) {
+  if (!entry || elapsedMs <= 0) return 0;
+  const timeline = entry.scoreTimeline?.filter((point) => Number.isFinite(point.atMs) && Number.isFinite(point.score)) ?? [];
+  if (timeline.length) {
+    let latest = 0;
+    for (const point of timeline) {
+      if (point.atMs > elapsedMs) break;
+      latest = point.score;
+    }
+    return elapsedMs >= (entry.durationMs ?? Number.POSITIVE_INFINITY) ? entry.score : latest;
+  }
+  if (!entry.durationMs) return 0;
+  return Math.round(entry.score * Math.min(1, elapsedMs / entry.durationMs));
 }
 
 function NextPieceGrid({ piece, blocked, compact = false }: { piece: PieceTemplate | null; blocked: boolean; compact?: boolean }) {
@@ -385,6 +434,7 @@ export default function PackingGame({
   onSaveScore: (name: string, score: number, proof: GameScoreProof) => Promise<boolean>;
 }) {
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const sessionHandlerRef = useRef(onCreateSession);
   const sessionTokenRef = useRef("");
@@ -397,6 +447,7 @@ export default function PackingGame({
   const [celebration, setCelebration] = useState<{ id: number; title: string; detail: string } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFallbackFullscreen, setIsFallbackFullscreen] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const [playerName, setPlayerName] = useState("");
   const [preferences, setPreferences] = useState<GamePreferences>(DEFAULT_PREFERENCES);
   const [savedScore, setSavedScore] = useState<number | null>(null);
@@ -413,19 +464,28 @@ export default function PackingGame({
     [scores],
   );
   const topScores = sortedScores.slice(0, 5);
+  const leader = sortedScores[0];
   const qualifiesForTopFive = state.score > 0 && (topScores.length < 5 || state.score > (topScores[4]?.score ?? 0));
   const liveRank = state.score > 0 ? 1 + sortedScores.filter((entry) => entry.score > state.score).length : null;
   const activeOrdinal = state.proofEvents.length + 1;
   const customsActive = state.running && activeOrdinal > 1 && activeOrdinal % CUSTOMS_INTERVAL === 0;
+  const nextPieceHidden = customsActive || (state.routeChosen && state.riskRoute === "no-luggage");
   const lostLuggageActive = state.running && activeOrdinal > 1 && activeOrdinal % LOST_LUGGAGE_INTERVAL === 0;
   const goldenPieceActive = state.running && activeOrdinal > 1 && activeOrdinal % GOLDEN_TICKET_INTERVAL === 0;
   const regionIndex = Math.min(REGIONS.length - 1, Math.max(0, state.level - 1));
   const region = REGIONS[regionIndex];
   const regionClass = styles[`region${region.id}`];
-  const regularDropDelay = Math.max(135, 820 - (state.level - 1) * 55);
-  const previousLevelDropDelay = Math.max(135, 820 - Math.max(0, state.level - 2) * 55);
+  const routeSpeedFactor = state.routeChosen && state.riskRoute === "express" ? 0.72 : 1;
+  const regularDropDelay = Math.max(95, Math.round((820 - (state.level - 1) * 55) * routeSpeedFactor));
+  const previousLevelDropDelay = Math.max(95, Math.round((820 - Math.max(0, state.level - 2) * 55) * routeSpeedFactor));
   const dropDelay = stabilitySeconds > 0 ? previousLevelDropDelay : regularDropDelay;
   const speedMultiplier = (820 / dropDelay).toFixed(1).replace(".", ",");
+  const leaderShadowScore = scoreAtElapsed(leader, elapsedMs);
+  const leaderShadowDelta = state.score - leaderShadowScore;
+  const shadowScale = Math.max(1, leader?.score ?? 0, state.score, leaderShadowScore);
+  const currentShadowWidth = Math.min(100, (state.score / shadowScale) * 100);
+  const leaderShadowPosition = Math.min(100, (leaderShadowScore / shadowScale) * 100);
+  const activeRiskRoute = RISK_ROUTES.find((item) => item.id === state.riskRoute) ?? RISK_ROUTES[0];
   const missions = [
     { id: "lines", title: "Maršruto pradžia", detail: "Pašalink 3 eilutes", progress: `${Math.min(state.lines, 3)}/3`, done: state.lines >= 3 },
     { id: "score", title: "Pilnas bilietas", detail: "Surink 1 000 taškų", progress: `${Math.min(state.score, 1000)}/1000`, done: state.score >= 1000 },
@@ -502,6 +562,14 @@ export default function PackingGame({
   }, [dropDelay, state.running]);
 
   useEffect(() => {
+    if (!state.running || !state.startedAtMs) return;
+    const updateElapsed = () => setElapsedMs(Date.now() - state.startedAtMs);
+    updateElapsed();
+    const timer = window.setInterval(updateElapsed, 250);
+    return () => window.clearInterval(timer);
+  }, [state.running, state.startedAtMs]);
+
+  useEffect(() => {
     const eventCount = state.proofEvents.length;
     if (!preferences.haptics || eventCount <= hapticEventRef.current) {
       hapticEventRef.current = eventCount;
@@ -533,6 +601,26 @@ export default function PackingGame({
 
   useEffect(() => {
     if (!state.effectId) return;
+    const audioContext = audioContextRef.current;
+    if (audioContext && state.lastClear) {
+      const notes = Math.min(4, Math.max(1, state.combo));
+      const baseFrequency = [392, 440, 494, 523, 587][regionIndex] ?? 440;
+      void audioContext.resume().catch(() => undefined);
+      for (let index = 0; index < notes; index += 1) {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const startsAt = audioContext.currentTime + index * 0.075;
+        oscillator.type = state.combo >= 3 ? "triangle" : "sine";
+        oscillator.frequency.setValueAtTime(baseFrequency * (1 + index * 0.18), startsAt);
+        gain.gain.setValueAtTime(0.0001, startsAt);
+        gain.gain.exponentialRampToValueAtTime(0.045 + Math.min(state.combo, 4) * 0.012, startsAt + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + 0.22);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startsAt);
+        oscillator.stop(startsAt + 0.24);
+      }
+    }
     const comboTitle = state.combo >= 4
       ? "Kelionės meistras"
       : state.combo === 3
@@ -557,7 +645,7 @@ export default function PackingGame({
     setCelebration({ id: state.effectId, title, detail });
     const timer = window.setTimeout(() => setCelebration(null), 1250);
     return () => window.clearTimeout(timer);
-  }, [region, state.combo, state.effectId, state.lastBonus, state.lastClear, state.level, state.leveledUp]);
+  }, [region, regionIndex, state.combo, state.effectId, state.lastBonus, state.lastClear, state.level, state.leveledUp]);
 
   useEffect(() => {
     const isBonusLevel = state.level >= 5 && (state.level - 5) % 3 === 0;
@@ -598,7 +686,7 @@ export default function PackingGame({
       lines: state.lines,
       maxClear: state.maxClear,
       maxCombo: state.maxCombo,
-      version: 2,
+      version: 3,
       sessionToken: sessionTokenRef.current,
     };
     void scoreHandlerRef.current(name, state.score, proof).then((saved) => {
@@ -623,6 +711,8 @@ export default function PackingGame({
       return;
     }
     if (starting) return;
+    if (!audioContextRef.current) audioContextRef.current = new AudioContext();
+    void audioContextRef.current.resume().catch(() => undefined);
     setStarting(true);
     setStartError("");
     const sessionToken = await sessionHandlerRef.current();
@@ -640,8 +730,20 @@ export default function PackingGame({
     setStabilityUntil(0);
     setStartError("");
     setTicketMode(false);
+    setElapsedMs(0);
     hapticEventRef.current = 0;
     dispatch({ type: "start", startedAtMs: Date.now() });
+  }
+
+  function chooseRiskRoute(route: RiskRoute) {
+    if (!state.running || state.routeChosen || state.level < RISK_CHOICE_LEVEL) return;
+    dispatch({ type: "chooseRoute", route });
+    const selected = RISK_ROUTES.find((item) => item.id === route);
+    setCelebration({
+      id: Date.now(),
+      title: selected?.name ?? "Maršrutas pasirinktas",
+      detail: selected?.reward ?? "Kelionė tęsiama",
+    });
   }
 
   async function retryScoreSave() {
@@ -655,7 +757,7 @@ export default function PackingGame({
       lines: state.lines,
       maxClear: state.maxClear,
       maxCombo: state.maxCombo,
-      version: 2,
+      version: 3,
       sessionToken: sessionTokenRef.current,
     });
     setSaving(false);
@@ -777,6 +879,23 @@ export default function PackingGame({
           </div>
         ) : null}
 
+        {state.running && leader?.score ? (
+          <div className={styles.rivalShadow} aria-live="polite">
+            <div className={styles.rivalShadowHead}>
+              <span>Varžovo šešėlis · {leader.name}</span>
+              <strong>Lyderis tuo metu: {leaderShadowScore} tšk.</strong>
+            </div>
+            <div className={styles.rivalShadowTrack} aria-hidden="true">
+              <i style={{ width: `${currentShadowWidth}%` }} />
+              <b style={{ left: `${leaderShadowPosition}%` }} />
+            </div>
+            <small className={leaderShadowDelta >= 0 ? styles.shadowAhead : styles.shadowBehind}>
+              {leaderShadowDelta >= 0 ? `Lenki lyderio tempą +${leaderShadowDelta}` : `Iki lyderio tempo trūksta ${Math.abs(leaderShadowDelta)}`}
+              {!leader.scoreTimeline?.length ? " · tempas apskaičiuotas pagal žaidimo trukmę" : ""}
+            </small>
+          </div>
+        ) : null}
+
         {stabilitySeconds > 0 ? (
           <div className={styles.stabilityBanner} aria-live="polite">
             <strong>Ramus skrydis</strong>
@@ -797,13 +916,21 @@ export default function PackingGame({
           </div>
         ) : null}
 
+        {state.running && state.routeChosen ? (
+          <div className={`${styles.activeRiskRoute} ${styles[`route-${state.riskRoute}`]}`}>
+            <span>Pasirinktas maršrutas</span>
+            <strong>{activeRiskRoute.name}</strong>
+            <small>{activeRiskRoute.reward}</small>
+          </div>
+        ) : null}
+
         <div
           className={styles.boardFrame}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div className={`${styles.board}${celebration && state.lastClear ? ` ${styles.boardClearing}` : ""}`} role="group" aria-label="Žaidimo Lagaminas 360 lenta">
+          <div className={`${styles.board}${celebration && state.lastClear ? ` ${styles.boardClearing}` : ""}${celebration && state.lastClear && state.combo > 1 ? ` ${styles.boardChain} ${styles[`chain${Math.min(state.combo, 4)}`]}` : ""}`} role="group" aria-label="Žaidimo Lagaminas 360 lenta">
             {state.board.flatMap((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const key = `${rowIndex}:${colIndex}`;
@@ -817,10 +944,35 @@ export default function PackingGame({
             )}
 
             {state.running ? (
-              <div className={styles.mobileNextPiece} aria-label={`Kita figūra: ${customsActive ? "paslėpta" : state.next?.name ?? "nežinoma"}`}>
+              <div className={styles.mobileNextPiece} aria-label={`Kita figūra: ${nextPieceHidden ? "paslėpta" : state.next?.name ?? "nežinoma"}`}>
                 <small>Kita</small>
-                <strong>{customsActive ? "Tikrinama" : state.next?.name ?? "–"}</strong>
-                <NextPieceGrid piece={state.next} blocked={customsActive} compact />
+                <strong>{nextPieceHidden ? state.riskRoute === "no-luggage" ? "Be bagažo" : "Tikrinama" : state.next?.name ?? "–"}</strong>
+                <NextPieceGrid piece={state.next} blocked={nextPieceHidden} compact />
+              </div>
+            ) : null}
+
+            {state.running && state.level >= RISK_CHOICE_LEVEL && !state.routeChosen ? (
+              <div className={styles.riskChoice} aria-live="polite" onTouchStart={(event) => event.stopPropagation()} onTouchEnd={(event) => event.stopPropagation()}>
+                <div>
+                  <span>3 lygio pasirinkimas</span>
+                  <strong>Pasirink kelionės riziką</strong>
+                  <small>Žaidimas tęsiasi, todėl rinkis greitai.</small>
+                </div>
+                <div className={styles.riskChoiceGrid}>
+                  {RISK_ROUTES.map((route) => (
+                    <button key={route.id} type="button" onClick={() => chooseRiskRoute(route.id)}>
+                      <strong>{route.name}</strong>
+                      <span>{route.detail}</span>
+                      <b>{route.reward}</b>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {celebration && state.lastClear && state.combo > 1 && !preferences.reduceEffects ? (
+              <div className={styles.chainAura} key={`chain-${celebration.id}`} aria-hidden="true">
+                <span>Kombo x{state.combo}</span>
               </div>
             ) : null}
 
@@ -941,9 +1093,9 @@ export default function PackingGame({
         <div className={styles.sideCard}>
           <div className={styles.sideTitle}>
             <strong>Kita detalė</strong>
-            <span>{customsActive ? "Tikrinama" : state.next?.name ?? "Laukia starto"}</span>
+            <span>{nextPieceHidden ? state.riskRoute === "no-luggage" ? "Be bagažo" : "Tikrinama" : state.next?.name ?? "Laukia starto"}</span>
           </div>
-          <NextPieceGrid piece={state.next} blocked={customsActive} />
+          <NextPieceGrid piece={state.next} blocked={nextPieceHidden} />
           {playerName.trim() ? <div className={styles.playerTag}>Žaidžia: <strong>{playerName.trim()}</strong></div> : null}
           <button className={styles.newGameButton} disabled={starting} type="button" onClick={() => void startGame()}>
             {starting ? "Tikrinama..." : state.active || state.gameOver ? "Pradėti iš naujo" : "Pradėti žaidimą"}
@@ -1033,7 +1185,7 @@ export default function PackingGame({
 
         <div className={styles.sideCard}>
           <strong>Kaip žaisti</strong>
-          <p>Užpildyk horizontalią eilutę be tarpų. Šalink eilutes viena figūra po kitos, kad augtų kombo. Keturios eilutės vienu metu aktyvuoja „Tiesioginį skrydį“, o kas 24 figūras gausi „Auksinį bilietą“ blogai eilutei pašalinti.</p>
+          <p>Užpildyk horizontalią eilutę be tarpų. Šalink eilutes viena figūra po kitos, kad augtų kombo. Pasiekęs 3 lygį pasirink saugų, greitą arba paslėptos figūros maršrutą. Keturios eilutės vienu metu aktyvuoja „Tiesioginį skrydį“, o kas 24 figūras gausi „Auksinį bilietą“ blogai eilutei pašalinti.</p>
           <div className={styles.keyGuide}>
             <span>← → judėti</span>
             <span>↑ pasukti</span>
