@@ -21,8 +21,12 @@ const MAX_AUDIT_EVENTS = 40;
 const MAX_TIMELINE_POINTS = 120;
 const RISK_CHOICE_LEVEL = 3;
 const NO_LUGGAGE_LINE_BONUS = 150;
+const CHALLENGE_FIRST_ORDINAL = 8;
+const CHALLENGE_INTERVAL = 14;
+const CHALLENGE_BONUS = 500;
 
 type RiskRoute = "safe" | "express" | "no-luggage";
+type TravelChallenge = "clear-line" | "no-rotate" | "double-combo";
 
 type SessionPayload = {
   fingerprint: string;
@@ -36,6 +40,8 @@ type ProofEvent = {
   cleared: number;
   dropPoints: number;
   goldenTicketsUsed: number;
+  rotated: boolean;
+  challengeBonus: number;
   riskRoute: RiskRoute;
   routeChosen: boolean;
 };
@@ -119,6 +125,8 @@ function parseProofEvents(value: unknown, proofVersion: number): ProofEvent[] | 
     const dropPoints = Number(item.dropPoints);
     const atMs = Number(item.atMs);
     const goldenTicketsUsed = Number(item.goldenTicketsUsed ?? 0);
+    const rotated = item.rotated;
+    const challengeBonus = Number(item.challengeBonus ?? 0);
     const riskRoute = item.riskRoute;
     const routeChosen = item.routeChosen;
     if (!Number.isInteger(cleared) || cleared < 0 || cleared > 4) return null;
@@ -127,11 +135,15 @@ function parseProofEvents(value: unknown, proofVersion: number): ProofEvent[] | 
     if (proofVersion >= 2 && (!Number.isInteger(atMs) || atMs < 0 || atMs > SESSION_TTL_MS)) return null;
     if (proofVersion >= 3 && !(["safe", "express", "no-luggage"] as unknown[]).includes(riskRoute)) return null;
     if (proofVersion >= 3 && typeof routeChosen !== "boolean") return null;
+    if (proofVersion >= 4 && typeof rotated !== "boolean") return null;
+    if (proofVersion >= 4 && (![0, CHALLENGE_BONUS].includes(challengeBonus))) return null;
     events.push({
       ...(proofVersion >= 2 ? { atMs } : {}),
       cleared,
       dropPoints,
       goldenTicketsUsed,
+      rotated: proofVersion >= 4 ? rotated as boolean : false,
+      challengeBonus: proofVersion >= 4 ? challengeBonus : 0,
       riskRoute: proofVersion >= 3 ? riskRoute as RiskRoute : "safe",
       routeChosen: proofVersion >= 3 ? routeChosen as boolean : false,
     });
@@ -139,9 +151,36 @@ function parseProofEvents(value: unknown, proofVersion: number): ProofEvent[] | 
   return events;
 }
 
+function challengeForOrdinal(ordinal: number): { id: TravelChallenge; startOrdinal: number } | null {
+  if (ordinal < CHALLENGE_FIRST_ORDINAL) return null;
+  const cycle = Math.floor((ordinal - CHALLENGE_FIRST_ORDINAL) / CHALLENGE_INTERVAL);
+  const ids: TravelChallenge[] = ["clear-line", "no-rotate", "double-combo"];
+  return { id: ids[cycle % ids.length], startOrdinal: CHALLENGE_FIRST_ORDINAL + cycle * CHALLENGE_INTERVAL };
+}
+
+function expectedChallengeBonus(events: ProofEvent[], index: number) {
+  const ordinal = index + 1;
+  const challenge = challengeForOrdinal(ordinal);
+  if (!challenge) return 0;
+  const cycleEvents = events.slice(challenge.startOrdinal - 1, index);
+  if (cycleEvents.some((item) => item.challengeBonus > 0)) return 0;
+  const event = events[index];
+  if (challenge.id === "clear-line") {
+    const startMs = challenge.startOrdinal <= 1 ? 0 : (events[challenge.startOrdinal - 2]?.atMs ?? 0);
+    return (event.atMs ?? 0) - startMs <= 20_000 && event.cleared > 0 ? CHALLENGE_BONUS : 0;
+  }
+  if (challenge.id === "no-rotate") {
+    if (ordinal > challenge.startOrdinal + 2) return 0;
+    return cycleEvents.length === 2 && [...cycleEvents, event].every((item) => !item.rotated) ? CHALLENGE_BONUS : 0;
+  }
+  if (ordinal > challenge.startOrdinal + 7) return 0;
+  const previous = events[index - 1];
+  return previous && previous.cleared > 0 && event.cleared > 0 ? CHALLENGE_BONUS : 0;
+}
+
 function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
   const proof = isRecord(body.proof) ? body.proof : null;
-  const proofVersion = Number(proof?.version) === 3 ? 3 : Number(proof?.version) === 2 ? 2 : 1;
+  const proofVersion = Number(proof?.version) === 4 ? 4 : Number(proof?.version) === 3 ? 3 : Number(proof?.version) === 2 ? 2 : 1;
   const events = parseProofEvents(proof?.events, proofVersion);
   const submittedScore = Number(body.score);
   if (!proof || !events || !Number.isInteger(submittedScore) || submittedScore < 0 || submittedScore > 2_000_000) return null;
@@ -193,6 +232,11 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
     if (proofVersion >= 3 && event.riskRoute === "no-luggage") {
       score += event.cleared * NO_LUGGAGE_LINE_BONUS * levelBeforeClear;
     }
+    if (proofVersion >= 4) {
+      const challengeBonus = expectedChallengeBonus(events, index);
+      if (event.challengeBonus !== challengeBonus) return null;
+      score += challengeBonus;
+    }
     lines += event.cleared;
     maxClear = Math.max(maxClear, event.cleared);
     maxCombo = Math.max(maxCombo, combo);
@@ -219,6 +263,7 @@ function verifyScore(body: Record<string, unknown>, session: SessionPayload) {
       dropPoints: event.dropPoints,
       ...(event.goldenTicketsUsed ? { goldenTicketsUsed: event.goldenTicketsUsed } : {}),
       ...(proofVersion >= 3 ? { riskRoute: event.riskRoute, routeChosen: event.routeChosen } : {}),
+      ...(proofVersion >= 4 ? { rotated: event.rotated, challengeBonus: event.challengeBonus } : {}),
       ...(ordinal % CUSTOMS_INTERVAL === 0 ? { customsCheck: true } : {}),
       ...(ordinal % LOST_LUGGAGE_INTERVAL === 0 ? { lostLuggage: true } : {}),
       ...(ordinal % GOLDEN_TICKET_INTERVAL === 0 ? { goldenPiece: true } : {}),

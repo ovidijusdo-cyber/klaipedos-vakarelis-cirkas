@@ -37,12 +37,15 @@ type ActivePiece = PieceTemplate & {
 };
 
 type RiskRoute = "safe" | "express" | "no-luggage";
+type TravelChallenge = "clear-line" | "no-rotate" | "double-combo";
 
 export type GameProofEvent = {
   atMs: number;
   cleared: number;
   dropPoints: number;
   goldenTicketsUsed: number;
+  rotated: boolean;
+  challengeBonus: number;
   riskRoute: RiskRoute;
   routeChosen: boolean;
 };
@@ -53,7 +56,7 @@ export type GameScoreProof = {
   lines: number;
   maxClear: number;
   maxCombo: number;
-  version: 3;
+  version: 4;
   sessionToken: string;
 };
 
@@ -75,6 +78,7 @@ type GameState = {
   maxCombo: number;
   next: PieceTemplate | null;
   pieceDropPoints: number;
+  pieceRotated: boolean;
   proofEvents: GameProofEvent[];
   riskRoute: RiskRoute;
   routeChosen: boolean;
@@ -102,6 +106,9 @@ const LOST_LUGGAGE_INTERVAL = 14;
 const GOLDEN_TICKET_INTERVAL = 24;
 const RISK_CHOICE_LEVEL = 3;
 const NO_LUGGAGE_LINE_BONUS = 150;
+const CHALLENGE_FIRST_ORDINAL = 8;
+const CHALLENGE_INTERVAL = 14;
+const CHALLENGE_BONUS = 500;
 const PREFERENCES_KEY = "packing-game-preferences-v1";
 
 type GamePreferences = {
@@ -223,6 +230,65 @@ function routeScoreMultiplier(route: RiskRoute) {
   return route === "express" ? 2 : 1;
 }
 
+const TRAVEL_CHALLENGES: Array<{ id: TravelChallenge; title: string; detail: string }> = [
+  { id: "clear-line", title: "Greitas persėdimas", detail: "Per 20 sek. išvalyk eilutę" },
+  { id: "no-rotate", title: "Tiesus maršrutas", detail: "Nuleisk 3 figūras jų nesukdamas" },
+  { id: "double-combo", title: "Dvigubas kombo", detail: "Du kartus iš eilės išvalyk bent po eilutę" },
+];
+
+function challengeWindow(ordinal: number) {
+  if (ordinal < CHALLENGE_FIRST_ORDINAL) return null;
+  const cycle = Math.floor((ordinal - CHALLENGE_FIRST_ORDINAL) / CHALLENGE_INTERVAL);
+  const startOrdinal = CHALLENGE_FIRST_ORDINAL + cycle * CHALLENGE_INTERVAL;
+  return { ...TRAVEL_CHALLENGES[cycle % TRAVEL_CHALLENGES.length], startOrdinal };
+}
+
+function challengeStartMs(events: GameProofEvent[], startOrdinal: number) {
+  return startOrdinal <= 1 ? 0 : (events[startOrdinal - 2]?.atMs ?? 0);
+}
+
+function challengeBonusForEvent(events: GameProofEvent[], event: Omit<GameProofEvent, "challengeBonus">) {
+  const ordinal = events.length + 1;
+  const challenge = challengeWindow(ordinal);
+  if (!challenge) return 0;
+  const cycleEvents = events.slice(challenge.startOrdinal - 1);
+  if (cycleEvents.some((item) => item.challengeBonus > 0)) return 0;
+
+  if (challenge.id === "clear-line") {
+    const inTime = event.atMs - challengeStartMs(events, challenge.startOrdinal) <= 20_000;
+    return inTime && event.cleared > 0 ? CHALLENGE_BONUS : 0;
+  }
+  if (challenge.id === "no-rotate") {
+    if (ordinal > challenge.startOrdinal + 2) return 0;
+    const attempts = [...cycleEvents, event];
+    return attempts.length === 3 && attempts.every((item) => !item.rotated) ? CHALLENGE_BONUS : 0;
+  }
+  if (ordinal > challenge.startOrdinal + 7) return 0;
+  const previous = events.at(-1);
+  return previous && previous.cleared > 0 && event.cleared > 0 ? CHALLENGE_BONUS : 0;
+}
+
+function challengeStatus(events: GameProofEvent[], elapsedMs: number) {
+  const ordinal = events.length + 1;
+  const challenge = challengeWindow(ordinal);
+  if (!challenge) return null;
+  const cycleEvents = events.slice(challenge.startOrdinal - 1);
+  const completed = cycleEvents.some((item) => item.challengeBonus > 0);
+  const startMs = challengeStartMs(events, challenge.startOrdinal);
+
+  if (challenge.id === "clear-line") {
+    const secondsLeft = Math.max(0, Math.ceil((20_000 - (elapsedMs - startMs)) / 1000));
+    return { ...challenge, completed, failed: !completed && secondsLeft === 0, progress: completed ? "Įvykdyta" : `${secondsLeft} sek.` };
+  }
+  if (challenge.id === "no-rotate") {
+    const failed = !completed && cycleEvents.some((item) => item.rotated);
+    return { ...challenge, completed, failed, progress: completed ? "Įvykdyta" : failed ? "Bandyk kitą iššūkį" : `${Math.min(cycleEvents.length, 3)}/3 figūros` };
+  }
+  const failed = !completed && ordinal > challenge.startOrdinal + 7;
+  const streak = events.at(-1)?.cleared ? 1 : 0;
+  return { ...challenge, completed, failed, progress: completed ? "Įvykdyta" : failed ? "Bandyk kitą iššūkį" : `${streak}/2 kombo` };
+}
+
 function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameState {
   const result = clearCompletedLines(mergePiece(state.board, piece));
   const lines = state.lines + result.cleared;
@@ -232,7 +298,6 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
   const directFlightBonus = result.cleared === 4 ? DIRECT_FLIGHT_BONUS * state.level : 0;
   const routeMultiplier = routeScoreMultiplier(state.riskRoute);
   const noLuggageBonus = state.riskRoute === "no-luggage" ? result.cleared * NO_LUGGAGE_LINE_BONUS * state.level : 0;
-  const score = state.score + (dropBonus + (LINE_POINTS[result.cleared] ?? 0) * state.level + comboBonus + directFlightBonus) * routeMultiplier + noLuggageBonus;
   const nextTemplate = state.next ?? randomPiece();
   const eventNumber = state.proofEvents.length + 1;
   const nextOrdinal = eventNumber + 1;
@@ -244,6 +309,17 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
     (state.proofEvents.at(-1)?.atMs ?? 0) + 1,
     Date.now() - state.startedAtMs,
   );
+  const proofEventBase = {
+    atMs,
+    cleared: result.cleared,
+    dropPoints: pieceDropPoints,
+    goldenTicketsUsed: state.goldenTicketsUsedPending,
+    rotated: state.pieceRotated,
+    riskRoute: state.riskRoute,
+    routeChosen: state.routeChosen,
+  };
+  const challengeBonus = challengeBonusForEvent(state.proofEvents, proofEventBase);
+  const score = state.score + (dropBonus + (LINE_POINTS[result.cleared] ?? 0) * state.level + comboBonus + directFlightBonus) * routeMultiplier + noLuggageBonus + challengeBonus;
   const roundState = {
     board: result.board,
     combo,
@@ -260,13 +336,10 @@ function lockPiece(state: GameState, piece: ActivePiece, dropBonus = 0): GameSta
     maxCombo: Math.max(state.maxCombo, combo),
     next,
     pieceDropPoints: 0,
+    pieceRotated: false,
     proofEvents: [...state.proofEvents, {
-      atMs,
-      cleared: result.cleared,
-      dropPoints: pieceDropPoints,
-      goldenTicketsUsed: state.goldenTicketsUsedPending,
-      riskRoute: state.riskRoute,
-      routeChosen: state.routeChosen,
+      ...proofEventBase,
+      challengeBonus,
     }],
     score,
   };
@@ -296,6 +369,7 @@ const initialGameState: GameState = {
   maxCombo: 0,
   next: null,
   pieceDropPoints: 0,
+  pieceRotated: false,
   proofEvents: [],
   riskRoute: "safe",
   routeChosen: false,
@@ -347,7 +421,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     const kick = [0, -1, 1, -2, 2].find((offset) =>
       canPlace(state.board, state.active as ActivePiece, state.active!.row, state.active!.col + offset, shape),
     );
-    return kick === undefined ? state : { ...state, active: { ...state.active, shape, col: state.active.col + kick } };
+    return kick === undefined ? state : { ...state, active: { ...state.active, shape, col: state.active.col + kick }, pieceRotated: true };
   }
 
   if (action.type === "hardDrop") {
@@ -442,6 +516,8 @@ export default function PackingGame({
   const scoreAttemptRef = useRef<string | null>(null);
   const stabilityLevelRef = useRef(0);
   const hapticEventRef = useRef(0);
+  const challengeEffectRef = useRef(0);
+  const finalSoundPlayedRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const [celebration, setCelebration] = useState<{ id: number; title: string; detail: string } | null>(null);
@@ -486,6 +562,13 @@ export default function PackingGame({
   const currentShadowWidth = Math.min(100, (state.score / shadowScale) * 100);
   const leaderShadowPosition = Math.min(100, (leaderShadowScore / shadowScale) * 100);
   const activeRiskRoute = RISK_ROUTES.find((item) => item.id === state.riskRoute) ?? RISK_ROUTES[0];
+  const occupiedTopRow = state.board.findIndex((row) => row.some(Boolean));
+  const stackHeight = occupiedTopRow < 0 ? 0 : BOARD_ROWS - occupiedTopRow;
+  const dangerActive = state.running && stackHeight >= 13;
+  const criticalDanger = state.running && stackHeight >= 15;
+  const topThreeThreshold = sortedScores[2]?.score ?? 0;
+  const inTopThree = state.score > 0 && (sortedScores.length < 3 || state.score > topThreeThreshold);
+  const activeChallenge = state.running ? challengeStatus(state.proofEvents, elapsedMs) : null;
   const missions = [
     { id: "lines", title: "Maršruto pradžia", detail: "Pašalink 3 eilutes", progress: `${Math.min(state.lines, 3)}/3`, done: state.lines >= 3 },
     { id: "score", title: "Pilnas bilietas", detail: "Surink 1 000 taškų", progress: `${Math.min(state.score, 1000)}/1000`, done: state.score >= 1000 },
@@ -648,6 +731,69 @@ export default function PackingGame({
   }, [region, regionIndex, state.combo, state.effectId, state.lastBonus, state.lastClear, state.level, state.leveledUp]);
 
   useEffect(() => {
+    const latest = state.proofEvents.at(-1);
+    if (!latest?.challengeBonus || challengeEffectRef.current === state.proofEvents.length) return;
+    challengeEffectRef.current = state.proofEvents.length;
+    setCelebration({
+      id: Date.now(),
+      title: "Kelionės iššūkis įvykdytas",
+      detail: `+${latest.challengeBonus} taškų`,
+    });
+  }, [state.proofEvents]);
+
+  useEffect(() => {
+    if (!dangerActive || !state.running) return;
+    const playTension = () => {
+      const audioContext = audioContextRef.current;
+      if (!audioContext) return;
+      void audioContext.resume().catch(() => undefined);
+      const now = audioContext.currentTime;
+      const notes = inTopThree ? [196, 247, 294] : [110, 117];
+      notes.forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const startsAt = now + index * (inTopThree ? 0.12 : 0.2);
+        oscillator.type = inTopThree ? "triangle" : "sawtooth";
+        oscillator.frequency.setValueAtTime(frequency, startsAt);
+        gain.gain.setValueAtTime(0.0001, startsAt);
+        gain.gain.exponentialRampToValueAtTime(criticalDanger ? 0.035 : 0.022, startsAt + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + 0.24);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startsAt);
+        oscillator.stop(startsAt + 0.26);
+      });
+    };
+    playTension();
+    const timer = window.setInterval(playTension, inTopThree ? 1_350 : 1_700);
+    return () => window.clearInterval(timer);
+  }, [criticalDanger, dangerActive, inTopThree, state.running]);
+
+  useEffect(() => {
+    if (!state.gameOver || finalSoundPlayedRef.current || !inTopThree) return;
+    const audioContext = audioContextRef.current;
+    if (!audioContext) return;
+    finalSoundPlayedRef.current = true;
+    const isNewRecord = !leader || state.score > leader.score;
+    const notes = isNewRecord ? [523, 659, 784, 1047] : [392, 494, 659];
+    void audioContext.resume().catch(() => undefined);
+    notes.forEach((frequency, index) => {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const startsAt = audioContext.currentTime + index * 0.13;
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(frequency, startsAt);
+      gain.gain.setValueAtTime(0.0001, startsAt);
+      gain.gain.exponentialRampToValueAtTime(0.07, startsAt + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + 0.34);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(startsAt);
+      oscillator.stop(startsAt + 0.36);
+    });
+  }, [inTopThree, leader, state.gameOver, state.score]);
+
+  useEffect(() => {
     const isBonusLevel = state.level >= 5 && (state.level - 5) % 3 === 0;
     if (!state.running || !isBonusLevel || stabilityLevelRef.current === state.level) return;
     stabilityLevelRef.current = state.level;
@@ -686,7 +832,7 @@ export default function PackingGame({
       lines: state.lines,
       maxClear: state.maxClear,
       maxCombo: state.maxCombo,
-      version: 3,
+      version: 4,
       sessionToken: sessionTokenRef.current,
     };
     void scoreHandlerRef.current(name, state.score, proof).then((saved) => {
@@ -732,6 +878,8 @@ export default function PackingGame({
     setTicketMode(false);
     setElapsedMs(0);
     hapticEventRef.current = 0;
+    challengeEffectRef.current = 0;
+    finalSoundPlayedRef.current = false;
     dispatch({ type: "start", startedAtMs: Date.now() });
   }
 
@@ -757,7 +905,7 @@ export default function PackingGame({
       lines: state.lines,
       maxClear: state.maxClear,
       maxCombo: state.maxCombo,
-      version: 3,
+      version: 4,
       sessionToken: sessionTokenRef.current,
     });
     setSaving(false);
@@ -838,7 +986,7 @@ export default function PackingGame({
 
   return (
     <div
-      className={`${styles.shell} ${regionClass}${isFullscreen || isFallbackFullscreen ? ` ${styles.fullscreen}` : ""}${isFallbackFullscreen ? ` ${styles.fullscreenFallback}` : ""}${preferences.reduceEffects ? ` ${styles.reducedEffects}` : ""}`}
+      className={`${styles.shell} ${regionClass}${dangerActive ? ` ${styles.danger}` : ""}${criticalDanger ? ` ${styles.dangerCritical}` : ""}${isFullscreen || isFallbackFullscreen ? ` ${styles.fullscreen}` : ""}${isFallbackFullscreen ? ` ${styles.fullscreenFallback}` : ""}${preferences.reduceEffects ? ` ${styles.reducedEffects}` : ""}`}
       ref={fullscreenRef}
     >
       <div className={styles.gameCard}>
@@ -900,6 +1048,22 @@ export default function PackingGame({
           <div className={styles.stabilityBanner} aria-live="polite">
             <strong>Ramus skrydis</strong>
             <span>Greitis stabilus dar {stabilitySeconds} sek.</span>
+          </div>
+        ) : null}
+
+        {dangerActive ? (
+          <div className={`${styles.dangerBanner}${inTopThree ? ` ${styles.dangerTopThree}` : ""}`} aria-live="assertive">
+            <strong>Lagaminas beveik pilnas</strong>
+            <span>{inTopThree ? "TOP 3 finalinis režimas" : "Atlaisvink eilutes dabar"}</span>
+          </div>
+        ) : null}
+
+        {activeChallenge ? (
+          <div className={`${styles.challengeBanner}${activeChallenge.completed ? ` ${styles.challengeComplete}` : ""}${activeChallenge.failed ? ` ${styles.challengeFailed}` : ""}`} aria-live="polite">
+            <span>Trumpas kelionės iššūkis</span>
+            <strong>{activeChallenge.title}</strong>
+            <small>{activeChallenge.completed ? `Atlikta · +${CHALLENGE_BONUS} taškų` : activeChallenge.failed ? "Šį kartą nepavyko" : activeChallenge.detail}</small>
+            <b>{activeChallenge.progress}</b>
           </div>
         ) : null}
 
