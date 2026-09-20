@@ -1119,16 +1119,17 @@ textarea {
   align-items: flex-end;
 }
 
-.movie-row-seats.has-discount {
+.movie-row-seats.has-discount,
+.movie-row-seats.has-row-two-discount {
   align-items: end;
 }
 
-.movie-row-seats.has-discount > :not(.movie-discount-label) {
+.movie-row-seats.has-discount > :not(.movie-price-zone),
+.movie-row-seats.has-row-two-discount > :not(.movie-price-zone) {
   grid-row: 2;
 }
 
-.movie-discount-label {
-  grid-column: 1 / span 9;
+.movie-price-zone {
   grid-row: 1;
   justify-self: stretch;
   padding: 3px 5px;
@@ -1143,6 +1144,24 @@ textarea {
   text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.movie-discount-label {
+  grid-column: 1 / span 9;
+}
+
+.movie-row-two-price-left {
+  grid-column: 1 / span 7;
+  border-color: rgba(37, 99, 235, 0.25);
+  background: linear-gradient(90deg, rgba(219, 234, 254, 0.94), rgba(239, 246, 255, 0.76));
+  color: #1d4ed8;
+}
+
+.movie-row-two-price-right {
+  grid-column: 10 / span 8;
+  border-color: rgba(37, 99, 235, 0.25);
+  background: linear-gradient(90deg, rgba(219, 234, 254, 0.94), rgba(239, 246, 255, 0.76));
+  color: #1d4ed8;
 }
 
 .movie-seat-cell {
