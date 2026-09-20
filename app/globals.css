@@ -1119,6 +1119,32 @@ textarea {
   align-items: flex-end;
 }
 
+.movie-row-seats.has-discount {
+  align-items: end;
+}
+
+.movie-row-seats.has-discount > :not(.movie-discount-label) {
+  grid-row: 2;
+}
+
+.movie-discount-label {
+  grid-column: 1 / span 9;
+  grid-row: 1;
+  justify-self: stretch;
+  padding: 3px 5px;
+  border: 1px solid rgba(5, 150, 105, 0.24);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(209, 250, 229, 0.92), rgba(236, 253, 245, 0.72));
+  color: #047857;
+  font-size: 0.52rem;
+  font-weight: 950;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .movie-seat-cell {
   position: relative;
   display: grid;
@@ -1435,6 +1461,16 @@ textarea {
 .movie-guest-heading strong {
   color: #0f172a;
   font-size: 1.08rem;
+}
+
+.movie-guest-heading small {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #047857;
+  font-size: 0.72rem;
+  font-weight: 950;
 }
 
 .movie-name-field {
@@ -2400,6 +2436,15 @@ textarea {
   display: block;
   margin-top: 8px;
   font-size: 1rem;
+}
+
+.chip small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.35;
 }
 
 .stats-grid {

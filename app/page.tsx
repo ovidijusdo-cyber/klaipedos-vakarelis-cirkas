@@ -1233,6 +1233,16 @@ function movieSeatGuestLabel(reservation: MovieSeatReservation) {
   return `${reservation.firstName.trim()}${lastInitial ? ` ${lastInitial}.` : ""}`;
 }
 
+function movieSeatPrice(seatId: string, regularPrice: number) {
+  const [row, seatNumberText] = seatId.split("-");
+  const seatNumber = Number(seatNumberText);
+  return row === "1" && seatNumber >= 7 && seatNumber <= 15 ? 3 : regularPrice;
+}
+
+function movieSeatsTotal(seatIds: string[], regularPrice: number) {
+  return seatIds.reduce((total, seatId) => total + movieSeatPrice(seatId, regularPrice), 0);
+}
+
 function movieSeat(row: string, seatNumber: number, variant?: "standard" | "accessible" | "sofa"): MovieSeatCell {
   return {
     type: "seat",
@@ -2321,13 +2331,13 @@ export default function Page() {
     if (!expirations.length) return 0;
     return Math.max(0, Math.ceil((Math.min(...expirations) - movieHoldNow) / 1000));
   }, [activeMovieSeatHolds, movieHoldNow, movieSelectedSeats]);
-  const movieSelectedTotal = movieSelectedSeats.length * movieSettings.ticketPrice;
+  const movieSelectedTotal = movieSeatsTotal(movieSelectedSeats, movieSettings.ticketPrice);
   const moviePaymentReservations = useMemo(
     () => activeMovieSeatReservations.filter((reservation) => moviePaymentReservationIds.includes(reservation.id)),
     [activeMovieSeatReservations, moviePaymentReservationIds],
   );
   const moviePaymentSeats = moviePaymentReservations.map((reservation) => reservation.seatId);
-  const moviePaymentTotal = moviePaymentReservations.length * movieSettings.ticketPrice;
+  const moviePaymentTotal = movieSeatsTotal(moviePaymentSeats, movieSettings.ticketPrice);
   const movieCalendarLink = googleCalendarUrl(movieSettings);
   const movieEventHighlight = useMemo(() => {
     const start = new Date(movieSettings.startIso);
@@ -4297,7 +4307,8 @@ export default function Page() {
             </div>
             <div className="chip">
               <span>Kaina</span>
-              <strong>{movieSettings.ticketPrice} € / vieta</strong>
+              <strong>Nuo 3 € / vieta</strong>
+              <small>1 eilės 7–15 vietos – po 3 €, kitos – po {movieSettings.ticketPrice} €</small>
             </div>
             <div className="chip">
               <span>Būsena</span>
@@ -4427,7 +4438,10 @@ export default function Page() {
                   {movieSeatRows.map((seatRow) => (
                     <div className="movie-seat-row" key={seatRow.row}>
                       <span className="movie-row-label">{seatRow.row}</span>
-                      <div className="movie-row-seats">
+                      <div className={`movie-row-seats${seatRow.row === "1" ? " has-discount" : ""}`}>
+                        {seatRow.row === "1" ? (
+                          <span className="movie-discount-label">1 eilės 7–15 vietos · 3 € / vieta</span>
+                        ) : null}
                         {seatRow.cells.map((seat) => {
                         if (seat.type === "space") {
                           return <span aria-hidden="true" className={`movie-seat-space ${seat.size ?? "large"}`} key={seat.key} />;
@@ -4453,8 +4467,8 @@ export default function Page() {
                               {reservation ? movieSeatGuestLabel(reservation) : ""}
                             </span>
                             <button
-                              aria-label={`Vieta ${seat.id}${paid ? ", apmokėta" : reserved ? ", rezervuota" : heldByOther ? ", laikinai laikoma" : selected ? ", pasirinkta" : ", laisva"}${locatedMovieSeatId === seat.id ? ", pažymėta paieškoje" : ""}`}
-                              title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName}` : `Vieta ${seat.id}`}
+                              aria-label={`Vieta ${seat.id}, ${movieSeatPrice(seat.id, movieSettings.ticketPrice)} eurai${paid ? ", apmokėta" : reserved ? ", rezervuota" : heldByOther ? ", laikinai laikoma" : selected ? ", pasirinkta" : ", laisva"}${locatedMovieSeatId === seat.id ? ", pažymėta paieškoje" : ""}`}
+                              title={reservation ? `${seat.id} - ${reservation.firstName} ${reservation.lastName} · ${movieSeatPrice(seat.id, movieSettings.ticketPrice)} €` : `Vieta ${seat.id} · ${movieSeatPrice(seat.id, movieSettings.ticketPrice)} €`}
                               className={paid ? "movie-seat paid" : reserved ? "movie-seat reserved" : heldByOther ? "movie-seat held" : selected ? "movie-seat selected" : seatBusy ? "movie-seat pending" : "movie-seat"}
                               disabled={reserved || heldByOther || seatBusy}
                               type="button"
@@ -4520,6 +4534,7 @@ export default function Page() {
                       <div className="movie-guest-heading">
                         <span>2 žingsnis</span>
                         <strong>Kas sėdės vietoje {seatId}?</strong>
+                        <small>{movieSeatPrice(seatId, movieSettings.ticketPrice)} €</small>
                       </div>
                       <div className="form-grid two">
                         <label className="movie-name-field">
@@ -4910,7 +4925,7 @@ export default function Page() {
                 </div>
                 <div>
                   <span>Suma</span>
-                  <strong>{movieSettings.ticketPrice} €</strong>
+                  <strong>{movieSeatPrice(pendingMoviePayment.reservation.seatId, movieSettings.ticketPrice)} €</strong>
                 </div>
               </div>
               <div className="modal-actions">
