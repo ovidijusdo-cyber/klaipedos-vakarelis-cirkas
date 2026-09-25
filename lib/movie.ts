@@ -14,6 +14,8 @@ export type MovieSettings = {
   secondMovieTitle: string;
 };
 
+const LEGACY_SWEDBANK_PAYMENT_URL = "https://www.swedbank.lt/pay?id=pr-hifleifwnfuq";
+
 export const DEFAULT_MOVIE_SETTINGS: MovieSettings = {
   eventName: "Kviečiame jus į dviejų filmų peržiūrą",
   dateLabel: "2026 m. rugsėjo 26 d., pradžia 18:20",
@@ -22,7 +24,7 @@ export const DEFAULT_MOVIE_SETTINGS: MovieSettings = {
   place: "Forum Cinemas Klaipėda „Akropolis“, 2 aukštas, salė Nr. 2",
   ticketPrice: 6,
   revolutPaymentUrl: "https://revolut.me/ovidij1c5",
-  swedbankPaymentUrl: "https://www.swedbank.lt/pay?id=pr-hifleifwnfuq",
+  swedbankPaymentUrl: "https://www.swedbank.lt/pay?id=3exjwm849jdjx",
   bankRecipient: "Ovidijus Domkus",
   bankIban: "LT42 3250 0669 2279 1534",
   bankBic: "REVOLT21",
@@ -44,6 +46,11 @@ export function normalizeMovieSettings(value: unknown): MovieSettings {
     ? (value as Record<string, unknown>)
     : {};
   const price = Number(settings.ticketPrice);
+  const swedbankPaymentUrl = textSetting(
+    settings.swedbankPaymentUrl,
+    DEFAULT_MOVIE_SETTINGS.swedbankPaymentUrl,
+    500,
+  );
 
   return {
     eventName: textSetting(settings.eventName, DEFAULT_MOVIE_SETTINGS.eventName),
@@ -53,7 +60,9 @@ export function normalizeMovieSettings(value: unknown): MovieSettings {
     place: textSetting(settings.place, DEFAULT_MOVIE_SETTINGS.place),
     ticketPrice: Number.isFinite(price) && price >= 0 && price <= 1000 ? Math.round(price * 100) / 100 : DEFAULT_MOVIE_SETTINGS.ticketPrice,
     revolutPaymentUrl: textSetting(settings.revolutPaymentUrl, DEFAULT_MOVIE_SETTINGS.revolutPaymentUrl, 500),
-    swedbankPaymentUrl: textSetting(settings.swedbankPaymentUrl, DEFAULT_MOVIE_SETTINGS.swedbankPaymentUrl, 500),
+    swedbankPaymentUrl: swedbankPaymentUrl === LEGACY_SWEDBANK_PAYMENT_URL
+      ? DEFAULT_MOVIE_SETTINGS.swedbankPaymentUrl
+      : swedbankPaymentUrl,
     bankRecipient: textSetting(settings.bankRecipient, DEFAULT_MOVIE_SETTINGS.bankRecipient, 160),
     bankIban: textSetting(settings.bankIban, DEFAULT_MOVIE_SETTINGS.bankIban, 80),
     bankBic: textSetting(settings.bankBic, DEFAULT_MOVIE_SETTINGS.bankBic, 40),
