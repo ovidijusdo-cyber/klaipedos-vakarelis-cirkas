@@ -6,6 +6,7 @@ import {
   MOVIE_SEAT_HOLD_SECONDS,
   normalizeMovieSettings,
 } from "../../../lib/movie";
+import { EVENT_ACCESS, EVENT_CLOSED_MESSAGES } from "../../../lib/event-access";
 
 const STATE_ID = "main";
 const ADMIN_PIN = process.env.ADMIN_PIN;
@@ -252,6 +253,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!EVENT_ACCESS.movie) {
+    return NextResponse.json({ error: EVENT_CLOSED_MESSAGES.movie }, { status: 423 });
+  }
+
   try {
     const body = await request.json();
     const action = cleanText(body?.action, 40);

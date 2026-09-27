@@ -13,6 +13,7 @@ import {
   normalizeMovieSettings,
   type MovieSettings,
 } from "../lib/movie";
+import { EVENT_ACCESS } from "../lib/event-access";
 
 declare global {
   interface Window {
@@ -1699,7 +1700,7 @@ export default function Page() {
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
 
   const [appMode, setAppMode] = useState<AppMode>(() => {
-    if (pathname === "/kino-filmas") return "movie";
+    if (pathname === "/kino-filmas" && EVENT_ACCESS.movie) return "movie";
     if (pathname === "/vakarelis") return "party";
     return "home";
   });
@@ -1927,7 +1928,7 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    if (pathname === "/kino-filmas") {
+    if (pathname === "/kino-filmas" && EVENT_ACCESS.movie) {
       setAppMode("movie");
     } else if (pathname === "/vakarelis") {
       setAppMode("party");
@@ -4086,6 +4087,7 @@ export default function Page() {
   );
 
   function openAppMode(mode: AppMode) {
+    if (mode === "movie" && !EVENT_ACCESS.movie) return;
     setAppMode(mode);
     const targetPath = mode === "movie" ? "/kino-filmas" : mode === "party" ? "/vakarelis" : "/";
     if (pathname !== targetPath) router.push(targetPath);
@@ -4185,21 +4187,27 @@ export default function Page() {
             <div className="eyebrow">klaipedosvakaras.fun</div>
             <h1>Pasirink, kur nori keliauti</h1>
             <p>
-              Viena nuoroda, atskiros veiklos: kino filmo peržiūra, kvadrato žaidimas ir teminis Klaipėdos vakarėlis.
+              Šiuo metu aktyvi registracija į teminį Klaipėdos vakarėlį. Pasibaigę renginiai lieka pažymėti kaip užrakinti.
             </p>
           </div>
 
           <div className="hub-choice-grid">
-            <button className="hub-choice-card movie" type="button" onClick={() => openAppMode("movie")}>
-              <span>Kino filmo peržiūra</span>
-              <strong>Dviejų filmų peržiūra {movieSettings.place}</strong>
-              <p>Pasirink vietas kaip kino salėje, įrašyk dalyvių vardus ir iškart matyk mokėtiną sumą.</p>
+            <button className="hub-choice-card movie locked" type="button" disabled aria-label="Kino filmo peržiūra įvyko, registracija uždaryta">
+              <div className="hub-choice-topline">
+                <span>Kino filmo peržiūra</span>
+                <span className="hub-lock-badge"><i aria-hidden="true" />Įvyko</span>
+              </div>
+              <strong>Kino peržiūra baigėsi</strong>
+              <p>Renginys jau įvyko, todėl vietų rezervacija ir mokėjimų žymėjimas uždaryti.</p>
             </button>
 
-            <button className="hub-choice-card square" type="button" onClick={() => router.push("/kvadratas")}>
-              <span>Kvadrato registracija</span>
-              <strong>Susitinkame aikštelėje</strong>
-              <p>Įrašyk savo vardą, pasirink norimą komandą ir stebėk viešai formuojamas sudėtis.</p>
+            <button className="hub-choice-card square locked" type="button" disabled aria-label="Kvadrato registracija laikinai uždaryta">
+              <div className="hub-choice-topline">
+                <span>Kvadrato registracija</span>
+                <span className="hub-lock-badge"><i aria-hidden="true" />Užrakinta</span>
+              </div>
+              <strong>Registracija laikinai uždaryta</strong>
+              <p>„Kvadratas“ kol kas neaktyvus. Informacija apie kitą žaidimą bus paskelbta vėliau.</p>
             </button>
 
             <button className="hub-choice-card party" type="button" onClick={() => openAppMode("party")}>

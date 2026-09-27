@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
+import { EVENT_ACCESS, EVENT_CLOSED_MESSAGES } from "../../../lib/event-access";
 
 const ADMIN_PIN = process.env.ADMIN_PIN;
 const MAX_PLAYERS = 200;
@@ -385,6 +386,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!EVENT_ACCESS.kvadratas) {
+    return NextResponse.json({ error: EVENT_CLOSED_MESSAGES.kvadratas }, { status: 423 });
+  }
+
   try {
     const body = await request.json();
     const action = cleanText(body?.action, 50);
