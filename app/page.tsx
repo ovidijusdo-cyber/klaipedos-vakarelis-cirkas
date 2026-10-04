@@ -14,6 +14,11 @@ import {
   type MovieSettings,
 } from "../lib/movie";
 import { EVENT_ACCESS } from "../lib/event-access";
+import {
+  PARTY_LANGUAGE_OPTIONS,
+  translatePartyText,
+  type PartyLanguage,
+} from "../lib/party-i18n";
 
 declare global {
   interface Window {
@@ -1684,6 +1689,9 @@ export default function Page() {
   const scannerFrameRef = useRef<number | null>(null);
   const scannerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastScannedQrRef = useRef<{ value: string; at: number } | null>(null);
+  const partyRootRef = useRef<HTMLElement | null>(null);
+  const partyTextOriginalsRef = useRef(new WeakMap<Text, string>());
+  const partyAttributeOriginalsRef = useRef(new WeakMap<Element, Map<string, string>>());
   const [hydrated, setHydrated] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
   const [waitingList, setWaitingList] = useState<WaitingItem[]>([]);
@@ -1698,6 +1706,8 @@ export default function Page() {
   const [movieSeatReservations, setMovieSeatReservations] = useState<MovieSeatReservation[]>(initialMovieSeatReservations);
   const [movieSettings, setMovieSettings] = useState<MovieSettings>(DEFAULT_MOVIE_SETTINGS);
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
+  const [partyLanguage, setPartyLanguage] = useState<PartyLanguage>("lt");
+  const [partyLanguageLoaded, setPartyLanguageLoaded] = useState(false);
 
   const [appMode, setAppMode] = useState<AppMode>(() => {
     if (pathname === "/kino-filmas" && EVENT_ACCESS.movie) return "movie";
@@ -1936,6 +1946,107 @@ export default function Page() {
       setAppMode("home");
     }
   }, [pathname]);
+
+  useEffect(() => {
+    const savedLanguage = window.localStorage.getItem("klaipedos-vakaras-party-language");
+    if (savedLanguage === "lt" || savedLanguage === "lv" || savedLanguage === "ru") {
+      setPartyLanguage(savedLanguage);
+    }
+    setPartyLanguageLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!partyLanguageLoaded) return;
+    window.localStorage.setItem("klaipedos-vakaras-party-language", partyLanguage);
+  }, [partyLanguage, partyLanguageLoaded]);
+
+  useEffect(() => {
+    if (appMode !== "party") {
+      document.documentElement.lang = "lt";
+      return;
+    }
+
+    const root = partyRootRef.current;
+    if (!root) return;
+    document.documentElement.lang = partyLanguage;
+    const textOriginals = partyTextOriginalsRef.current;
+    const attributeOriginals = partyAttributeOriginalsRef.current;
+    const translatedAttributes = ["placeholder", "aria-label", "title"];
+    let applyingTranslation = false;
+
+    const translateTextNode = (node: Text, reactUpdated = false) => {
+      const current = node.data;
+      const storedOriginal = textOriginals.get(node);
+      if (!storedOriginal) {
+        textOriginals.set(node, current);
+      } else if (reactUpdated && current !== translatePartyText(storedOriginal, partyLanguage)) {
+        textOriginals.set(node, current);
+      }
+      const original = textOriginals.get(node) ?? current;
+      const translated = translatePartyText(original, partyLanguage);
+      if (node.data !== translated) node.data = translated;
+    };
+
+    const translateElementAttributes = (element: Element, reactUpdated = false) => {
+      let originals = attributeOriginals.get(element);
+      if (!originals) {
+        originals = new Map<string, string>();
+        attributeOriginals.set(element, originals);
+      }
+      translatedAttributes.forEach((attribute) => {
+        const current = element.getAttribute(attribute);
+        if (current === null) return;
+        const storedOriginal = originals?.get(attribute);
+        if (!storedOriginal) {
+          originals?.set(attribute, current);
+        } else if (reactUpdated && current !== translatePartyText(storedOriginal, partyLanguage)) {
+          originals?.set(attribute, current);
+        }
+        const original = originals?.get(attribute) ?? current;
+        const translated = translatePartyText(original, partyLanguage);
+        if (current !== translated) element.setAttribute(attribute, translated);
+      });
+    };
+
+    const translateTree = (node: Node, reactUpdated = false) => {
+      applyingTranslation = true;
+      if (node.nodeType === Node.TEXT_NODE) translateTextNode(node as Text, reactUpdated);
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        translateElementAttributes(node as Element, reactUpdated);
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+        let child = walker.nextNode();
+        while (child) {
+          if (child.nodeType === Node.TEXT_NODE) translateTextNode(child as Text, reactUpdated);
+          else translateElementAttributes(child as Element, reactUpdated);
+          child = walker.nextNode();
+        }
+      }
+      applyingTranslation = false;
+    };
+
+    translateTree(root);
+    const observer = new MutationObserver((mutations) => {
+      if (applyingTranslation) return;
+      mutations.forEach((mutation) => {
+        if (mutation.type === "characterData") {
+          translateTree(mutation.target, true);
+        } else if (mutation.type === "attributes") {
+          translateTree(mutation.target, true);
+        } else {
+          mutation.addedNodes.forEach((node) => translateTree(node));
+        }
+      });
+    });
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: translatedAttributes,
+    });
+
+    return () => observer.disconnect();
+  }, [appMode, partyLanguage]);
 
   useEffect(() => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -5001,7 +5112,7 @@ export default function Page() {
   }
 
   return (
-      <main className="page-shell world-party">
+      <main className="page-shell world-party" ref={partyRootRef}>
         <div className="page-glow page-glow-left" />
         <div className="page-glow page-glow-right" />
         {showConfetti || celebratingRegistration ? (
@@ -5016,9 +5127,26 @@ export default function Page() {
           </div>
         ) : null}
 
-        <button className="ghost-button back-home-button" type="button" onClick={() => openAppMode("home")}>
-          Grįžti į pasirinkimą
-        </button>
+        <div className="party-topbar">
+          <button className="ghost-button back-home-button" type="button" onClick={() => openAppMode("home")}>
+            Grįžti į pasirinkimą
+          </button>
+          <div className="party-language-switcher" aria-label="Kalba" role="group">
+            <span>Kalba</span>
+            {PARTY_LANGUAGE_OPTIONS.map((language) => (
+              <button
+                aria-pressed={partyLanguage === language.id}
+                className={partyLanguage === language.id ? "active" : ""}
+                key={language.id}
+                type="button"
+                onClick={() => setPartyLanguage(language.id)}
+              >
+                <b>{language.short}</b>
+                <small>{language.label}</small>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <section className="hero">
         <div className="hero-copy">
@@ -6249,8 +6377,8 @@ export default function Page() {
                       placeholder="Pavardė"
                     />
                     <select value={person.type} onChange={(event) => setPerson(index, "type", event.target.value as PersonType)}>
-                      <option value="adult">Nuo {ADULT_AGE_START} m.</option>
-                      <option value="child">Vaikas iki {CHILD_AGE_LIMIT} m.</option>
+                      <option value="adult">{translatePartyText(`Nuo ${ADULT_AGE_START} m.`, partyLanguage)}</option>
+                      <option value="child">{translatePartyText(`Vaikas iki ${CHILD_AGE_LIMIT} m.`, partyLanguage)}</option>
                     </select>
                     <button className="ghost-button" disabled={form.people.length === 1} type="button" onClick={() => removePerson(index)}>
                       Pašalinti
