@@ -4298,7 +4298,7 @@ export default function Page() {
             <div className="eyebrow">klaipedosvakaras.fun</div>
             <h1>Pasirink, kur nori keliauti</h1>
             <p>
-              Šiuo metu aktyvi registracija į teminį Klaipėdos vakarėlį. Pasibaigę renginiai lieka pažymėti kaip užrakinti.
+              Šiuo metu gali registruotis į teminį Klaipėdos vakarėlį ir įrašyti savo susidomėjimą kelione į filialą Suomijoje. Pasibaigę renginiai pažymėti kaip užrakinti.
             </p>
           </div>
 
@@ -4328,6 +4328,15 @@ export default function Page() {
               </div>
               <strong>Tautos. Aplink pasaulį per 360 minučių</strong>
               <p>Vienas vakaras Priekulėje, daugybė kultūrų, skonių, muzikos ir pasaulio stotelių.</p>
+            </button>
+
+            <button className="hub-choice-card filialas" type="button" onClick={() => router.push("/filialas")}>
+              <div className="hub-choice-topline">
+                <span>Kelionė į Suomiją</span>
+                <span className="hub-party-date">2027 m. balandis</span>
+              </div>
+              <strong>Kartu į filialą</strong>
+              <p>Preliminari trijų dienų kelionė autobusu iš Klaipėdos. Įsirašyk į norinčiųjų sąrašą.</p>
             </button>
           </div>
         </section>

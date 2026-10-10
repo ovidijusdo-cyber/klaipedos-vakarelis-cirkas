@@ -207,6 +207,17 @@ textarea {
   background: linear-gradient(135deg, #7f1d1d, #ea580c 54%, #facc15);
 }
 
+.hub-choice-card.filialas {
+  background:
+    radial-gradient(circle at 87% 22%, rgba(255, 255, 255, .2) 0 52px, transparent 53px),
+    linear-gradient(135deg, #112c42, #0e6f78 60%, #3da89c);
+}
+
+.hub-choice-card.filialas .hub-party-date {
+  background: #f8d39a;
+  color: #173d47;
+}
+
 .hub-choice-card.locked {
   position: relative;
   overflow: hidden;
