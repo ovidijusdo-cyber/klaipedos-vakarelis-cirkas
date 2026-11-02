@@ -1243,6 +1243,10 @@ function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+function normalizeGuestSearch(value: string) {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").trim().toLocaleLowerCase("lt-LT");
+}
+
 function movieSeatGuestLabel(reservation: MovieSeatReservation) {
   const lastInitial = reservation.lastName.trim().charAt(0);
   return `${reservation.firstName.trim()}${lastInitial ? ` ${lastInitial}.` : ""}`;
@@ -1778,6 +1782,7 @@ export default function Page() {
   const [playlistSaving, setPlaylistSaving] = useState(false);
   const [ideaForm, setIdeaForm] = useState("");
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
+  const [guestSearch, setGuestSearch] = useState("");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [pendingRideCancel, setPendingRideCancel] = useState<PendingRideCancel>(null);
@@ -4313,8 +4318,13 @@ export default function Page() {
     activePeople(reservation).map((person) => ({
       city: reservation.city,
       name: maskName(person.firstName, person.lastName),
+      searchName: normalizeGuestSearch(`${person.firstName} ${person.lastName} ${reservation.city}`),
     })),
   );
+  const guestSearchTerms = normalizeGuestSearch(guestSearch).split(/\s+/).filter(Boolean);
+  const filteredGuestEntries = guestSearchTerms.length
+    ? guestEntries.filter((entry) => guestSearchTerms.every((term) => entry.searchName.includes(term)))
+    : guestEntries;
 
   function openAppMode(mode: AppMode) {
     if (mode === "movie" && !EVENT_ACCESS.movie) return;
@@ -5558,9 +5568,21 @@ export default function Page() {
 
       {activePanel === "guests" ? (
         <SectionCard title="Svečių lenta" description="Rodomi tik apmokėti ir organizatoriaus patvirtinti dalyviai.">
-          <div className="guest-grid">
-            {guestEntries.length ? (
-              guestEntries.map((entry, index) => (
+          <div className="guest-search-panel">
+            <label htmlFor="guest-search"><strong>Ieškoti svečio</strong><span>Įrašyk vardą arba pavardę, kad greitai rastum žmogų sąraše.</span></label>
+            <input
+              id="guest-search"
+              type="search"
+              autoComplete="off"
+              value={guestSearch}
+              onChange={(event) => setGuestSearch(event.target.value)}
+              placeholder="Vardas arba pavardė"
+            />
+            {guestSearchTerms.length ? <span className="guest-search-count" role="status">{translatePartyText("Rasta", partyLanguage)}: {filteredGuestEntries.length} {translatePartyText("iš", partyLanguage)} {guestEntries.length}</span> : null}
+          </div>
+          <div className={guestSearchTerms.length ? "guest-grid search-results" : "guest-grid"}>
+            {filteredGuestEntries.length ? (
+              filteredGuestEntries.map((entry, index) => (
                 <div
                   className={highlightGuestKey === `${entry.city}-${entry.name}` ? "guest-cell highlighted" : "guest-cell"}
                   key={`${entry.name}-${entry.city}-${index}`}
@@ -5570,7 +5592,7 @@ export default function Page() {
                 </div>
               ))
             ) : (
-              <div className="empty-state">Kol kas aktyvių svečių nėra.</div>
+              <div className="empty-state">{guestEntries.length ? "Pagal paiešką svečių nerasta." : "Kol kas aktyvių svečių nėra."}</div>
             )}
           </div>
         </SectionCard>
