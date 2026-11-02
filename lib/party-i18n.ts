@@ -55,6 +55,27 @@ const translations: Record<string, Translation> = {
   "Apmokėta vietų": { lv: "Apmaksātas vietas", ru: "Оплачено мест" },
   "Laisvų vietų": { lv: "Brīvas vietas", ru: "Свободных мест" },
   "Noriu dalyvauti": { lv: "Vēlos piedalīties", ru: "Хочу участвовать" },
+  "Tikrinamos vietos...": { lv: "Pārbaudām vietas...", ru: "Проверяем места..." },
+  "Laukiančiųjų sąrašas": { lv: "Gaidītāju saraksts", ru: "Список ожидания" },
+  "Visos 140 vietų šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą.": {
+    lv: "Visas 140 vietas pašlaik ir aizņemtas. Atstāj savu vārdu, uzvārdu un e-pastu.",
+    ru: "Все 140 мест сейчас заняты. Оставьте имя, фамилию и адрес электронной почты.",
+  },
+  "Automatiniai el. laiškai dar neįjungti. Organizatorius matys tavo kontaktą laukiančiųjų sąraše.": {
+    lv: "Automātiskās e-pasta vēstules vēl nav ieslēgtas. Organizators redzēs tavu kontaktinformāciju gaidītāju sarakstā.",
+    ru: "Автоматические письма пока не включены. Организатор увидит ваши контактные данные в списке ожидания.",
+  },
+  "Visos 140 vietų užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.": {
+    lv: "Visas 140 vietas ir aizņemtas. Spied „Vēlos piedalīties“ un pievienojies gaidītāju sarakstam.",
+    ru: "Все 140 мест заняты. Нажмите «Хочу участвовать» и запишитесь в список ожидания.",
+  },
+  "Vardas ir pavardė": { lv: "Vārds un uzvārds", ru: "Имя и фамилия" },
+  "El. paštas": { lv: "E-pasts", ru: "Электронная почта" },
+  "Laiškas vietos nerezervuoja. Ji atiteks pirmam registraciją užbaigusiam žmogui.": {
+    lv: "Vēstule nerezervē vietu. To saņems pirmais, kurš pabeigs reģistrāciju.",
+    ru: "Письмо не бронирует место. Оно достанется тому, кто первым завершит регистрацию.",
+  },
+  "Prisijungti prie laukiančiųjų": { lv: "Pievienoties gaidītāju sarakstam", ru: "Записаться в список ожидания" },
   "Mano registracijos būsena": { lv: "Mans reģistrācijas statuss", ru: "Статус моей регистрации" },
   "Apmokėjimo informacija": { lv: "Maksājuma informācija", ru: "Информация об оплате" },
   "Bendra daina · Ošia Vilnius": { lv: "Kopīgā dziesma · Viļņa skan", ru: "Общая песня · Шумит Вильнюс" },

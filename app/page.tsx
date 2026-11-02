@@ -83,6 +83,15 @@ type WaitingItem = {
   createdAt: string;
 };
 
+type PartyWaitlistEntry = {
+  id: string;
+  fullName: string;
+  email: string;
+  status: "waiting" | "sending" | "notified" | "expired";
+  createdAt: string;
+  notifiedAt: string | null;
+};
+
 type NotificationItem = {
   id: number;
   message: string;
@@ -1715,6 +1724,17 @@ export default function Page() {
     return "home";
   });
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [partyWaitlistOpen, setPartyWaitlistOpen] = useState(false);
+  const [partyWaitlistForm, setPartyWaitlistForm] = useState({ fullName: "", email: "", consent: false });
+  const [partyWaitlistSaving, setPartyWaitlistSaving] = useState(false);
+  const [partyWaitlistNotice, setPartyWaitlistNotice] = useState<Notice | null>(null);
+  const [partyWaitlistEntries, setPartyWaitlistEntries] = useState<PartyWaitlistEntry[]>([]);
+  const [partyWaitlistCount, setPartyWaitlistCount] = useState(0);
+  const [partyWaitlistError, setPartyWaitlistError] = useState("");
+  const [partyWaitlistEmailConfigured, setPartyWaitlistEmailConfigured] = useState<boolean | null>(null);
+  const [registerChecking, setRegisterChecking] = useState(false);
+  const [registerSaving, setRegisterSaving] = useState(false);
+  const [registerError, setRegisterError] = useState("");
   const [myTicketOpen, setMyTicketOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -2877,6 +2897,93 @@ export default function Page() {
     setRideSeatsTouched(false);
   }
 
+  async function openPartyRegistration() {
+    if (!remoteStateLoadedRef.current) {
+      setRegisterError("Nepavyko patikrinti registracijų. Atnaujink puslapį ir bandyk dar kartą.");
+      return;
+    }
+    setRegisterChecking(true);
+    setRegisterError("");
+    try {
+      const response = await fetch("/api/party-waitlist", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Availability check failed: ${response.status}`);
+      const data = await response.json() as { remaining: number; waitingCount: number; emailConfigured: boolean };
+      setPartyWaitlistCount(data.waitingCount);
+      setPartyWaitlistEmailConfigured(data.emailConfigured);
+      setPendingRegistration(null);
+      resetRegistrationForm();
+      if (data.remaining <= 0) {
+        setPartyWaitlistNotice(null);
+        setPartyWaitlistOpen(true);
+      } else {
+        setRegisterOpen(true);
+      }
+    } catch (error) {
+      console.error("Failed to check party availability", error);
+      setRegisterError("Nepavyko patikrinti laisvų vietų. Bandyk dar kartą.");
+    } finally {
+      setRegisterChecking(false);
+    }
+  }
+
+  async function joinPartyWaitlist(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPartyWaitlistSaving(true);
+    setPartyWaitlistNotice(null);
+    try {
+      const response = await fetch("/api/party-waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(partyWaitlistForm),
+      });
+      const data = await response.json() as { error?: string; alreadyJoined?: boolean; hasSpace?: boolean };
+      if (data.hasSpace) {
+        setPartyWaitlistOpen(false);
+        setPendingRegistration(null);
+        resetRegistrationForm();
+        setRegisterOpen(true);
+        return;
+      }
+      if (!response.ok) throw new Error(data.error || "Nepavyko prisijungti prie sąrašo.");
+      if (!data.alreadyJoined) setPartyWaitlistCount((previous) => previous + 1);
+      setPartyWaitlistNotice({
+        type: "success",
+        text: data.alreadyJoined
+          ? "Jau esi laukiančiųjų sąraše."
+          : partyWaitlistEmailConfigured
+            ? "Įtraukėme į laukiančiųjų sąrašą. Atsilaisvinus vietai, atsiųsime laišką."
+            : "Įtraukėme į laukiančiųjų sąrašą. Organizatorius matys tavo kontaktą.",
+      });
+    } catch (error) {
+      setPartyWaitlistNotice({ type: "warning", text: error instanceof Error ? error.message : "Nepavyko prisijungti prie sąrašo." });
+    } finally {
+      setPartyWaitlistSaving(false);
+    }
+  }
+
+  async function refreshPartyWaitlist() {
+    if (!adminUnlocked || !adminPin) return;
+    try {
+      const response = await fetch("/api/party-waitlist", {
+        cache: "no-store",
+        headers: { "x-admin-pin": adminPin },
+      });
+      if (!response.ok) throw new Error(`Waitlist load failed: ${response.status}`);
+      const data = await response.json() as { entries?: PartyWaitlistEntry[]; waitingCount: number; emailConfigured?: boolean };
+      setPartyWaitlistEntries(data.entries ?? []);
+      setPartyWaitlistCount(data.waitingCount);
+      setPartyWaitlistEmailConfigured(data.emailConfigured ?? false);
+      setPartyWaitlistError("");
+    } catch (error) {
+      console.error("Failed to load party waitlist", error);
+      setPartyWaitlistError("Nepavyko įkelti laukiančiųjų sąrašo.");
+    }
+  }
+
+  useEffect(() => {
+    if (adminUnlocked) void refreshPartyWaitlist();
+  }, [adminUnlocked, adminPin]);
+
   function buildReservationFromForm(id = createNumericId(), createdAt = formatDateTime(), existingReservation?: Reservation | null): Reservation | null {
     const people = form.people
       .filter((person) => person.firstName.trim())
@@ -2914,32 +3021,40 @@ export default function Page() {
     };
   }
 
-  function savePendingRegistration() {
+  async function savePendingRegistration() {
     const existingReservation = pendingRegistration ? reservations.find((reservation) => reservation.id === pendingRegistration.id) : null;
     const reservation = buildReservationFromForm(existingReservation?.id, existingReservation?.createdAt, existingReservation);
     if (!reservation) return null;
 
-    const existingCount = existingReservation ? counts(existingReservation).total : 0;
-    if (occupied - existingCount + counts(reservation).total > MAX_PLACES) {
-      setWaitingList((previous) => [
-        {
-          id: reservation.id,
-          city: reservation.city,
-          contactPhone: reservation.contactPhone,
-          contactEmail: reservation.contactEmail,
-          rideOfferSeats: reservation.rideOfferSeats,
-          rideContactPhone: reservation.rideContactPhone,
-          rideNotificationEmail: reservation.rideNotificationEmail,
-          needsRide: reservation.needsRide,
-          people: reservation.people,
-          createdAt: reservation.createdAt,
-        },
-        ...previous,
-      ]);
-      setSubmitted(null);
-      setPendingRegistration(null);
-      resetRegistrationForm();
-      setRegisterOpen(false);
+    try {
+      const response = await fetch("/api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payload: { reservations: [reservation] },
+          sectionUpdatedAt: { reservations: Date.now() },
+          changedIds: { reservations: [reservation.id] },
+        }),
+      });
+      if (!response.ok) {
+        if (response.status === 409) {
+          const availability = await fetch("/api/party-waitlist", { cache: "no-store" });
+          const summary = availability.ok ? await availability.json() as { remaining: number; emailConfigured: boolean } : null;
+          if (summary && summary.remaining === 0) {
+            setPartyWaitlistEmailConfigured(summary.emailConfigured);
+            setPartyWaitlistForm((previous) => ({ ...previous, fullName: `${reservation.people[0]?.firstName ?? ""} ${reservation.people[0]?.lastName ?? ""}`.trim() }));
+            setRegisterOpen(false);
+            setPartyWaitlistOpen(true);
+          } else {
+            setRegisterError(summary ? `Liko tik ${summary.remaining} laisvų vietų. Sumažink registruojamų žmonių skaičių ir bandyk dar kartą.` : "Vietų duomenys pasikeitė. Bandyk registraciją dar kartą.");
+          }
+          return null;
+        }
+        throw new Error(`Reservation save failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to save party reservation", error);
+      setRegisterError("Nepavyko išsaugoti registracijos. Bandyk dar kartą.");
       return null;
     }
 
@@ -2968,7 +3083,7 @@ export default function Page() {
     return reservation;
   }
 
-  function submitReservation(event: FormEvent<HTMLFormElement>) {
+  async function submitReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (form.canOfferRide && !form.rideSeats) {
       setRideSeatsTouched(true);
@@ -2982,15 +3097,19 @@ export default function Page() {
       return;
     }
 
-    const reservation = savePendingRegistration();
-    if (!reservation) return;
-
-    setRegisterStep("payment");
+    setRegisterError("");
+    setRegisterSaving(true);
+    try {
+      const reservation = await savePendingRegistration();
+      if (reservation) setRegisterStep("payment");
+    } finally {
+      setRegisterSaving(false);
+    }
   }
 
   function finalizeReservation() {
     if (!form.consentAccepted) return;
-    const reservation = pendingRegistration ?? savePendingRegistration();
+    const reservation = pendingRegistration;
     if (!reservation) return;
 
     setSubmitted(reservation);
@@ -5238,8 +5357,8 @@ export default function Page() {
           </div>
 
           <div className="hero-actions">
-            <button className="primary-button" type="button" onClick={() => { setPendingRegistration(null); resetRegistrationForm(); setRegisterOpen(true); }}>
-              Noriu dalyvauti
+            <button className="primary-button" type="button" onClick={() => void openPartyRegistration()} disabled={registerChecking}>
+              {registerChecking ? "Tikrinamos vietos..." : "Noriu dalyvauti"}
             </button>
             <button className="secondary-button" type="button" onClick={() => setMyTicketOpen(true)}>
               Mano registracijos būsena
@@ -5258,6 +5377,9 @@ export default function Page() {
               Atšaukti dalyvavimą
             </button>
           </div>
+
+          {registerError ? <div className="notice warning" role="alert">{registerError}</div> : null}
+          {remaining === 0 ? <p className="party-full-note">Visos 140 vietų užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.</p> : null}
 
           <div className="telegram-cta">
             <a className="telegram-button" href={TELEGRAM_GROUP_URL} target="_blank" rel="noreferrer">
@@ -5785,7 +5907,7 @@ export default function Page() {
 
               <div className="stats-grid admin">
                 <StatCard label="Aktyvių rezervacijų" value={String(activeReservations.length)} />
-                <StatCard label="Laukiančiųjų eilė" value={String(waitingList.length)} tone="warning" />
+                <StatCard label="Laukia vietos" value={String(partyWaitlistCount + waitingList.length)} tone="warning" />
                 <StatCard label="Atvyko" value={String(totalArrived)} tone="success" />
                 <StatCard label="Apmokėta vietų" value={String(totalPaidSeats)} tone="accent" />
               </div>
@@ -5796,6 +5918,27 @@ export default function Page() {
                 <StatCard label="Pažymėta banku" value={String(totalBankChosen)} tone="accent" />
                 <StatCard label="Pažymėta grynais" value={String(totalCashChosen)} tone="success" />
               </div>
+
+              <SectionCard title="Vakarėlio laukiančiųjų sąrašas" description="Užpildžius 140 vietų, norintys dalyvauti palieka vardą ir el. paštą. Atsilaisvinus vietai, laiškas siunčiamas eilės tvarka; jis vietos nerezervuoja.">
+                <div className="inline-header">
+                  <strong>Laukia: {partyWaitlistCount}</strong>
+                  <button className="ghost-button" type="button" onClick={() => void refreshPartyWaitlist()}>Atnaujinti</button>
+                </div>
+                {partyWaitlistError ? <div className="notice warning">{partyWaitlistError}</div> : null}
+                {partyWaitlistEmailConfigured === false ? <div className="notice warning">El. laiškų siuntimas nesukonfigūruotas. Reikia RESEND_API_KEY ir REMINDER_EMAIL_FROM serverio aplinkoje.</div> : null}
+                {partyWaitlistEntries.length ? (
+                  <div className="party-waitlist-admin-list">
+                    {partyWaitlistEntries.map((entry, index) => (
+                      <div className="party-waitlist-admin-row" key={entry.id}>
+                        <strong>{index + 1}. {entry.fullName}</strong>
+                        <a href={`mailto:${entry.email}`}>{entry.email}</a>
+                        <span>{entry.status === "notified" ? "Pranešta el. paštu" : entry.status === "expired" ? "Kvietimas nebegalioja" : entry.status === "sending" ? "Siunčiamas laiškas" : "Laukia vietos"}</span>
+                        <small>{new Date(entry.createdAt).toLocaleString("lt-LT")}</small>
+                      </div>
+                    ))}
+                  </div>
+                ) : <div className="empty-state">Laukiančiųjų dar nėra.</div>}
+              </SectionCard>
 
               <SectionCard title="Kino peržiūros nustatymai" description="Pakeitimai automatiškai išsaugomi ir iškart pritaikomi kino puslapyje, mokėjimuose, kalendoriuje bei el. laiškuose.">
                 <div className="movie-admin-settings">
@@ -6352,6 +6495,59 @@ export default function Page() {
         <span>Klausti Ovidijaus</span>
       </a>
 
+      <Modal
+        open={partyWaitlistOpen}
+        title="Laukiančiųjų sąrašas"
+        description="Visos 140 vietų šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą."
+        onClose={() => setPartyWaitlistOpen(false)}
+      >
+        <form className="stack" onSubmit={joinPartyWaitlist}>
+          <div className="form-grid two">
+            <label className="field">
+              <span>Vardas ir pavardė</span>
+              <input
+                autoComplete="name"
+                required
+                maxLength={100}
+                value={partyWaitlistForm.fullName}
+                onChange={(event) => setPartyWaitlistForm((previous) => ({ ...previous, fullName: event.target.value }))}
+                placeholder="Vardas Pavardė"
+              />
+            </label>
+            <label className="field">
+              <span>El. paštas</span>
+              <input
+                autoComplete="email"
+                type="email"
+                required
+                maxLength={254}
+                value={partyWaitlistForm.email}
+                onChange={(event) => setPartyWaitlistForm((previous) => ({ ...previous, email: event.target.value }))}
+                placeholder="vardas@pastas.lt"
+              />
+            </label>
+          </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              required
+              checked={partyWaitlistForm.consent}
+              onChange={(event) => setPartyWaitlistForm((previous) => ({ ...previous, consent: event.target.checked }))}
+            />
+            <span>Sutinku, kad mano duomenys būtų saugomi laukiančiųjų sąraše ir man būtų išsiųstas pranešimas apie atsilaisvinusią vietą. <button className="inline-link-button" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button>.</span>
+          </label>
+          {partyWaitlistEmailConfigured === false ? <div className="notice warning">Automatiniai el. laiškai dar neįjungti. Organizatorius matys tavo kontaktą laukiančiųjų sąraše.</div> : null}
+          <div className="notice warning">Laiškas vietos nerezervuoja. Ji atiteks pirmam registraciją užbaigusiam žmogui.</div>
+          {partyWaitlistNotice ? <div className={`notice ${partyWaitlistNotice.type}`} role="status">{partyWaitlistNotice.text}</div> : null}
+          <div className="modal-actions">
+            <button className="ghost-button" type="button" onClick={() => setPartyWaitlistOpen(false)}>Uždaryti</button>
+            <button className="primary-button" type="submit" disabled={partyWaitlistSaving || partyWaitlistNotice?.type === "success"}>
+              {partyWaitlistSaving ? "Įtraukiama..." : "Prisijungti prie laukiančiųjų"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
         <Modal
         open={registerOpen}
         title="Registracijos forma"
@@ -6565,6 +6761,7 @@ export default function Page() {
               {privacyTouched && !form.consentAccepted ? (
                 <div className="validation-error">Pirma spustelėkite, kad sutinkate su privatumo politika.</div>
               ) : null}
+              {registerError ? <div className="notice warning" role="alert">{registerError}</div> : null}
 
                 <div className="modal-actions">
                   <button
@@ -6578,8 +6775,8 @@ export default function Page() {
                   >
                     Uždaryti
                   </button>
-                  <button className="primary-button" type="submit">
-                    Toliau į apmokėjimą
+                  <button className="primary-button" type="submit" disabled={registerSaving}>
+                    {registerSaving ? "Saugoma registracija..." : "Toliau į apmokėjimą"}
                   </button>
                 </div>
             </>
@@ -6637,11 +6834,11 @@ export default function Page() {
           </div>
           <div className="privacy-section">
             <strong>2. Kokie duomenys renkami</strong>
-            <p>Registracijos metu gali būti renkami šie duomenys: vardas, pavardė, miestas, telefono numeris, el. pašto adresas, registruojamų asmenų sąrašas, mokėjimo būsena ir su atvykimu bei pavežėjimu susiję žymėjimai ir kontaktai.</p>
+            <p>Registracijos metu gali būti renkami šie duomenys: vardas, pavardė, miestas, telefono numeris, el. pašto adresas, registruojamų asmenų sąrašas, mokėjimo būsena ir su atvykimu bei pavežėjimu susiję žymėjimai ir kontaktai. Laukiančiųjų sąraše saugomi vardas, pavardė, el. paštas ir pranešimo būsena.</p>
           </div>
           <div className="privacy-section">
             <strong>3. Duomenų tvarkymo tikslas</strong>
-            <p>Duomenys naudojami renginio registracijai administruoti, dalyvių sąrašui sudaryti, mokėjimams sutikrinti, QR patikrai prie įėjimo, komunikacijai dėl renginio, vietų valdymui ir dalyvių pavežėjimui suderinti.</p>
+            <p>Duomenys naudojami renginio registracijai administruoti, dalyvių sąrašui sudaryti, mokėjimams sutikrinti, QR patikrai prie įėjimo, komunikacijai dėl renginio, vietų valdymui ir dalyvių pavežėjimui suderinti. Laukiančiųjų el. paštas naudojamas tik pranešti apie atsilaisvinusią vietą.</p>
           </div>
           <div className="privacy-section">
             <strong>4. Teisinis pagrindas</strong>

@@ -7,6 +7,10 @@
     {
       "path": "/api/movie-reminders",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/party-waitlist-notify",
+      "schedule": "0 8 * * *"
     }
   ]
 }

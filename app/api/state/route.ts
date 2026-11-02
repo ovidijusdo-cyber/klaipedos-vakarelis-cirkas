@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
+import { PARTY_CAPACITY, expirePartyWaitlistInvitations, notifyAvailablePartyWaitlistGuests, partyOccupied } from "../../../lib/party-waitlist";
 
 const STATE_ID = "main";
 const SECTION_TIMESTAMPS_KEY = "__sectionUpdatedAt";
@@ -581,6 +582,11 @@ export async function POST(request: Request) {
 
       mergedPayload[SECTION_TIMESTAMPS_KEY] = nextSectionUpdatedAt;
       sanitizeStoredPayload(mergedPayload);
+      const previousOccupied = partyOccupied(existingPayload);
+      const nextOccupied = partyOccupied(mergedPayload);
+      if (nextOccupied > PARTY_CAPACITY && nextOccupied > previousOccupied) {
+        return NextResponse.json({ error: "Visos vietos užimtos. Prisijunk prie laukiančiųjų sąrašo." }, { status: 409 });
+      }
 
       let query = supabase
         .from("event_state")
@@ -600,6 +606,11 @@ export async function POST(request: Request) {
       }
 
       if (updatedRows && updatedRows.length > 0) {
+        if (nextOccupied < previousOccupied) {
+          await notifyAvailablePartyWaitlistGuests().catch((error) => console.error("Failed to notify party waitlist", error));
+        } else if (previousOccupied < PARTY_CAPACITY && nextOccupied >= PARTY_CAPACITY) {
+          await expirePartyWaitlistInvitations().catch((error) => console.error("Failed to expire party waitlist invitations", error));
+        }
         return NextResponse.json({ ok: true });
       }
 

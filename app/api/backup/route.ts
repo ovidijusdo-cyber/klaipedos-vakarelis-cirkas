@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
+import { PARTY_WAITLIST_STATE_ID } from "../../../lib/party-waitlist";
 
 const STATE_ID = "main";
 const ADMIN_PIN = process.env.ADMIN_PIN;
@@ -21,12 +22,13 @@ function isAuthorized(request: Request) {
 
 async function createBackup() {
   const supabase = createSupabaseServerClient();
-  const [stateResult, teamsResult, playersResult, matchesResult, leagueGroupsResult, leagueRosterResult, leagueMatchesResult] = await Promise.all([
+  const [stateResult, waitlistResult, teamsResult, playersResult, matchesResult, leagueGroupsResult, leagueRosterResult, leagueMatchesResult] = await Promise.all([
     supabase
       .from("event_state")
       .select("payload, updated_at")
       .eq("id", STATE_ID)
       .maybeSingle(),
+    supabase.from("event_state").select("payload, updated_at").eq("id", PARTY_WAITLIST_STATE_ID).maybeSingle(),
     supabase.from("kvadratas_teams").select("*"),
     supabase.from("kvadratas_players").select("*"),
     supabase.from("kvadratas_matches").select("*"),
@@ -39,6 +41,7 @@ async function createBackup() {
   if (stateError) {
     throw stateError;
   }
+  if (waitlistResult.error) throw waitlistResult.error;
   if (teamsResult.error) {
     throw teamsResult.error;
   }
@@ -77,6 +80,19 @@ async function createBackup() {
 
   if (backupError) {
     throw backupError;
+  }
+
+  if (waitlistResult.data) {
+    const { error: waitlistBackupError } = await supabase.from("event_state_backups").upsert(
+      {
+        state_id: PARTY_WAITLIST_STATE_ID,
+        backup_date: backupDate,
+        payload: waitlistResult.data.payload,
+        source_updated_at: waitlistResult.data.updated_at,
+      },
+      { onConflict: "state_id,backup_date" },
+    );
+    if (waitlistBackupError) throw waitlistBackupError;
   }
 
   const { error: kvadratasBackupError } = await supabase.from("kvadratas_backups").upsert(
