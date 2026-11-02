@@ -107,6 +107,8 @@ const translations: Record<string, Translation> = {
   "Rasta": { lv: "Atrasti", ru: "Найдено" },
   "iš": { lv: "no", ru: "из" },
   "Pagal paiešką svečių nerasta.": { lv: "Pēc meklēšanas viesi nav atrasti.", ru: "По запросу гости не найдены." },
+  "Įrašyk miestą": { lv: "Ieraksti pilsētu", ru: "Введите город" },
+  "Nenurodytas miestas": { lv: "Pilsēta nav norādīta", ru: "Город не указан" },
   "Programa": { lv: "Programma", ru: "Программа" },
   "Svarbu": { lv: "Svarīgi", ru: "Важно" },
   "Dainų pasiūlymai ir idėjos": { lv: "Dziesmu ieteikumi un idejas", ru: "Песни и идеи" },

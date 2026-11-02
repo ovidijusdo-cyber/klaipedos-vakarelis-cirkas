@@ -1244,7 +1244,7 @@ function normalizeText(value: string) {
 }
 
 function normalizeGuestSearch(value: string) {
-  return value.normalize("NFD").replace(/\p{M}/gu, "").trim().toLocaleLowerCase("lt-LT");
+  return value.normalize("NFD").replace(/\p{M}/gu, "").trim().replace(/\s+/g, " ").toLocaleLowerCase("lt-LT");
 }
 
 function movieSeatGuestLabel(reservation: MovieSeatReservation) {
@@ -1783,6 +1783,7 @@ export default function Page() {
   const [ideaForm, setIdeaForm] = useState("");
   const [activePanel, setActivePanel] = useState<PublicPanel>("guests");
   const [guestSearch, setGuestSearch] = useState("");
+  const [guestCityFilter, setGuestCityFilter] = useState("");
   const [pendingCancel, setPendingCancel] = useState<PendingCancel>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [pendingRideCancel, setPendingRideCancel] = useState<PendingRideCancel>(null);
@@ -4318,13 +4319,33 @@ export default function Page() {
     activePeople(reservation).map((person) => ({
       city: reservation.city,
       name: maskName(person.firstName, person.lastName),
-      searchName: normalizeGuestSearch(`${person.firstName} ${person.lastName} ${reservation.city}`),
+      searchName: normalizeGuestSearch(`${person.firstName} ${person.lastName}`),
     })),
   );
+  const guestCityOptions = Array.from(guestEntries.reduce((cities, entry) => {
+    const label = entry.city.trim() || "Nenurodytas miestas";
+    const key = normalizeGuestSearch(label);
+    const existing = cities.get(key);
+    const accentCount = (label.normalize("NFD").match(/\p{M}/gu) ?? []).length;
+    if (existing) {
+      existing.count += 1;
+      if (accentCount > existing.accentCount) {
+        existing.label = label;
+        existing.accentCount = accentCount;
+      }
+    } else {
+      cities.set(key, { key, label, count: 1, accentCount });
+    }
+    return cities;
+  }, new Map<string, { key: string; label: string; count: number; accentCount: number }>()).values())
+    .sort((a, b) => a.label.localeCompare(b.label, "lt-LT"));
   const guestSearchTerms = normalizeGuestSearch(guestSearch).split(/\s+/).filter(Boolean);
-  const filteredGuestEntries = guestSearchTerms.length
-    ? guestEntries.filter((entry) => guestSearchTerms.every((term) => entry.searchName.includes(term)))
-    : guestEntries;
+  const guestCityTerm = normalizeGuestSearch(guestCityFilter);
+  const guestFilterActive = guestSearchTerms.length > 0 || Boolean(guestCityTerm);
+  const filteredGuestEntries = guestEntries.filter((entry) =>
+    (!guestCityTerm || normalizeGuestSearch(entry.city.trim() || "Nenurodytas miestas").includes(guestCityTerm)) &&
+    guestSearchTerms.every((term) => entry.searchName.includes(term)),
+  );
 
   function openAppMode(mode: AppMode) {
     if (mode === "movie" && !EVENT_ACCESS.movie) return;
@@ -5578,9 +5599,24 @@ export default function Page() {
               onChange={(event) => setGuestSearch(event.target.value)}
               placeholder="Vardas arba pavardė"
             />
-            {guestSearchTerms.length ? <span className="guest-search-count" role="status">{translatePartyText("Rasta", partyLanguage)}: {filteredGuestEntries.length} {translatePartyText("iš", partyLanguage)} {guestEntries.length}</span> : null}
+            <div className="guest-city-filter">
+              <label htmlFor="guest-city-filter">Miestas</label>
+              <input
+                id="guest-city-filter"
+                type="search"
+                autoComplete="off"
+                list="guest-city-options"
+                value={guestCityFilter}
+                onChange={(event) => setGuestCityFilter(event.target.value)}
+                placeholder="Įrašyk miestą"
+              />
+              <datalist id="guest-city-options">
+                {guestCityOptions.map((city) => <option key={city.key} value={city.label} label={`${city.count}`} />)}
+              </datalist>
+            </div>
+            {guestFilterActive ? <span className="guest-search-count" role="status">{translatePartyText("Rasta", partyLanguage)}: {filteredGuestEntries.length} {translatePartyText("iš", partyLanguage)} {guestEntries.length}</span> : null}
           </div>
-          <div className={guestSearchTerms.length ? "guest-grid search-results" : "guest-grid"}>
+          <div className={guestFilterActive ? "guest-grid search-results" : "guest-grid"}>
             {filteredGuestEntries.length ? (
               filteredGuestEntries.map((entry, index) => (
                 <div

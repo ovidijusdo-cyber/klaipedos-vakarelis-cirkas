@@ -2999,7 +2999,7 @@ textarea {
 
 .guest-search-panel {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(230px, 1.3fr) auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(210px, 1.3fr) minmax(170px, 0.9fr) auto;
   align-items: center;
   gap: 14px;
   margin-bottom: 18px;
@@ -3024,6 +3024,16 @@ textarea {
   width: 100%;
   min-width: 0;
   background: white;
+}
+
+.guest-city-filter {
+  display: grid;
+  gap: 4px;
+}
+
+.guest-city-filter label {
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .guest-grid.search-results {
