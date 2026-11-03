@@ -119,7 +119,7 @@
 .routeLineSecond { left: 53%; top: 48%; width: 31%; transform: rotate(-30deg); }
 .routeCaption { position: absolute; right: 20px; bottom: 20px; left: 20px; padding: 15px; border-radius: 14px; background: rgba(11, 46, 59, .74); color: #e5f5f3; text-align: center; font-size: .85rem; font-weight: 700; }
 
-.introStrip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 19px 0 72px; border: 1px solid #dae7e4; border-radius: 22px; background: #dae7e4; overflow: hidden; }
+.introStrip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 72px 0; border: 1px solid #dae7e4; border-radius: 22px; background: #dae7e4; overflow: hidden; }
 .introStrip > div { padding: 26px; background: #fff; }
 .introStrip span { display: block; color: #1a8887; font-family: var(--font-heading), sans-serif; font-size: 1.3rem; font-weight: 800; }
 .introStrip strong { display: block; margin: 9px 0 5px; font-size: 1rem; }
@@ -137,19 +137,19 @@
 .dayCard h3 { margin: 24px 0 10px; font-size: 1.13rem; }
 .dayCard p { margin: 0; color: #617b83; font-size: .94rem; line-height: 1.6; }
 
-.registrationArea { display: grid; grid-template-columns: minmax(340px, .88fr) minmax(0, 1.12fr); align-items: start; gap: 22px; margin-top: 76px; scroll-margin-top: 24px; }
+.registrationArea { display: grid; grid-template-columns: minmax(340px, .88fr) minmax(0, 1.12fr); align-items: start; gap: 22px; margin-top: 24px; scroll-margin-top: 24px; }
 .formCard, .busCard { border: 1px solid #dce8e5; border-radius: 28px; background: white; box-shadow: 0 20px 54px rgba(32, 84, 91, .08); }
 .formCard { padding: clamp(24px, 3.2vw, 40px); }
 .formCard > p { margin: 0 0 28px; color: #57717b; line-height: 1.7; }
 .formCard form { display: grid; gap: 15px; }
-.nameLabel { font-weight: 900; }
-.nameInput { width: 100%; padding: 17px 18px; border: 2px solid #93d4c8; border-radius: 14px; outline: none; background: #eefbf7; color: #193c45; font: inherit; font-size: 1.05rem; box-sizing: border-box; }
-.nameInput:focus { border-color: #087f78; box-shadow: 0 0 0 4px rgba(16, 137, 128, .13); }
-.nameInput::placeholder { color: #698b8c; }
+.nameLabel { color: #163e48; font-size: 1.1rem; font-weight: 900; }
+.nameInput { width: 100%; min-height: 66px; padding: 17px 20px; border: 2px solid #e4b55d; border-radius: 16px; outline: none; background: #fff8e9; color: #193c45; font: inherit; font-size: 1.16rem; box-sizing: border-box; }
+.nameInput:focus { border-color: #b57016; box-shadow: 0 0 0 4px rgba(218, 157, 65, .19); }
+.nameInput::placeholder { color: #7c766c; }
 .consent { display: flex; align-items: flex-start; gap: 11px; margin-top: 6px; color: #48656e; font-size: .89rem; line-height: 1.5; cursor: pointer; }
 .consent input { width: 19px; height: 19px; margin: 2px 0 0; accent-color: #138b80; flex: none; }
-.submitButton { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; margin-top: 10px; padding: 18px 20px; border: 0; border-radius: 15px; background: #117e76; color: white; font: inherit; font-weight: 900; text-align: left; cursor: pointer; }
-.submitButton:hover:not(:disabled) { background: #0b6761; }
+.submitButton { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 68px; margin-top: 10px; padding: 18px 22px; border: 0; border-radius: 16px; background: linear-gradient(110deg, #ffd47c, #f2a742); color: #173640; font: inherit; font-size: 1.08rem; font-weight: 900; text-align: left; box-shadow: 0 12px 24px rgba(161, 94, 23, .2); cursor: pointer; }
+.submitButton:hover:not(:disabled) { background: linear-gradient(110deg, #ffe0a0, #f6b65e); }
 .submitButton:disabled { opacity: .55; cursor: not-allowed; }
 .submitButton span { font-size: 1.3rem; }
 .notice, .error { margin: 4px 0 0; padding: 12px 15px; border-radius: 10px; font-size: .89rem; font-weight: 700; line-height: 1.5; }
@@ -194,9 +194,9 @@
   .routeArt::before { inset: 25px; }
   .routeArt > span:not(.routeLine, .routeLineSecond) { padding: 7px 9px; font-size: .67rem; }
   .routeCaption { font-size: .72rem; }
-  .introStrip { grid-template-columns: 1fr; margin-bottom: 55px; }
+  .introStrip { grid-template-columns: 1fr; margin: 55px 0; }
   .introStrip > div { padding: 19px 22px; }
-  .registrationArea { margin-top: 55px; }
+  .registrationArea { margin-top: 16px; }
   .formCard, .busCard { border-radius: 22px; }
   .passengerList { gap: 10px; padding-inline: 0; }
   .passenger { padding: 9px; }

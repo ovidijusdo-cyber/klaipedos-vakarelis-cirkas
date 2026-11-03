@@ -116,42 +116,19 @@ export default function FilialasPage() {
           </div>
         </section>
 
-        <section className={styles.introStrip} aria-label="Svarbi kelionės informacija">
-          <div><span>01</span><strong>Susidomėjimo registracija</strong><p>Įrašytas vardas padės suprasti, kiek žmonių norėtų vykti.</p></div>
-          <div><span>02</span><strong>Data tikslinama</strong><p>Kelionė planuojama balandį; konkreti savaitė dar nenustatyta.</p></div>
-          <div><span>03</span><strong>Kaina preliminari</strong><p>Tiksli suma paaiškės žinant grupės dydį ir kelionės išlaidas.</p></div>
-        </section>
-
-        <section className={styles.itinerary} aria-labelledby="route-title">
-          <div className={styles.sectionHeading}>
-            <span className={styles.sectionKicker}>KELIONĖS EIGA</span>
-            <h2 id="route-title">Trys dienos drauge</h2>
-            <p>Numatomas maršrutas. Laikai, nakvynės vietos ir lankytinos vietos bus patikslinti vėliau.</p>
-          </div>
-          <div className={styles.dayGrid}>
-            {days.map((item) => (
-              <article className={styles.dayCard} key={item.number}>
-                <div className={styles.dayTop}><span>{item.number}</span><small>{item.day}</small></div>
-                <h3>{item.route}</h3>
-                <p>{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className={styles.registrationArea} id="registracija" aria-labelledby="register-title">
           <div className={styles.formCard}>
             <span className={styles.sectionKicker}>VIETA NORINČIŲJŲ SĄRAŠE</span>
             <h2 id="register-title">Norėtum vykti?</h2>
             <p>Įrašyk savo vardą ir pavardę. Tai yra susidomėjimo registracija, o ne apmokėjimas ar patvirtinta vieta autobuse.</p>
             <form onSubmit={register}>
-              <label className={styles.nameLabel} htmlFor="traveler-name">Vardas ir pavardė</label>
+              <label className={styles.nameLabel} htmlFor="traveler-name">Vardas Pavardė</label>
               <input
                 id="traveler-name"
                 className={styles.nameInput}
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
-                placeholder="Pvz., Vardas Pavardė"
+                placeholder="Įrašyk vardą ir pavardę"
                 autoComplete="name"
                 maxLength={100}
                 required
@@ -193,6 +170,29 @@ export default function FilialasPage() {
               </div>
               <div className={styles.busEnd}>SĄRAŠAS ATNAUJINAMAS AUTOMATIŠKAI</div>
             </div>
+          </div>
+        </section>
+
+        <section className={styles.introStrip} aria-label="Svarbi kelionės informacija">
+          <div><span>01</span><strong>Susidomėjimo registracija</strong><p>Įrašytas vardas padės suprasti, kiek žmonių norėtų vykti.</p></div>
+          <div><span>02</span><strong>Data tikslinama</strong><p>Kelionė planuojama balandį; konkreti savaitė dar nenustatyta.</p></div>
+          <div><span>03</span><strong>Kaina preliminari</strong><p>Tiksli suma paaiškės žinant grupės dydį ir kelionės išlaidas.</p></div>
+        </section>
+
+        <section className={styles.itinerary} aria-labelledby="route-title">
+          <div className={styles.sectionHeading}>
+            <span className={styles.sectionKicker}>KELIONĖS EIGA</span>
+            <h2 id="route-title">Trys dienos drauge</h2>
+            <p>Numatomas maršrutas. Laikai, nakvynės vietos ir lankytinos vietos bus patikslinti vėliau.</p>
+          </div>
+          <div className={styles.dayGrid}>
+            {days.map((item) => (
+              <article className={styles.dayCard} key={item.number}>
+                <div className={styles.dayTop}><span>{item.number}</span><small>{item.day}</small></div>
+                <h3>{item.route}</h3>
+                <p>{item.description}</p>
+              </article>
+            ))}
           </div>
         </section>
 
