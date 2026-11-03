@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "./supabase/server";
 
-export const PARTY_CAPACITY = 140;
+export const PARTY_CAPACITY = 150;
 export const PARTY_WAITLIST_STATE_ID = "party-waitlist-2026-11-07";
 const MAX_UPDATE_RETRIES = 6;
 
