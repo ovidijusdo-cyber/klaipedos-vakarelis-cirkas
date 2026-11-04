@@ -66,7 +66,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin || origin !== new URL(request.url).origin) return json({ error: "Neleistina užklausa." }, 403);
+  const allowedHosts = new Set([
+    new URL(request.url).host,
+    request.headers.get("host"),
+    request.headers.get("x-forwarded-host")?.split(",")[0].trim(),
+    "klaipedosvakaras.fun",
+    "www.klaipedosvakaras.fun",
+  ]);
+  let originHost: string | null = null;
+  try {
+    originHost = origin ? new URL(origin).host : null;
+  } catch {
+    return json({ error: "Neleistina užklausa." }, 403);
+  }
+  if (!originHost || !allowedHosts.has(originHost)) return json({ error: "Neleistina užklausa." }, 403);
   const token = deviceToken(request);
   if (!token) return json({ error: "Atnaujink puslapį ir bandyk dar kartą. Naršyklėje turi būti įjungti slapukai." }, 428);
 
