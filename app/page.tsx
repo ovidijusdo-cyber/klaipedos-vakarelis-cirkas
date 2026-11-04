@@ -5532,9 +5532,6 @@ export default function Page() {
         <button className={activePanel === "drivers" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("drivers")}>
           Vairuotojai, kurie turi vietos
         </button>
-        <button className="panel-tab" type="button" onClick={() => { setVoteStep(1); setVoteOpen(true); }}>
-          Balsavimo dėžutė
-        </button>
         <button className={activePanel === "qr" ? "panel-tab active" : "panel-tab"} type="button" onClick={() => setActivePanel("qr")}>
           QR tikrinimas
         </button>
