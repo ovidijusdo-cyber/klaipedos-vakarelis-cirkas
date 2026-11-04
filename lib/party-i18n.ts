@@ -57,17 +57,17 @@ const translations: Record<string, Translation> = {
   "Noriu dalyvauti": { lv: "Vēlos piedalīties", ru: "Хочу участвовать" },
   "Tikrinamos vietos...": { lv: "Pārbaudām vietas...", ru: "Проверяем места..." },
   "Laukiančiųjų sąrašas": { lv: "Gaidītāju saraksts", ru: "Список ожидания" },
-  "Visos 150 vietų šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą.": {
-    lv: "Visas 150 vietas pašlaik ir aizņemtas. Atstāj savu vārdu, uzvārdu un e-pastu.",
-    ru: "Все 150 мест сейчас заняты. Оставьте имя, фамилию и адрес электронной почты.",
+  "Visos 157 vietos šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą.": {
+    lv: "Visas 157 vietas pašlaik ir aizņemtas. Atstāj savu vārdu, uzvārdu un e-pastu.",
+    ru: "Все 157 мест сейчас заняты. Оставьте имя, фамилию и адрес электронной почты.",
   },
   "Automatiniai el. laiškai dar neįjungti. Organizatorius matys tavo kontaktą laukiančiųjų sąraše.": {
     lv: "Automātiskās e-pasta vēstules vēl nav ieslēgtas. Organizators redzēs tavu kontaktinformāciju gaidītāju sarakstā.",
     ru: "Автоматические письма пока не включены. Организатор увидит ваши контактные данные в списке ожидания.",
   },
-  "Visos 150 vietų užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.": {
-    lv: "Visas 150 vietas ir aizņemtas. Spied „Vēlos piedalīties“ un pievienojies gaidītāju sarakstam.",
-    ru: "Все 150 мест заняты. Нажмите «Хочу участвовать» и запишитесь в список ожидания.",
+  "Visos 157 vietos užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.": {
+    lv: "Visas 157 vietas ir aizņemtas. Spied „Vēlos piedalīties“ un pievienojies gaidītāju sarakstam.",
+    ru: "Все 157 мест заняты. Нажмите «Хочу участвовать» и запишитесь в список ожидания.",
   },
   "Vardas ir pavardė": { lv: "Vārds un uzvārds", ru: "Имя и фамилия" },
   "El. paštas": { lv: "E-pasts", ru: "Электронная почта" },

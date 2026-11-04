@@ -348,7 +348,7 @@ const CHILD_AGE_LIMIT = 12;
 const ADULT_AGE_START = 13;
 const VOLUNTEER_DISCOUNT_CODE = "noriuprisideti50";
 const VOLUNTEER_DISCOUNT_PERCENT = 50;
-const MAX_PLACES = 150;
+const MAX_PLACES = 157;
 const SONG_PLAYLIST_PIN = "v";
 const SONG_VOTES_STORAGE_KEY = "klaipedos-vakaras-song-votes";
 const COMMON_SONG_TITLE = "Ošia Vilnius";
@@ -5410,7 +5410,7 @@ export default function Page() {
           </div>
 
           {registerError ? <div className="notice warning" role="alert">{registerError}</div> : null}
-          {remaining === 0 ? <p className="party-full-note">Visos 150 vietų užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.</p> : null}
+          {remaining === 0 ? <p className="party-full-note">Visos 157 vietos užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.</p> : null}
 
           <div className="telegram-cta">
             <a className="telegram-button" href={TELEGRAM_GROUP_URL} target="_blank" rel="noreferrer">
@@ -5974,7 +5974,7 @@ export default function Page() {
                 <StatCard label="Pažymėta grynais" value={String(totalCashChosen)} tone="success" />
               </div>
 
-              <SectionCard title="Vakarėlio laukiančiųjų sąrašas" description="Užpildžius 150 vietų, norintys dalyvauti palieka vardą ir el. paštą. Atsilaisvinus vietai, laiškas siunčiamas eilės tvarka; jis vietos nerezervuoja.">
+              <SectionCard title="Vakarėlio laukiančiųjų sąrašas" description="Užpildžius 157 vietas, norintys dalyvauti palieka vardą ir el. paštą. Atsilaisvinus vietai, laiškas siunčiamas eilės tvarka; jis vietos nerezervuoja.">
                 <div className="inline-header">
                   <strong>Laukia: {partyWaitlistCount}</strong>
                   <button className="ghost-button" type="button" onClick={() => void refreshPartyWaitlist()}>Atnaujinti</button>
@@ -6553,7 +6553,7 @@ export default function Page() {
       <Modal
         open={partyWaitlistOpen}
         title="Laukiančiųjų sąrašas"
-        description="Visos 150 vietų šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą."
+        description="Visos 157 vietos šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą."
         onClose={() => setPartyWaitlistOpen(false)}
       >
         <form className="stack" onSubmit={joinPartyWaitlist}>
