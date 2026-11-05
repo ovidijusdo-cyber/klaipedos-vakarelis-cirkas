@@ -57,17 +57,19 @@ const translations: Record<string, Translation> = {
   "Noriu dalyvauti": { lv: "Vēlos piedalīties", ru: "Хочу участвовать" },
   "Tikrinamos vietos...": { lv: "Pārbaudām vietas...", ru: "Проверяем места..." },
   "Laukiančiųjų sąrašas": { lv: "Gaidītāju saraksts", ru: "Список ожидания" },
-  "Visos 157 vietos šiuo metu užimtos. Palik savo vardą, pavardę ir el. paštą.": {
-    lv: "Visas 157 vietas pašlaik ir aizņemtas. Atstāj savu vārdu, uzvārdu un e-pastu.",
-    ru: "Все 157 мест сейчас заняты. Оставьте имя, фамилию и адрес электронной почты.",
+  "Atsiprašome, vietų nėra": { lv: "Atvainojiet, brīvu vietu nav", ru: "Извините, свободных мест нет" },
+  "Tik jeigu kas nors išsibrauks iš sąrašo, galima bus užsiregistruoti.": {
+    lv: "Reģistrēties atkal varēs tikai tad, ja kāds atteiksies no savas vietas.",
+    ru: "Зарегистрироваться снова можно будет, только если кто-то отменит участие.",
   },
+  "Supratau": { lv: "Sapratu", ru: "Понятно" },
   "Automatiniai el. laiškai dar neįjungti. Organizatorius matys tavo kontaktą laukiančiųjų sąraše.": {
     lv: "Automātiskās e-pasta vēstules vēl nav ieslēgtas. Organizators redzēs tavu kontaktinformāciju gaidītāju sarakstā.",
     ru: "Автоматические письма пока не включены. Организатор увидит ваши контактные данные в списке ожидания.",
   },
-  "Visos 157 vietos užimtos. Spausk „Noriu dalyvauti“ ir prisijunk prie laukiančiųjų sąrašo.": {
-    lv: "Visas 157 vietas ir aizņemtas. Spied „Vēlos piedalīties“ un pievienojies gaidītāju sarakstam.",
-    ru: "Все 157 мест заняты. Нажмите «Хочу участвовать» и запишитесь в список ожидания.",
+  "Visos 157 vietos užimtos. Jei kas nors išsibrauks iš sąrašo, vėl bus galima užsiregistruoti.": {
+    lv: "Visas 157 vietas ir aizņemtas. Ja kāds atteiksies no savas vietas, varēs reģistrēties atkal.",
+    ru: "Все 157 мест заняты. Если кто-то отменит участие, можно будет зарегистрироваться снова.",
   },
   "Vardas ir pavardė": { lv: "Vārds un uzvārds", ru: "Имя и фамилия" },
   "El. paštas": { lv: "E-pasts", ru: "Электронная почта" },
