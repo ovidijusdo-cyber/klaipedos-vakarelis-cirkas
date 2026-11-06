@@ -81,6 +81,7 @@ const translations: Record<string, Translation> = {
   "Mano registracijos būsena": { lv: "Mans reģistrācijas statuss", ru: "Статус моей регистрации" },
   "Apmokėjimo informacija": { lv: "Maksājuma informācija", ru: "Информация об оплате" },
   "Bendra daina · Ošia Vilnius": { lv: "Kopīgā dziesma · Viļņa skan", ru: "Общая песня · Шумит Вильнюс" },
+  "Bendra daina · Laimingos akys, reginčios tave": { lv: "Kopīgā dziesma · Mūsu acis redz un ausis dzird", ru: "Общая песня · Я счастлив, что вижу свет" },
   "Susikeisti": { lv: "Nodot vietu", ru: "Передать место" },
   "Atšaukti dalyvavimą": { lv: "Atcelt dalību", ru: "Отменить участие" },
   "Prisijungti į vakarėlio Telegram grupę": { lv: "Pievienoties vakara Telegram grupai", ru: "Вступить в Telegram-группу вечера" },

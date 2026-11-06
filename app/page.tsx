@@ -14,6 +14,7 @@ import {
   type MovieSettings,
 } from "../lib/movie";
 import { EVENT_ACCESS } from "../lib/event-access";
+import { SECOND_COMMON_SONGS, SECOND_SONG_LANGUAGE_OPTIONS, type SecondSongLanguage } from "../lib/party-song-laimingos-akys";
 import {
   PARTY_LANGUAGE_OPTIONS,
   translatePartyText,
@@ -1743,8 +1744,10 @@ export default function Page() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [paymentInfoOpen, setPaymentInfoOpen] = useState(false);
   const [commonSongOpen, setCommonSongOpen] = useState(false);
+  const [commonSongId, setCommonSongId] = useState<"vilnius" | "laimingos-akys">("vilnius");
   const [commonSongFontSize, setCommonSongFontSize] = useState(20);
   const [commonSongLanguage, setCommonSongLanguage] = useState<CommonSongLanguage>("lt");
+  const [secondSongLanguage, setSecondSongLanguage] = useState<SecondSongLanguage>("lt");
 
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPin, setAdminPin] = useState("");
@@ -2548,7 +2551,9 @@ export default function Page() {
     (activeMovieDirectoryPage - 1) * MOVIE_DIRECTORY_PAGE_SIZE,
     activeMovieDirectoryPage * MOVIE_DIRECTORY_PAGE_SIZE,
   );
-  const activeCommonSong = COMMON_SONGS[commonSongLanguage];
+  const activeCommonSong = commonSongId === "vilnius" ? COMMON_SONGS[commonSongLanguage] : SECOND_COMMON_SONGS[secondSongLanguage];
+  const activeSongLanguage = commonSongId === "vilnius" ? commonSongLanguage : secondSongLanguage;
+  const activeSongLanguageOptions = commonSongId === "vilnius" ? COMMON_SONG_LANGUAGE_OPTIONS : SECOND_SONG_LANGUAGE_OPTIONS;
   const pendingReservations = useMemo(
     () =>
       activeReservations
@@ -5356,10 +5361,16 @@ export default function Page() {
             <button className="secondary-button" type="button" onClick={() => setPaymentInfoOpen(true)}>
               Apmokėjimo informacija
             </button>
-            <button className="common-song-hero-button" type="button" onClick={() => { setCommonSongLanguage("lt"); setCommonSongOpen(true); }}>
-              <MusicNoteIcon />
-              Bendra daina · Ošia Vilnius
-            </button>
+            <div className="common-song-buttons">
+              <button className="common-song-hero-button" type="button" onClick={() => { setCommonSongId("vilnius"); setCommonSongLanguage("lt"); setCommonSongOpen(true); }}>
+                <MusicNoteIcon />
+                Bendra daina · Ošia Vilnius
+              </button>
+              <button className="common-song-hero-button second-song-hero-button" type="button" onClick={() => { setCommonSongId("laimingos-akys"); setSecondSongLanguage(partyLanguage); setCommonSongOpen(true); }}>
+                <MusicNoteIcon />
+                Bendra daina · Laimingos akys, reginčios tave
+              </button>
+            </div>
             <button className="ghost-button light" type="button" onClick={() => setTransferOpen(true)}>
               Susikeisti
             </button>
@@ -7371,14 +7382,17 @@ export default function Page() {
         onClose={() => setCommonSongOpen(false)}
       >
         <div className="common-song-modal">
-          {COMMON_SONG_LANGUAGE_OPTIONS.length > 1 ? (
+          {activeSongLanguageOptions.length > 1 ? (
             <div className="common-song-languages" aria-label="Pasirinkti dainos kalbą">
-              {COMMON_SONG_LANGUAGE_OPTIONS.map((language) => (
+              {activeSongLanguageOptions.map((language) => (
                 <button
-                  className={commonSongLanguage === language.id ? "active" : ""}
+                  className={activeSongLanguage === language.id ? "active" : ""}
                   key={language.id}
                   type="button"
-                  onClick={() => setCommonSongLanguage(language.id)}
+                  onClick={() => {
+                    if (commonSongId === "vilnius") setCommonSongLanguage(language.id as CommonSongLanguage);
+                    else setSecondSongLanguage(language.id as SecondSongLanguage);
+                  }}
                 >
                   <strong>{language.label}</strong>
                   <span>{language.name}</span>

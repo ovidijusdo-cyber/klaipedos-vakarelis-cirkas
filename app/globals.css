@@ -2698,9 +2698,26 @@ textarea {
   animation: commonSongPulse 1.9s ease-in-out infinite;
 }
 
+.common-song-buttons {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .common-song-hero-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 22px 38px rgba(220, 38, 38, 0.42);
+}
+
+.second-song-hero-button {
+  background: linear-gradient(135deg, #0f766e 0%, #0891b2 55%, #2563eb 100%);
+  box-shadow: 0 18px 34px rgba(8, 145, 178, 0.3);
+  animation-delay: 0.95s;
+}
+
+.second-song-hero-button:hover {
+  box-shadow: 0 22px 38px rgba(8, 145, 178, 0.4);
 }
 
 @keyframes commonSongPulse {
