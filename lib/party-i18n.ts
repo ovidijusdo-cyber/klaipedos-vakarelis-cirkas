@@ -80,7 +80,7 @@ const translations: Record<string, Translation> = {
   "Prisijungti prie laukiančiųjų": { lv: "Pievienoties gaidītāju sarakstam", ru: "Записаться в список ожидания" },
   "Mano registracijos būsena": { lv: "Mans reģistrācijas statuss", ru: "Статус моей регистрации" },
   "Apmokėjimo informacija": { lv: "Maksājuma informācija", ru: "Информация об оплате" },
-  "Bendra daina · Ošia Vilnius": { lv: "Kopīgā dziesma · Viļņa skan", ru: "Общая песня · Шумит Вильнюс" },
+  "Bendra daina · Ošia Vilnius": { lv: "Kopīgā dziesma · Viļņa skan", ru: "Общая песня · Радость в Вильнюсе" },
   "Bendra daina · Laimingos akys, reginčios tave": { lv: "Kopīgā dziesma · Mūsu acis redz un ausis dzird", ru: "Общая песня · Я счастлив, что вижу свет" },
   "Susikeisti": { lv: "Nodot vietu", ru: "Передать место" },
   "Atšaukti dalyvavimą": { lv: "Atcelt dalību", ru: "Отменить участие" },
