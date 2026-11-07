@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   PARTY_BALLOT_CATEGORIES,
   type PartyBallotCategoryId,
@@ -37,26 +37,33 @@ export default function BalsavimasPage() {
   const [saving, setSaving] = useState<PartyBallotCategoryId | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const voteRevisionRef = useRef(0);
+  const loadSequenceRef = useRef(0);
+  const lastAppliedLoadRef = useRef(0);
 
   useEffect(() => {
     let active = true;
     async function load() {
+      const voteRevision = voteRevisionRef.current;
+      const loadSequence = ++loadSequenceRef.current;
+      const canApply = () => active && voteRevision === voteRevisionRef.current && loadSequence > lastAppliedLoadRef.current;
       try {
         const response = await fetch("/api/balsavimas", { cache: "no-store" });
         const data = await response.json() as BallotResponse;
         if (!response.ok || !data.participants || !data.results || !data.votedCategoryIds) {
           throw new Error(data.error || "Balsavimo duomenų įkelti nepavyko.");
         }
-        if (active) {
+        if (canApply()) {
+          lastAppliedLoadRef.current = loadSequence;
           setParticipants(data.participants);
           setResults(data.results);
           setVotedCategoryIds(data.votedCategoryIds);
           setError("");
         }
       } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : "Patikrink ryšį ir atnaujink puslapį.");
+        if (canApply()) setError(loadError instanceof Error ? loadError.message : "Patikrink ryšį ir atnaujink puslapį.");
       } finally {
-        if (active) setLoading(false);
+        if (active && voteRevision === voteRevisionRef.current) setLoading(false);
       }
     }
     void load();
@@ -77,6 +84,7 @@ export default function BalsavimasPage() {
 
   async function vote(categoryId: PartyBallotCategoryId, targetPersonId: string) {
     if (saving || votedCategoryIds.includes(categoryId)) return;
+    voteRevisionRef.current += 1;
     setSaving(categoryId);
     setError("");
     setNotice("");
@@ -90,8 +98,10 @@ export default function BalsavimasPage() {
       if (!response.ok || !data.results || !data.votedCategoryIds) {
         throw new Error(data.error || "Balso išsaugoti nepavyko.");
       }
+      voteRevisionRef.current += 1;
       setResults(data.results);
       setVotedCategoryIds(data.votedCategoryIds);
+      setError("");
       setNotice("Balsas įskaitytas. Ačiū, kad dalyvauji!");
     } catch (voteError) {
       setError(voteError instanceof Error ? voteError.message : "Balso išsaugoti nepavyko.");
