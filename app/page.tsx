@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import jsQR from "jsqr";
 import { QRCodeSVG } from "qrcode.react";
 import PackingGame, { type GameScoreProof } from "./components/PackingGame";
+import { PartyAnnouncementModal } from "../components/PartyAnnouncementModal";
 import {
   DEFAULT_MOVIE_SETTINGS,
   MOVIE_SEAT_HOLD_SECONDS,
@@ -1747,6 +1748,7 @@ export default function Page() {
   const [deletedReservationIds, setDeletedReservationIds] = useState<number[]>([]);
   const [partyLanguage, setPartyLanguage] = useState<PartyLanguage>("lt");
   const [partyLanguageLoaded, setPartyLanguageLoaded] = useState(false);
+  const [partyAnnouncementOpen, setPartyAnnouncementOpen] = useState(pathname === "/vakarelis");
 
   const [appMode, setAppMode] = useState<AppMode>(() => {
     if (pathname === "/kino-filmas" && EVENT_ACCESS.movie) return "movie";
@@ -1996,6 +1998,10 @@ export default function Page() {
     } else if (pathname === "/") {
       setAppMode("home");
     }
+  }, [pathname]);
+
+  useEffect(() => {
+    setPartyAnnouncementOpen(pathname === "/vakarelis");
   }, [pathname]);
 
   useEffect(() => {
@@ -5263,6 +5269,12 @@ export default function Page() {
       <main className="page-shell world-party" ref={partyRootRef}>
         <div className="page-glow page-glow-left" />
         <div className="page-glow page-glow-right" />
+        <PartyAnnouncementModal
+          language={partyLanguage}
+          onClose={() => setPartyAnnouncementOpen(false)}
+          onLanguageChange={setPartyLanguage}
+          open={partyAnnouncementOpen && partyLanguageLoaded}
+        />
         {showConfetti || celebratingRegistration ? (
           <div className="confetti-layer" aria-hidden="true">
             {Array.from({ length: 50 }).map((_, index) => (
