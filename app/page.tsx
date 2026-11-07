@@ -5318,6 +5318,12 @@ export default function Page() {
               žaidimai ir aprangos akcentai nuves per skirtingas pasaulio kultūras.
             </p>
 
+          <a className="party-vote-spotlight" href="/balsavimas">
+            <span className="party-vote-spotlight-dot" aria-hidden="true" />
+            <span>BALSAVIMAS</span>
+            <span className="party-vote-spotlight-arrow" aria-hidden="true">→</span>
+          </a>
+
           <div className="chip-grid">
             <div className="chip">
               <span>Data</span>

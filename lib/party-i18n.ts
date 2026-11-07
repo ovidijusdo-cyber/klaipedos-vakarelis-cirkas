@@ -10,6 +10,7 @@ type Translation = { lv: string; ru: string };
 
 const translations: Record<string, Translation> = {
   "Kalba": { lv: "Valoda", ru: "Язык" },
+  "BALSAVIMAS": { lv: "BALSOŠANA", ru: "ГОЛОСОВАНИЕ" },
   "Grįžti į pasirinkimą": { lv: "Atgriezties pie izvēles", ru: "Вернуться к выбору" },
   "Vakaro maršrutas": { lv: "Vakara maršruts", ru: "Маршрут вечера" },
   "Priekulė · aplink pasaulį · Priekulė": { lv: "Priekule · apkārt pasaulei · Priekule", ru: "Приекуле · вокруг света · Приекуле" },
