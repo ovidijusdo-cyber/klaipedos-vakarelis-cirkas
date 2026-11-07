@@ -8,6 +8,17 @@ export const PARTY_BALLOT_CATEGORIES = [
 
 export type PartyBallotCategoryId = (typeof PARTY_BALLOT_CATEGORIES)[number]["id"];
 export type PartyBallotParticipant = { id: string; name: string };
+
+export const PARTY_BALLOT_EXTRA_PARTICIPANTS: PartyBallotParticipant[] = [
+  { id: "ballot-only-2026-11-07-1", name: "Kęstutis Jazukevičius" },
+  { id: "ballot-only-2026-11-07-2", name: "Simonas Jazukevičius" },
+  { id: "ballot-only-2026-11-07-3", name: "Zinaida Jazukevičienė" },
+  { id: "ballot-only-2026-11-07-4", name: "Julija Daunorienė" },
+  { id: "ballot-only-2026-11-07-5", name: "Luknė Daunorytė" },
+  { id: "ballot-only-2026-11-07-6", name: "Živilė" },
+  { id: "ballot-only-2026-11-07-7", name: "Džiuljeta Budrienė" },
+];
+
 export type PartyBallotVote = {
   categoryId: PartyBallotCategoryId;
   targetPersonId: string;
@@ -32,10 +43,11 @@ export function partyBallotParticipants(payload: unknown): PartyBallotParticipan
       if (!isRecord(person) || person.active === false || typeof person.id !== "string") continue;
       const firstName = typeof person.firstName === "string" ? person.firstName.trim() : "";
       const lastName = typeof person.lastName === "string" ? person.lastName.trim() : "";
-      if (!firstName || !lastName) continue;
-      people.set(person.id, { id: person.id, name: `${firstName} ${lastName}` });
+      if (!firstName) continue;
+      people.set(person.id, { id: person.id, name: lastName ? `${firstName} ${lastName}` : firstName });
     }
   }
+  for (const person of PARTY_BALLOT_EXTRA_PARTICIPANTS) people.set(person.id, person);
   return [...people.values()].sort((a, b) => a.name.localeCompare(b.name, "lt"));
 }
 
