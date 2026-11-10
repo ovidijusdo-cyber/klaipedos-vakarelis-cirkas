@@ -9,29 +9,28 @@ type InterestResponse = { registrations?: Interest[]; count?: number; error?: st
 
 const days = [
   {
-    day: "Ketvirtadienis",
+    day: "Balandžio 15 d. · ketvirtadienis",
     number: "01",
     route: "Lietuva → Estija",
-    description: "Išvykstame iš Klaipėdos išnuomotu autobusu. Atvykę į Estiją nakvojame viešbutyje.",
+    description: "Autobusu išvykstame iš Klaipėdos į Estiją, kur apsistojame nakvynei.",
   },
   {
-    day: "Penktadienis",
+    day: "Balandžio 16 d. · penktadienis",
     number: "02",
     route: "Estija → Suomija → Estija",
-    description: "Ryte keltu persikeliame į Suomiją ir vykstame į filialą. Vėliau numatome laiką muziejams arba lankytinoms vietoms. Vakare grįžtame į Estiją ir nakvojame viešbutyje.",
+    description: "Keltu persikeliame į Suomiją, aplankome filialą, muziejus ir pasivaikštome po miestą. Vakare keltu grįžtame į Estiją ir pernakvojame.",
   },
   {
-    day: "Šeštadienis",
+    day: "Balandžio 17 d. · šeštadienis",
     number: "03",
     route: "Estija → Klaipėda",
-    description: "Po nakvynės autobusu grįžtame į Klaipėdą.",
+    description: "Autobusu keliaujame atgal į Klaipėdą.",
   },
 ];
 
 export default function FilialasPage() {
   const [registrations, setRegistrations] = useState<Interest[]>([]);
   const [fullName, setFullName] = useState("");
-  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -72,13 +71,12 @@ export default function FilialasPage() {
       const response = await fetch("/api/filialas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, publicNameConsent: consent }),
+        body: JSON.stringify({ fullName }),
       });
       const data = (await response.json()) as InterestResponse;
       if (!response.ok || !Array.isArray(data.registrations)) throw new Error(data.error || "Registracija nepavyko.");
       setRegistrations(data.registrations);
       setFullName("");
-      setConsent(false);
       setNotice("Ačiū! Tavo vardas įrašytas į norinčiųjų sąrašą.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Registracija nepavyko. Bandyk dar kartą.");
@@ -97,13 +95,14 @@ export default function FilialasPage() {
 
         <section className={styles.hero} aria-labelledby="filialas-title">
           <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>Planuojama bendra kelionė · 2027 m. balandis</span>
-            <h1 id="filialas-title">Kartu į filialą <em>Suomijoje</em></h1>
-            <p>Ar vyktum kartu autobusu iš Klaipėdos? Šiuo metu renkame norinčiųjų vardus, kad galėtume įvertinti grupės dydį ir suplanuoti kelionę.</p>
+            <span className={styles.eyebrow}>🇫🇮 Bendra kelionė autobusu · 2027 m. balandžio 15–17 d.</span>
+            <h1 id="filialas-title">Kelionė į <em>Suomijos filialą</em></h1>
+            <p>Brangūs broliai ir sesės! Nemažai jūsų esate užsiminę, kad norėtumėte aplankyti Jehovos liudytojų filialą Suomijoje (Betelį). Todėl pabandykime suorganizuoti bendrą trijų dienų kelionę autobusu iš Klaipėdos!</p>
             <a className={styles.heroAction} href="#registracija">Užsirašyti į norinčiųjų sąrašą <span aria-hidden="true">↗</span></a>
             <div className={styles.heroFacts}>
+              <div><small>DATA</small><strong>2027 m. balandžio 15–17 d.</strong></div>
               <div><small>TRUKMĖ</small><strong>Ketvirtadienis – šeštadienis</strong></div>
-              <div><small>NUMATOMA KAINA</small><strong>Apie 150–200 € / asmeniui</strong></div>
+              <div><small>PRELIMINARI KAINA</small><strong>150–200 € / asmeniui</strong></div>
             </div>
           </div>
           <div className={styles.routeArt} aria-hidden="true">
@@ -120,7 +119,7 @@ export default function FilialasPage() {
           <div className={styles.formCard}>
             <span className={styles.sectionKicker}>VIETA NORINČIŲJŲ SĄRAŠE</span>
             <h2 id="register-title">Norėtum vykti?</h2>
-            <p>Įrašyk savo vardą ir pavardę. Tai yra susidomėjimo registracija, o ne apmokėjimas ar patvirtinta vieta autobuse.</p>
+            <p>Jei ši kelionė tave domina, įrašyk vardą ir pavardę. Tai tik preliminari registracija norinčiųjų skaičiui įvertinti, o ne apmokėjimas ar patvirtinta vieta autobuse.</p>
             <form onSubmit={register}>
               <label className={styles.nameLabel} htmlFor="traveler-name">Vardas Pavardė</label>
               <input
@@ -133,10 +132,7 @@ export default function FilialasPage() {
                 maxLength={100}
                 required
               />
-              <label className={styles.consent}>
-                <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required />
-                <span>Sutinku, kad mano vardas ir pavardė būtų matomi šiame viešame norinčiųjų sąraše.</span>
-              </label>
+              <p className={styles.nameVisibilityNote}>Įrašytas vardas ir pavardė bus matomi šiame norinčiųjų sąraše.</p>
               <button className={styles.submitButton} type="submit" disabled={saving || loading || Boolean(loadError)}>
                 {saving ? "Įrašoma..." : "Užsiregistruoti kaip norinčiam vykti"}
                 <span aria-hidden="true">→</span>
@@ -174,16 +170,16 @@ export default function FilialasPage() {
         </section>
 
         <section className={styles.introStrip} aria-label="Svarbi kelionės informacija">
-          <div><span>01</span><strong>Susidomėjimo registracija</strong><p>Įrašytas vardas padės suprasti, kiek žmonių norėtų vykti.</p></div>
-          <div><span>02</span><strong>Data tikslinama</strong><p>Kelionė planuojama balandį; konkreti savaitė dar nenustatyta.</p></div>
-          <div><span>03</span><strong>Kaina preliminari</strong><p>Tiksli suma paaiškės žinant grupės dydį ir kelionės išlaidas.</p></div>
+          <div><span>01</span><strong>Tik preliminari registracija</strong><p>Kol kas renkame norinčiųjų vardus. Žinodami grupės dydį galėsime tiksliau suplanuoti kelionę.</p></div>
+          <div><span>02</span><strong>Balandžio 15–17 d.</strong><p>Trijų dienų kelionė nuo ketvirtadienio iki šeštadienio. Tikslūs išvykimo laikai bus pranešti vėliau.</p></div>
+          <div><span>03</span><strong>Apie 150–200 € asmeniui</strong><p>Preliminari suma apima autobusą, kurą, nakvynes ir kitas kelionės išlaidas. Galutinė kaina priklausys nuo norinčiųjų skaičiaus.</p></div>
         </section>
 
         <section className={styles.itinerary} aria-labelledby="route-title">
           <div className={styles.sectionHeading}>
             <span className={styles.sectionKicker}>KELIONĖS EIGA</span>
             <h2 id="route-title">Trys dienos drauge</h2>
-            <p>Numatomas maršrutas. Laikai, nakvynės vietos ir lankytinos vietos bus patikslinti vėliau.</p>
+            <p>Numatomas maršrutas. Tikslūs laikai, nakvynės vietos ir lankytini objektai bus patikslinti vėliau.</p>
           </div>
           <div className={styles.dayGrid}>
             {days.map((item) => (
@@ -194,6 +190,11 @@ export default function FilialasPage() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className={styles.closingNote} aria-label="Kvietimas keliauti drauge">
+          <strong>Būtų labai smagu kartu aplankyti filialą ir praleisti tris gražias dienas bendrystėje!</strong>
+          <p>Kai žinosime, kiek mūsų būtų, pateiksime galutinį kelionės planą ir tikslią kainą.</p>
         </section>
 
         <footer className={styles.footer}>Kelionės informacija preliminari. Galutinį planą ir tikslią kainą paskelbsime įvertinę norinčiųjų skaičių.</footer>

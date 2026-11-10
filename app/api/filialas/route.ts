@@ -68,10 +68,6 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ error: "Įrašyk vardą ir pavardę." }, { status: 400 });
     }
-    if (body?.publicNameConsent !== true) {
-      return NextResponse.json({ error: "Patvirtink, kad tavo vardas bus matomas šiame sąraše." }, { status: 400 });
-    }
-
     const supabase = createSupabaseServerClient();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const { data: state, error: loadError } = await supabase

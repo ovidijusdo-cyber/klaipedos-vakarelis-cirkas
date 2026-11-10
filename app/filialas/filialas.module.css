@@ -146,8 +146,7 @@
 .nameInput { width: 100%; min-height: 66px; padding: 17px 20px; border: 2px solid #e4b55d; border-radius: 16px; outline: none; background: #fff8e9; color: #193c45; font: inherit; font-size: 1.16rem; box-sizing: border-box; }
 .nameInput:focus { border-color: #b57016; box-shadow: 0 0 0 4px rgba(218, 157, 65, .19); }
 .nameInput::placeholder { color: #7c766c; }
-.consent { display: flex; align-items: flex-start; gap: 11px; margin-top: 6px; color: #48656e; font-size: .89rem; line-height: 1.5; cursor: pointer; }
-.consent input { width: 19px; height: 19px; margin: 2px 0 0; accent-color: #138b80; flex: none; }
+.nameVisibilityNote { margin: 0; color: #607981; font-size: .85rem; line-height: 1.5; }
 .submitButton { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 68px; margin-top: 10px; padding: 18px 22px; border: 0; border-radius: 16px; background: linear-gradient(110deg, #ffd47c, #f2a742); color: #173640; font: inherit; font-size: 1.08rem; font-weight: 900; text-align: left; box-shadow: 0 12px 24px rgba(161, 94, 23, .2); cursor: pointer; }
 .submitButton:hover:not(:disabled) { background: linear-gradient(110deg, #ffe0a0, #f6b65e); }
 .submitButton:disabled { opacity: .55; cursor: not-allowed; }
@@ -175,6 +174,9 @@
 .passenger strong { overflow-wrap: anywhere; font-size: .89rem; line-height: 1.35; }
 .emptyBus { grid-column: 1 / -1; padding: 28px 12px; border: 1px dashed #a7ccc5; border-radius: 15px; color: #66828a; text-align: center; font-weight: 700; }
 .busEnd { padding: 17px 0 5px; border-top: 2px dashed #bad4cc; color: #63818a; text-align: center; font-size: .69rem; font-weight: 900; letter-spacing: .14em; }
+.closingNote { margin-top: 56px; padding: 30px; border: 1px solid #c8dfd8; border-radius: 23px; background: linear-gradient(120deg, #e7f5ef, #fff5e5); text-align: center; }
+.closingNote strong { display: block; color: #165962; font-family: var(--font-heading), sans-serif; font-size: clamp(1.25rem, 2.5vw, 1.9rem); line-height: 1.3; }
+.closingNote p { margin: 10px 0 0; color: #506b73; line-height: 1.6; }
 .footer { margin-top: 64px; padding-top: 25px; border-top: 1px solid #d5e4df; color: #67818a; text-align: center; font-size: .85rem; }
 
 @media (max-width: 900px) {
