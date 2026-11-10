@@ -147,6 +147,9 @@
 .nameInput:focus { border-color: #b57016; box-shadow: 0 0 0 4px rgba(218, 157, 65, .19); }
 .nameInput::placeholder { color: #7c766c; }
 .nameVisibilityNote { margin: 0; color: #607981; font-size: .85rem; line-height: 1.5; }
+.priorityNotice { margin: 0; padding: 12px 16px; border: 1px solid #ef9c9c; border-radius: 13px; background: #fff1f1; color: #b4232a; font-size: .98rem; font-weight: 900; line-height: 1.4; text-align: center; animation: priorityPulse 2.2s ease-in-out infinite; }
+@keyframes priorityPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 46, 52, .12); } 50% { box-shadow: 0 0 0 6px rgba(217, 46, 52, .22); } }
+@media (prefers-reduced-motion: reduce) { .priorityNotice { animation: none; } }
 .submitButton { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 68px; margin-top: 10px; padding: 18px 22px; border: 0; border-radius: 16px; background: linear-gradient(110deg, #ffd47c, #f2a742); color: #173640; font: inherit; font-size: 1.08rem; font-weight: 900; text-align: left; box-shadow: 0 12px 24px rgba(161, 94, 23, .2); cursor: pointer; }
 .submitButton:hover:not(:disabled) { background: linear-gradient(110deg, #ffe0a0, #f6b65e); }
 .submitButton:disabled { opacity: .55; cursor: not-allowed; }

@@ -133,6 +133,7 @@ export default function FilialasPage() {
                 required
               />
               <p className={styles.nameVisibilityNote}>Įrašytas vardas ir pavardė bus matomi šiame norinčiųjų sąraše.</p>
+              <p className={styles.priorityNotice}>Pirmenybė teikiama Klaipėdos Šiaurės bendruomenei</p>
               <button className={styles.submitButton} type="submit" disabled={saving || loading || Boolean(loadError)}>
                 {saving ? "Įrašoma..." : "Užsiregistruoti kaip norinčiam vykti"}
                 <span aria-hidden="true">→</span>
