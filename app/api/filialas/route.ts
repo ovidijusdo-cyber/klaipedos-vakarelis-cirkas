@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { FILIALAS_CAPACITY } from "../../../lib/filialas";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 const STATE_ID = "filialas-interest-2027-04";
-const MAX_INTERESTS = 500;
 
 type Interest = {
   id: string;
@@ -81,8 +81,8 @@ export async function POST(request: Request) {
       if (registrations.some((item) => item.fullName.toLocaleLowerCase("lt-LT") === fullName.toLocaleLowerCase("lt-LT"))) {
         return NextResponse.json({ error: "Šis vardas ir pavardė jau įrašyti." }, { status: 409 });
       }
-      if (registrations.length >= MAX_INTERESTS) {
-        return NextResponse.json({ error: "Norinčiųjų sąrašas šiuo metu pilnas." }, { status: 409 });
+      if (registrations.length >= FILIALAS_CAPACITY) {
+        return NextResponse.json({ error: "Registracija užpildyta: visos 52 vietos užimtos." }, { status: 409 });
       }
 
       const next = [...registrations, { id: randomUUID(), fullName, createdAt: new Date().toISOString() }];

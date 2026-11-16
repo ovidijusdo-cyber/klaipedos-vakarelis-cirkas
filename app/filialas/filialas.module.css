@@ -141,10 +141,12 @@
 .formCard, .busCard { border: 1px solid #dce8e5; border-radius: 28px; background: white; box-shadow: 0 20px 54px rgba(32, 84, 91, .08); }
 .formCard { padding: clamp(24px, 3.2vw, 40px); }
 .formCard > p { margin: 0 0 28px; color: #57717b; line-height: 1.7; }
+.formCard > .capacityNotice { margin: -12px 0 22px; padding: 12px 16px; border-radius: 13px; background: #e7f6f1; color: #116860; font-weight: 900; line-height: 1.5; }
 .formCard form { display: grid; gap: 15px; }
 .nameLabel { color: #163e48; font-size: 1.1rem; font-weight: 900; }
 .nameInput { width: 100%; min-height: 66px; padding: 17px 20px; border: 2px solid #e4b55d; border-radius: 16px; outline: none; background: #fff8e9; color: #193c45; font: inherit; font-size: 1.16rem; box-sizing: border-box; }
 .nameInput:focus { border-color: #b57016; box-shadow: 0 0 0 4px rgba(218, 157, 65, .19); }
+.nameInput:disabled { opacity: .65; cursor: not-allowed; }
 .nameInput::placeholder { color: #7c766c; }
 .nameVisibilityNote { margin: 0; color: #607981; font-size: .85rem; line-height: 1.5; }
 .priorityNotice { margin: 0; padding: 12px 16px; border: 1px solid #ef9c9c; border-radius: 13px; background: #fff1f1; color: #b4232a; font-size: .98rem; font-weight: 900; line-height: 1.4; text-align: center; animation: priorityPulse 2.2s ease-in-out infinite; }
@@ -161,7 +163,7 @@
 .busCard { padding: clamp(22px, 3vw, 36px); }
 .busHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .busHeading h2 { margin-bottom: 0; }
-.countBadge { display: grid; justify-items: center; min-width: 90px; padding: 11px; border-radius: 17px; background: #e7f6f1; color: #0a7770; }
+.countBadge { display: grid; justify-items: center; min-width: 108px; padding: 11px; border-radius: 17px; background: #e7f6f1; color: #0a7770; }
 .countBadge strong { font-family: var(--font-heading), sans-serif; font-size: 1.7rem; line-height: 1; }
 .countBadge span { font-size: .74rem; font-weight: 900; }
 .busHint { color: #617b83; font-size: .9rem; line-height: 1.5; }

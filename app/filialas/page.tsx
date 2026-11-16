@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
+import { FILIALAS_CAPACITY } from "../../lib/filialas";
 import styles from "./filialas.module.css";
 
 type Interest = { id: string; fullName: string; createdAt: string };
@@ -35,6 +36,8 @@ export default function FilialasPage() {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
+  const placesLeft = Math.max(0, FILIALAS_CAPACITY - registrations.length);
+  const isFull = !loading && !loadError && placesLeft === 0;
 
   useEffect(() => {
     let active = true;
@@ -120,6 +123,7 @@ export default function FilialasPage() {
             <span className={styles.sectionKicker}>VIETA NORINČIŲJŲ SĄRAŠE</span>
             <h2 id="register-title">Norėtum vykti?</h2>
             <p>Jei ši kelionė tave domina, įrašyk vardą ir pavardę. Tai tik preliminari registracija norinčiųjų skaičiui įvertinti, o ne apmokėjimas ar patvirtinta vieta autobuse.</p>
+            {!loading && !loadError ? <p className={styles.capacityNotice} role="status">{isFull ? "Registracija užpildyta: visos 52 vietos užimtos." : `Liko ${placesLeft} iš ${FILIALAS_CAPACITY} vietų.`}</p> : null}
             <form onSubmit={register}>
               <label className={styles.nameLabel} htmlFor="traveler-name">Vardas Pavardė</label>
               <input
@@ -131,11 +135,12 @@ export default function FilialasPage() {
                 autoComplete="name"
                 maxLength={100}
                 required
+                disabled={isFull}
               />
               <p className={styles.nameVisibilityNote}>Įrašytas vardas ir pavardė bus matomi šiame norinčiųjų sąraše.</p>
               <p className={styles.priorityNotice}>Pirmenybė teikiama Klaipėdos Šiaurės bendruomenei</p>
-              <button className={styles.submitButton} type="submit" disabled={saving || loading || Boolean(loadError)}>
-                {saving ? "Įrašoma..." : "Užsiregistruoti kaip norinčiam vykti"}
+              <button className={styles.submitButton} type="submit" disabled={saving || loading || Boolean(loadError) || isFull}>
+                {isFull ? "Vietų nebėra" : saving ? "Įrašoma..." : "Užsiregistruoti kaip norinčiam vykti"}
                 <span aria-hidden="true">→</span>
               </button>
               {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
@@ -149,7 +154,7 @@ export default function FilialasPage() {
                 <span className={styles.sectionKicker}>BŪSIMI KELEIVIAI</span>
                 <h2 id="bus-title">Kelionės autobusas</h2>
               </div>
-              <div className={styles.countBadge}><strong>{registrations.length}</strong><span>norinčiųjų</span></div>
+              <div className={styles.countBadge}><strong>{registrations.length}/{FILIALAS_CAPACITY}</strong><span>norinčiųjų</span></div>
             </div>
             <p className={styles.busHint}>Vardai rodomi autobuso iliustracijoje. Sėdėjimo vietos neskiriamos.</p>
             <div className={styles.bus}>
