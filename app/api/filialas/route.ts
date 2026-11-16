@@ -115,3 +115,54 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nepavyko įrašyti vardo. Bandyk dar kartą." }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    if (Number(request.headers.get("content-length") ?? 0) > 2048) {
+      return NextResponse.json({ error: "Prašymas per ilgas." }, { status: 413 });
+    }
+
+    const body = await request.json();
+    const fullName = typeof body?.fullName === "string"
+      ? body.fullName.normalize("NFC").trim().replace(/\s+/g, " ")
+      : "";
+    if (fullName.length < 3 || fullName.length > 100) {
+      return NextResponse.json({ error: "Įrašyk vardą ir pavardę." }, { status: 400 });
+    }
+
+    const supabase = createSupabaseServerClient();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { data: state, error: loadError } = await supabase
+        .from("event_state")
+        .select("payload, updated_at")
+        .eq("id", STATE_ID)
+        .maybeSingle();
+      if (loadError) throw loadError;
+
+      const registrations = storedInterests(state?.payload);
+      const match = registrations.find((item) =>
+        item.fullName.toLocaleLowerCase("lt-LT") === fullName.toLocaleLowerCase("lt-LT"));
+      if (!state || !match) {
+        return NextResponse.json({ error: "Tokios registracijos sąraše nerasta." }, { status: 404 });
+      }
+
+      const next = registrations.filter((item) => item.id !== match.id);
+      const { data: updated, error } = await supabase
+        .from("event_state")
+        .update({ payload: { registrations: next } })
+        .eq("id", STATE_ID)
+        .eq("updated_at", state.updated_at)
+        .select("id");
+      if (error) throw error;
+      if (updated?.length) return response(next);
+    }
+
+    return NextResponse.json({ error: "Sąrašas ką tik pasikeitė. Bandyk dar kartą." }, { status: 409 });
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Netinkami atšaukimo duomenys." }, { status: 400 });
+    }
+    console.error("Failed to cancel filialas interest", error);
+    return NextResponse.json({ error: "Nepavyko atšaukti dalyvavimo. Bandyk dar kartą." }, { status: 500 });
+  }
+}

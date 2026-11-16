@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FILIALAS_CAPACITY } from "../../lib/filialas";
 import styles from "./filialas.module.css";
 
@@ -36,6 +36,12 @@ export default function FilialasPage() {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelName, setCancelName] = useState("");
+  const [cancelCandidate, setCancelCandidate] = useState<Interest | null>(null);
+  const [cancelError, setCancelError] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const cancelTriggerRef = useRef<HTMLButtonElement>(null);
   const placesLeft = Math.max(0, FILIALAS_CAPACITY - registrations.length);
   const isFull = !loading && !loadError && placesLeft === 0;
 
@@ -65,6 +71,18 @@ export default function FilialasPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!cancelOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !cancelling) {
+        setCancelOpen(false);
+        cancelTriggerRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cancelOpen, cancelling]);
+
   async function register(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
@@ -85,6 +103,51 @@ export default function FilialasPage() {
       setNotice(error instanceof Error ? error.message : "Registracija nepavyko. Bandyk dar kartą.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  function closeCancel() {
+    if (cancelling) return;
+    setCancelOpen(false);
+    cancelTriggerRef.current?.focus();
+  }
+
+  async function cancelRegistration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (cancelling) return;
+
+    if (!cancelCandidate) {
+      const normalized = cancelName.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("lt-LT");
+      const match = registrations.find((person) => person.fullName.toLocaleLowerCase("lt-LT") === normalized);
+      if (!match) {
+        setCancelError("Tokio vardo ir pavardės norinčiųjų sąraše nėra.");
+        return;
+      }
+      setCancelCandidate(match);
+      setCancelError("");
+      return;
+    }
+
+    setCancelling(true);
+    setCancelError("");
+    try {
+      const response = await fetch("/api/filialas", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: cancelCandidate.fullName }),
+      });
+      const data = (await response.json()) as InterestResponse;
+      if (!response.ok || !Array.isArray(data.registrations)) throw new Error(data.error || "Atšaukimas nepavyko.");
+      setRegistrations(data.registrations);
+      setCancelOpen(false);
+      setCancelName("");
+      setCancelCandidate(null);
+      setNotice("Dalyvavimas atšauktas. Vieta vėl laisva.");
+      cancelTriggerRef.current?.focus();
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "Atšaukimas nepavyko. Bandyk dar kartą.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -138,7 +201,6 @@ export default function FilialasPage() {
                 disabled={isFull}
               />
               <p className={styles.nameVisibilityNote}>Įrašytas vardas ir pavardė bus matomi šiame norinčiųjų sąraše.</p>
-              <p className={styles.priorityNotice}>Pirmenybė teikiama Klaipėdos Šiaurės bendruomenei</p>
               <button className={styles.submitButton} type="submit" disabled={saving || loading || Boolean(loadError) || isFull}>
                 {isFull ? "Vietų nebėra" : saving ? "Įrašoma..." : "Užsiregistruoti kaip norinčiam vykti"}
                 <span aria-hidden="true">→</span>
@@ -146,6 +208,17 @@ export default function FilialasPage() {
               {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
               {loadError ? <p className={styles.error} role="alert">{loadError}</p> : null}
             </form>
+            <button
+              ref={cancelTriggerRef}
+              className={styles.cancelTrigger}
+              type="button"
+              onClick={() => {
+                setCancelName("");
+                setCancelCandidate(null);
+                setCancelError("");
+                setCancelOpen(true);
+              }}
+            >Atšaukti dalyvavimą</button>
           </div>
 
           <div className={styles.busCard} aria-labelledby="bus-title">
@@ -205,6 +278,44 @@ export default function FilialasPage() {
 
         <footer className={styles.footer}>Kelionės informacija preliminari. Galutinį planą ir tikslią kainą paskelbsime įvertinę norinčiųjų skaičių.</footer>
       </div>
+      {cancelOpen ? (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.cancelDialog} role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+            <button className={styles.modalClose} type="button" onClick={closeCancel} aria-label="Uždaryti">×</button>
+            <span className={styles.sectionKicker}>KELIONĖ Į SUOMIJĄ</span>
+            <h2 id="cancel-title">Atšaukti dalyvavimą</h2>
+            <p>{cancelCandidate ? "Patvirtink, kad nori atšaukti šią registraciją. Vieta taps laisva kitam žmogui." : "Įrašyk savo vardą ir pavardę taip, kaip jie matomi norinčiųjų sąraše."}</p>
+            <form onSubmit={cancelRegistration}>
+              <label className={styles.nameLabel} htmlFor="cancel-name">Vardas Pavardė</label>
+              <input
+                id="cancel-name"
+                className={styles.nameInput}
+                value={cancelName}
+                onChange={(event) => {
+                  setCancelName(event.target.value);
+                  setCancelCandidate(null);
+                  setCancelError("");
+                }}
+                placeholder="Įrašyk vardą ir pavardę"
+                list="filialas-names"
+                autoComplete="name"
+                maxLength={100}
+                required
+                autoFocus
+              />
+              <datalist id="filialas-names">{registrations.map((person) => <option key={person.id} value={person.fullName} />)}</datalist>
+              {cancelCandidate ? <p className={styles.confirmName}>Atšaukiama: <strong>{cancelCandidate.fullName}</strong></p> : null}
+              {cancelError ? <p className={styles.error} role="alert">{cancelError}</p> : null}
+              <div className={styles.modalActions}>
+                <button className={styles.keepButton} type="button" onClick={closeCancel} disabled={cancelling}>Palikti registraciją</button>
+                <button className={styles.cancelConfirm} type="submit" disabled={cancelling}>
+                  {cancelling ? "Atšaukiama..." : cancelCandidate ? "Taip, atšaukti dalyvavimą" : "Rasti registraciją"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

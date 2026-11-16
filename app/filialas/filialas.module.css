@@ -149,9 +149,6 @@
 .nameInput:disabled { opacity: .65; cursor: not-allowed; }
 .nameInput::placeholder { color: #7c766c; }
 .nameVisibilityNote { margin: 0; color: #607981; font-size: .85rem; line-height: 1.5; }
-.priorityNotice { margin: 0; padding: 12px 16px; border: 1px solid #ef9c9c; border-radius: 13px; background: #fff1f1; color: #b4232a; font-size: .98rem; font-weight: 900; line-height: 1.4; text-align: center; animation: priorityPulse 2.2s ease-in-out infinite; }
-@keyframes priorityPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 46, 52, .12); } 50% { box-shadow: 0 0 0 6px rgba(217, 46, 52, .22); } }
-@media (prefers-reduced-motion: reduce) { .priorityNotice { animation: none; } }
 .submitButton { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 68px; margin-top: 10px; padding: 18px 22px; border: 0; border-radius: 16px; background: linear-gradient(110deg, #ffd47c, #f2a742); color: #173640; font: inherit; font-size: 1.08rem; font-weight: 900; text-align: left; box-shadow: 0 12px 24px rgba(161, 94, 23, .2); cursor: pointer; }
 .submitButton:hover:not(:disabled) { background: linear-gradient(110deg, #ffe0a0, #f6b65e); }
 .submitButton:disabled { opacity: .55; cursor: not-allowed; }
@@ -159,6 +156,21 @@
 .notice, .error { margin: 4px 0 0; padding: 12px 15px; border-radius: 10px; font-size: .89rem; font-weight: 700; line-height: 1.5; }
 .notice { background: #e7f6ef; color: #145e45; }
 .error { background: #fff1eb; color: #9b3f2c; }
+.cancelTrigger { width: 100%; margin-top: 26px; padding: 15px 18px; border: 1px solid #cbdad9; border-radius: 14px; background: #f7faf9; color: #42646c; font: inherit; font-weight: 800; cursor: pointer; }
+.cancelTrigger:hover { border-color: #9ebbb8; background: #edf5f2; }
+.modalBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(14, 35, 46, .68); }
+.cancelDialog { position: relative; width: min(100%, 460px); max-height: calc(100dvh - 40px); overflow: auto; box-sizing: border-box; padding: clamp(24px, 4vw, 36px); border-radius: 24px; background: white; box-shadow: 0 28px 80px rgba(4, 24, 36, .28); }
+.cancelDialog h2 { margin: 12px 0; color: #183242; font-family: var(--font-heading), sans-serif; font-size: clamp(1.7rem, 4vw, 2.25rem); }
+.cancelDialog > p { margin: 0 0 22px; color: #57717b; line-height: 1.55; }
+.cancelDialog form { display: grid; gap: 14px; }
+.modalClose { position: absolute; top: 14px; right: 16px; width: 38px; height: 38px; border: 0; border-radius: 50%; background: #eef4f2; color: #31525b; font: inherit; font-size: 1.5rem; cursor: pointer; }
+.confirmName { margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff4e7; color: #5f4a2c; line-height: 1.4; }
+.modalActions { display: grid; gap: 10px; margin-top: 6px; }
+.modalActions button { min-height: 48px; padding: 11px 15px; border-radius: 12px; font: inherit; font-weight: 800; cursor: pointer; }
+.modalActions button:disabled { opacity: .6; cursor: not-allowed; }
+.keepButton { border: 1px solid #cbdad9; background: white; color: #31525b; }
+.cancelConfirm { border: 0; background: #b53634; color: white; }
+.cancelConfirm:hover:not(:disabled) { background: #982b2a; }
 
 .busCard { padding: clamp(22px, 3vw, 36px); }
 .busHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
